@@ -28,3 +28,4 @@ AI-Quant-Lab is a multi-agent research workspace for designing, implementing, an
 ## Core rule
 
 No strategy is promoted because of one attractive backtest. Evidence must survive realistic costs, unseen data, perturbation, and independent QA.
+
