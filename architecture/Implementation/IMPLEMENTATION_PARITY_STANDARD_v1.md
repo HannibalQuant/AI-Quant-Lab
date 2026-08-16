@@ -298,3 +298,20 @@ Engineering governance owns implementation identity and reference traceability; 
 Mandatory implementation types include architecture/specification, Python research/backtest/optimization/WFRS/MCSTS/PSS, Pine and TradingView strategy/indicator, paper, live, monitoring, risk control, deployment configuration, data, feature, regime, order-routing, and portfolio representations. Mandatory dimensions cover reference, traceability, inputs, calculations, timing, execution, costs, state, precision, errors, platform limits, and mismatch visibility.
 
 Every future AI Quant Lab implementation-dependent result, report, evidence package, decision, deployment, or monitoring baseline must conform to IPS before institutional reliance. Failure, rejection, invalidation, supersession, cancellation, or retirement never erases mismatch history or learning.
+
+## Phase 1.5 Phase-Specific Parity Checkpoints
+
+Implementation parity is scope- and stage-specific. One favorable parity event cannot support every later representation.
+
+| Checkpoint | Required comparison | Institutional effect |
+|---|---|---|
+| Pre-experiment reference parity | Architecture/reference behavior against the research implementation intended to generate evidence | Required before results from that implementation support EEP |
+| Research implementation parity | Data, calculations, state, timing, costs and outputs within the research environment | Bounds the evidence-producing implementation only |
+| Post-engineering parity | Approved architecture against the exact engineered version after material engineering change | Detects unauthorized behavioral change before downstream reliance |
+| Pre-paper parity | Evidence-producing reference against paper implementation, venue mappings, controls and monitoring | Required before paper readiness/activation reliance |
+| Pre-limited-live parity | Paper/reference behavior against exact limited-live implementation and configuration | Required for the requested limited-live scope |
+| Pre-live-active parity | Limited-live/reference evidence against exact live-active version, controls and environment | Required for the requested live-active scope |
+| Post-remediation parity | Frozen pre-incident reference against remediated versions after mismatch, incident or decay response | Required before revalidation/reactivation reliance |
+| Monitoring/control parity | Production behavior, risk controls, monitoring calculations and response triggers against governed definitions | Continues during operation and after material configuration change |
+
+Every checkpoint has its own IPS identity, versions, scope, tolerances, mismatches, classification, expiry and consumers. A later checkpoint may consume earlier records but cannot silently extend them.
