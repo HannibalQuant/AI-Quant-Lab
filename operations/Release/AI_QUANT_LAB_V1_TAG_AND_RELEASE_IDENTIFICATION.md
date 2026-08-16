@@ -111,11 +111,11 @@ Pre-publication evidence satisfies items 1–9. The final post-publication reche
 
 ## 15. v1.0 Tag Creation Status
 
-The tag is authorized for creation only after this record is published and the resulting `main` commit passes the final verification. The repository tag reference and release metadata are the authoritative evidence of actual creation; this document must not be read alone as proof that the tag exists.
+The final tree passed the required pre-tag checks. Tag creation was not performed because the available governed GitHub channel does not expose tag or release creation. The repository owner must create the tag after confirming the final `main` HEAD. This document must not be read as proof that the tag exists.
 
 ## 16. v1.0 Tag Target SHA
 
-The required target is the exact `main` commit produced by publication of this record, provided the final verification passes. Because a commit cannot contain its own SHA, the exact value is recorded externally in `refs/tags/v1.0`, release metadata, and the repository release-governance audit comment. The pre-publication SHA `03bb17fb8c2aa6d2af773776e65fd7470f0ddd9f` is the verified parent, not the final tag target after this record is added.
+The required target is the exact `main` commit produced by publication of this final human-action verdict. Because a commit cannot contain its own SHA, the exact value is recorded by the final repository audit and handoff accompanying this record. The repository owner must use that value unchanged. After creation, `refs/tags/v1.0` and release metadata must resolve to the same commit. The earlier SHA `03bb17fb8c2aa6d2af773776e65fd7470f0ddd9f` is an ancestor and must not be used as the final tag target.
 
 ## 17. Release Notes / Release Metadata Summary
 
@@ -149,8 +149,8 @@ A constitutional release is a governance baseline, not an operational approval.
 
 ## 21. Final Release Identification Verdict
 
-Subject to successful final verification and publication of `refs/tags/v1.0` on the exact publication commit:
+Final repository verification passed, but the available governed GitHub channel does not expose tag or release creation. The exact final publication commit is therefore eligible for owner action:
 
-**V1 TAG CREATED AND RELEASE IDENTIFIED**
+**V1 TAG READY FOR HUMAN CREATION**
 
-Actual tag creation must be confirmed from the repository reference and release metadata; otherwise the applicable operational verdict is **V1 TAG READY FOR HUMAN CREATION** or **V1 TAG BLOCKED**, as supported by repository evidence.
+The repository owner must create `v1.0` on the exact verified `main` HEAD reported by the final audit, then verify that the reference resolves to that same commit. No substitute SHA is permitted.
