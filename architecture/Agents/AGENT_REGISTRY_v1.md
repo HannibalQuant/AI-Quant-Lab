@@ -839,3 +839,30 @@ Governance asks:
 - Every message, memory action, evidence action, workflow role, decision, delegation, and lifecycle event resolves to exact Registry and Contract versions.
 
 The Agent Registry governs institutional identity and eligibility. It enables specialized agents to cooperate without allowing capability, convenience, or hierarchy to dissolve constitutional boundaries.
+
+## Phase 1.5 Integration Reconciliation
+
+This reconciliation note binds later operational responsibilities without creating new agents or enlarging authority.
+
+### Operational role bindings
+
+| Responsibility | Binding for v1.0 | Authority boundary |
+|---|---|---|
+| Deployment governance | Explicit human governance role operating DGS, supported by registered agents within their existing contracts | May activate only within current EDP, PRC, RRP and DGS scope; cannot create evidence, Validation or risk authority |
+| Monitoring governance | Hybrid human operator and registered monitoring-workflow participants | Observes, records and escalates under MEDS; cannot silently retune, change limits or reactivate |
+| Portfolio construction ownership | Hybrid governed workflow using Quant Strategy Architect, Validation Agent, Risk Governance Agent and Executive Decision Agent only for their existing bounded functions | No participant inherits another participant's authority; PCS classification is not risk or deployment approval |
+| Production-readiness ownership | Explicit human readiness coordinator supported by registered reviewers | Classifies readiness under PRC only; cannot issue EDP, risk approval or DGS activation |
+| Command operations | Human command issuer/owner and WOE coordinator | CM routes and constrains commands; it cannot expand AR rights or override standards |
+| Institutional operations | Explicit human operating-cycle owner supported by registered agents | IOP coordinates queues, reviews and records; it cannot bypass constitutional gates |
+| Future specialized operational agents | Deferred governance decision | Any future agent requires an approved contract and AR registration before institutional action |
+
+### Original placeholder folders
+
+| Folder | v1.0 classification | Institutional effect |
+|---|---|---|
+| `agents/CEO-Agent/` | Deprecated alias pending governance mapping to Executive Decision Agent | No authority arises from the folder; Executive Decision authority exists only under the approved contract and Registry record |
+| `agents/Python-Agent/` | Retained bounded non-authority implementation helper under Quant Strategy Engineer governance | Cannot change hypotheses, validate, approve risk or deploy |
+| `agents/Pine-Agent/` | Retained bounded non-authority implementation helper under Quant Strategy Engineer governance | Cannot change reference behavior or issue parity/Validation verdicts |
+| `agents/QA-Agent/` | Retained bounded non-authority review helper; not equivalent to Validation Agent | Cannot issue VEP, accept risk or authorize deployment |
+
+The folders are preserved for lineage. They remain inactive for institutional authority until a governed contract and Registry decision states otherwise.
