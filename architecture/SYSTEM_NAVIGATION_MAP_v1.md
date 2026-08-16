@@ -270,3 +270,11 @@ CM command discipline precedes IOP action. IOP daily review consumes WOE queues,
 System Integration governance owns this navigation map and synchronizes names, paths, dependencies and reading order. Domain standards remain authoritative. Changes require versioning, impact analysis and link review. The map cannot waive evidence, alter agent rights, change lifecycle state, issue verdicts or authorize deployment.
 
 Every future user, operator, agent, reviewer, validator, risk reviewer, executive, deployment/monitoring operator or integrator must be able to locate the governing document, required input, authorized actor, forward gate, return path, failure treatment, emergency route and audit chain through this map. Navigation failure is corrected as a governance defect; it is never solved by guessing.
+
+## Phase 1.5 Integrated-Tree Validation
+
+This map was reconciled against the integrated v1.0 repository tree. The canonical path register in `SYSTEM_INDEX.md` is the authoritative navigation reference for exact locations; domain documents remain authoritative for substance.
+
+Validation confirmed the presence of Foundation, Master System Design, operating systems, agent contracts, MACP, SMI, EES, WOE, AR, ART, SLS, ARP, MDRS, RCS, FFS, EDS, SFSS, XDS, WFRS, MCSTS, PSS, ODS, DQS, IPS, EEP, VEP, RRP, EDP, PCS, PRC, DGS, MEDS, EDRP, CM and IOP in one tree. Forward, return, failure, emergency, suspension, reactivation, retirement and audit paths remain governed handoffs rather than implied approvals.
+
+Navigation validation cannot issue a scientific verdict, accept risk, make an Executive Decision, classify readiness, activate deployment or prove operational safety.
