@@ -282,3 +282,16 @@ Portfolio governance owns construction identity, inclusion discipline, exposure 
 Mandatory risks include concentration by strategy, market, asset, venue, timeframe, family, regime, feature, signal, factor, liquidity, execution and cost; drawdown correlation, tail dependence, hidden leverage, capacity, crowding, correlation breakdown, regime shift, simultaneous failure and monitoring blind spots. Mandatory dimensions include exact component versions and Validation, risk, deployment and monitoring scopes.
 
 Every future AI Quant Lab portfolio candidate, strategy combination, allocation, diversification, correlation, risk-budget, deployment or monitoring claim must conform to PCS before institutional reliance. Failure, rejection, invalidation, supersession, suspension or retirement never erases portfolio history or learning.
+
+## Phase 1.5 PCS Applicability Clarification
+
+PCS is mandatory whenever institutional reliance involves one or more strategies and any of the following conditions exists:
+
+- multiple strategies or implementations share a portfolio, mandate or capital pool;
+- capital, margin, collateral, venue exposure, execution capacity or liquidity is shared;
+- instruments, markets or timeframes exhibit material correlation, drawdown correlation or tail dependence;
+- strategies share features, signals, data sources, regime logic, execution constraints or failure modes;
+- a single strategy has material portfolio-wide exposure, concentration, capacity, leverage, liquidity, simultaneous-exit or scaling impact;
+- requested scaling exceeds the strategy's isolated validated, risk-reviewed or deployment-governed scope.
+
+PCS may be marked not applicable only for an isolated strategy whose capital, margin, execution, data/failure dependencies and risk effects are demonstrably segregated and whose scale remains within its exact approved scope. The not-applicable decision requires an identified authority, rationale, evidence, expiry/review condition and audit record. It cannot be inferred from strategy count alone and cannot waive RRP, EDP, PRC, DGS or MEDS.
