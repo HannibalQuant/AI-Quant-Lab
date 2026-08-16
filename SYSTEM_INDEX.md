@@ -175,3 +175,25 @@ AI Quant Lab v1.0 is now a governed institutional architecture for autonomous qu
 AI Quant Lab is not a single strategy. AI Quant Lab is not a backtest engine. AI Quant Lab is not an optimizer. AI Quant Lab is not a trading signal service. AI Quant Lab is a governed institutional intelligence system for discovering, testing, challenging, validating, governing, deploying, monitoring and learning from quantitative strategies.
 
 The index navigates; it does not govern alone. No document operates alone, no standard replaces another, no agent owns the whole system, no workflow skips evidence, no evidence becomes decision, no decision rewrites evidence, no readiness becomes deployment, no monitoring silence becomes health, no emergency expands authority, no failure becomes deletion and no archive becomes forgetting.
+
+## Phase 1.5 Canonical Path Register
+
+The following paths are validated against the integrated v1.0 tree. This register improves navigation only and creates no authority.
+
+| Area | Canonical path |
+|---|---|
+| Foundation | `README.md`; `docs/Vision.md`; `docs/Architecture.md`; `docs/Roadmap.md`; `docs/Standards.md` |
+| Master design | `docs/MASTER_SYSTEM_DESIGN.md` |
+| Operating systems/framework | `knowledge/MASTER_KNOWLEDGE_OS.md`; `system/DECISION_OPERATING_SYSTEM.md`; `research/SCIENTIFIC_RESEARCH_OPERATING_SYSTEM.md`; `system/AGENT_CONTRACT_FRAMEWORK.md` |
+| Agent contracts | `agents/*/AGENT_CONTRACT.md` for registered constitutional agents |
+| Communication/state/evidence/workflow | `architecture/Communication/MACP_v1.md`; `architecture/Memory/SHARED_MEMORY_INTERFACE_v1.md`; `architecture/Evidence/EVIDENCE_EXCHANGE_STANDARD_v1.md`; `architecture/Workflow/WORKFLOW_ORCHESTRATION_ENGINE_v1.md` |
+| Registries | `architecture/Agents/AGENT_REGISTRY_v1.md`; `architecture/Artifacts/ARTIFACT_REGISTRY_v1.md` |
+| Research-to-strategy | `architecture/Pipeline/AUTONOMOUS_RESEARCH_PIPELINE_v1.md`; `architecture/Market/MARKET_DISCOVERY_AND_RANKING_STANDARD_v1.md`; `architecture/Regime/REGIME_CLASSIFICATION_STANDARD_v1.md`; `architecture/Features/FEATURE_FACTORY_STANDARD_v1.md`; `architecture/Edge/EDGE_DISCOVERY_STANDARD_v1.md`; `architecture/Strategy/STRATEGY_FAMILY_SELECTION_STANDARD_v1.md`; `architecture/Strategy/STRATEGY_LIFECYCLE_STANDARD_v1.md` |
+| Experiment/robustness | `architecture/Experiment/EXPERIMENT_DESIGN_STANDARD_v1.md`; `architecture/Robustness/WALK_FORWARD_AND_ROBUSTNESS_STANDARD_v1.md`; `architecture/Robustness/MONTE_CARLO_AND_STRESS_TESTING_STANDARD_v1.md`; `architecture/Robustness/PARAMETER_STABILITY_STANDARD_v1.md`; `architecture/Validation/OVERFITTING_DEFENSE_STANDARD_v1.md` |
+| Data/parity | `architecture/Data/DATA_QUALITY_STANDARD_v1.md`; `architecture/Implementation/IMPLEMENTATION_PARITY_STANDARD_v1.md` |
+| Packages | `architecture/Evidence/EXPERIMENT_EVIDENCE_PACKAGE_v1.md`; `architecture/Validation/VALIDATION_EVIDENCE_PACKAGE_v1.md`; `architecture/Risk/RISK_REVIEW_PACKAGE_v1.md`; `architecture/Decision/EXECUTIVE_DECISION_PACKAGE_v1.md` |
+| Portfolio/deployment/monitoring | `architecture/Portfolio/PORTFOLIO_CONSTRUCTION_STANDARD_v1.md`; `architecture/Deployment/PRODUCTION_READINESS_CHECKLIST_v1.md`; `architecture/Deployment/DEPLOYMENT_GOVERNANCE_STANDARD_v1.md`; `architecture/Monitoring/MONITORING_AND_EDGE_DECAY_STANDARD_v1.md`; `architecture/Monitoring/EDGE_DECAY_RESPONSE_PLAYBOOK_v1.md` |
+| Operations | `operations/Command/AI_QUANT_LAB_COMMAND_MANUAL_v1.md`; `operations/Playbooks/INSTITUTIONAL_OPERATING_PLAYBOOK_v1.md` |
+| Navigation/reviews | `SYSTEM_INDEX.md`; `architecture/SYSTEM_NAVIGATION_MAP_v1.md`; `operations/Reviews/SYSTEM_V1_READINESS_REVIEW.md`; `operations/Integration/CONSTITUTIONAL_INTEGRATION_RECONCILIATION_REPORT_v1.md` |
+
+Placeholder folders are preserved but are not constitutional agent contracts unless AR and an approved contract say otherwise.
