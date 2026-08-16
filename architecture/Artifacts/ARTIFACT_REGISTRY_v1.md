@@ -892,3 +892,24 @@ An Artifact Registry version may be retired only after artifact types and consum
 - Every consequential artifact relationship and use remains explainable, traceable, versioned, reviewable, and reconstructable.
 
 ART governs institutional artifacts without replacing the agents and standards that create research, evidence, implementations, validation, risk decisions, executive decisions, deployments, and knowledge.
+
+## Phase 1.5 Artifact-Type Reconciliation
+
+The v1.0 artifact catalogue includes the following later-introduced governed record classes. This is a semantic catalogue amendment only; it does not transfer or enlarge domain authority.
+
+| Artifact type | Governing document | Authority limitation |
+|---|---|---|
+| Parameter Stability Record | PSS | Evidence only; not Validation, risk or deployment approval |
+| Overfitting Defense Record | ODS | Defense classification only; not proof of edge |
+| Data Quality Record | DQS | Data eligibility only |
+| Implementation Parity Record | IPS | Parity classification only |
+| Portfolio Construction Record | PCS | Portfolio eligibility only |
+| Production Readiness Record | PRC | Readiness classification only |
+| Command Record | CM | Command identity/routing only |
+| Institutional Operating Record | IOP | Operating-cycle state only |
+| System Index | FSI | Navigation only |
+| System Navigation Map | FSI | Navigation only |
+| System v1.0 Readiness Review | Readiness review mandate | Audit conclusion only |
+| Constitutional Integration Reconciliation Report | Phase 1.5 integration mandate | Integration traceability only |
+
+Each type remains subject to the existing ART identity, owner, version, lineage, freeze, custody, consumer, supersession, retention and audit rules. Its governing domain document remains authoritative for content and permitted use.
