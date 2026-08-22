@@ -43,7 +43,7 @@ The hierarchy is:
 
 This document establishes:
 
-- fifteen logical domains and forty-four canonical modules;
+- fifteen logical domains and forty-six canonical modules;
 - control-plane and trust boundaries;
 - preliminary authority, evidence, dependency, state, agent, and human mappings;
 - prohibited shortcuts and authority loops;
@@ -623,7 +623,7 @@ Blocking architecture questions: **0**. All questions are bounded and assigned t
 | Criterion | Result | Evidence |
 |---|---|---|
 | Domains established | PASS | 15-domain map |
-| Canonical inventory | PASS | 44 modules |
+| Canonical inventory | PASS | 46 modules |
 | Responsibilities/non-responsibilities | PASS | Sections 9–27 |
 | Trust boundaries | PASS | 7 boundaries |
 | Authority/evidence flows | PASS | Sections 31–32 |
