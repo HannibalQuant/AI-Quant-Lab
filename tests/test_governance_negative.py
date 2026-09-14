@@ -5,7 +5,11 @@ import pytest
 import ai_quant_lab
 from ai_quant_lab.core.execution_boundary import ExecutionBoundaryViolation
 from ai_quant_lab.core.model import (
-    ExecutionState, InvalidState, StateAssignment, StateAxis, StateVector,
+    ExecutionState,
+    InvalidState,
+    StateAssignment,
+    StateAxis,
+    StateVector,
 )
 
 

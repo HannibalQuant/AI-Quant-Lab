@@ -1,7 +1,10 @@
 import pytest
 
 from ai_quant_lab.core.governance import (
-    PRECONDITIONS, PreconditionStatus, UnresolvedGovernancePrecondition, precondition,
+    PRECONDITIONS,
+    PreconditionStatus,
+    UnresolvedGovernancePrecondition,
+    precondition,
 )
 
 
