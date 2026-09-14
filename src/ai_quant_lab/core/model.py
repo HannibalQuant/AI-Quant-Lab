@@ -65,24 +65,60 @@ class GovernedId:
         return cls(uuid.uuid4().hex)
 
 
-def _identifier(name: str, namespace: str) -> type[GovernedId]:
-    return type(name, (GovernedId,), {"namespace": namespace})
+class ArtifactId(GovernedId):
+    namespace = "artifact"
 
 
-ArtifactId = _identifier("ArtifactId", "artifact")
-EvidenceId = _identifier("EvidenceId", "evidence")
-ProvenanceId = _identifier("ProvenanceId", "provenance")
-DatasetId = _identifier("DatasetId", "dataset")
-ExperimentId = _identifier("ExperimentId", "experiment")
-RunId = _identifier("RunId", "run")
-TrialId = _identifier("TrialId", "trial")
-ValidationId = _identifier("ValidationId", "validation")
-MonitoringId = _identifier("MonitoringId", "monitoring")
-CommandId = _identifier("CommandId", "command")
-DecisionId = _identifier("DecisionId", "decision")
-AuditEventId = _identifier("AuditEventId", "audit-event")
-AuthorityBindingId = _identifier("AuthorityBindingId", "authority-binding")
-AgentId = _identifier("AgentId", "agent")
+class EvidenceId(GovernedId):
+    namespace = "evidence"
+
+
+class ProvenanceId(GovernedId):
+    namespace = "provenance"
+
+
+class DatasetId(GovernedId):
+    namespace = "dataset"
+
+
+class ExperimentId(GovernedId):
+    namespace = "experiment"
+
+
+class RunId(GovernedId):
+    namespace = "run"
+
+
+class TrialId(GovernedId):
+    namespace = "trial"
+
+
+class ValidationId(GovernedId):
+    namespace = "validation"
+
+
+class MonitoringId(GovernedId):
+    namespace = "monitoring"
+
+
+class CommandId(GovernedId):
+    namespace = "command"
+
+
+class DecisionId(GovernedId):
+    namespace = "decision"
+
+
+class AuditEventId(GovernedId):
+    namespace = "audit-event"
+
+
+class AuthorityBindingId(GovernedId):
+    namespace = "authority-binding"
+
+
+class AgentId(GovernedId):
+    namespace = "agent"
 
 
 @dataclass(frozen=True, slots=True, order=True)
