@@ -60,10 +60,10 @@ def _ip(number: int, title: str, modules: str, domains: str, owner: str, decisio
 P = PreconditionStatus
 PRECONDITIONS = (
     _ip(1, "Principal authentication model", "IAM-01", "IAM,command,agents", "IAM + Security", "Approve authentication and threat model", P.OPEN, "No consequential admission", "", "T08,T14", "OPEN: no authentication runtime"),
-    _ip(2, "Integrity/signature/tamper-evidence model", "AUD-01,AUD-02,AUD-03", "ART,EVI,AUD", "GOV + Security", "Approve integrity/signature model", P.PARTIALLY_RESOLVED, "Unverifiable is inadmissible", "IP-04", "T04,T05,T25", "PARTIAL: SHA-256; signatures/ledger open"),
+    _ip(2, "Integrity/signature/tamper-evidence model", "AUD-01,AUD-02,AUD-03", "ART,EVI,AUD", "GOV + Security", "Approve integrity/signature model", P.PARTIALLY_RESOLVED, "Unverifiable is inadmissible", "IP-04", "T04,T05,T25", "PARTIAL: typed canonical bytes, integrity/tamper checks; signatures/trust roots open"),
     _ip(3, "Authority/delegation/revocation binding", "IAM-02,GOV-01", "IAM,mutations", "GOV + IAM", "Approve binding semantics", P.OPEN, "No inferred authority", "IP-01", "T08,T13,T14", "OPEN: IDs grant no authority"),
-    _ip(4, "Canonical serialization/ID/hash/equivalence", "AUD-01,DAT-05", "artifacts,data", "ART + DAT", "Approve representation scope", P.PARTIALLY_RESOLVED, "No unsupported lock claim", "", "T04,T36", "PARTIAL: JSON v1/IDs/SHA-256 for Sprint 1"),
-    _ip(5, "Time/clock/timezone/ordering rules", "DAT-03,ORC-02", "DAT,STA,commands", "STA + DAT", "Approve temporal specification", P.PARTIALLY_RESOLVED, "Hold ambiguity", "", "T16,T35", "PARTIAL: UTC timestamps; domain ordering open"),
+    _ip(4, "Canonical serialization/ID/hash/equivalence", "AUD-01,DAT-05", "artifacts,data", "ART + DAT", "Approve representation scope", P.PARTIALLY_RESOLVED, "No unsupported lock claim", "", "T04,T36", "PARTIAL: typed codecs/golden vectors/equivalence implemented; authority approval open"),
+    _ip(5, "Time/clock/timezone/ordering rules", "DAT-03,ORC-02", "DAT,STA,commands", "STA + DAT", "Approve temporal specification", P.PARTIALLY_RESOLVED, "Hold ambiguity", "", "T16,T35", "PARTIAL: exact UTC microsecond encoding; domain/causal ordering open"),
     _ip(6, "Emergency and release/reactivation authority", "RSK-02,HUM-02", "RSK,DEC,HUM,command", "GOV + humans", "Approve roles/dual control", P.OPEN, "Containment persists", "IP-03,IP-07", "T09,T11,T33", "OPEN: no emergency runtime"),
     _ip(7, "Approval/confirmation/expiry policy", "HUM-01,HUM-02", "command,decision", "GOV + IAM", "Approve scoped policy", P.OPEN, "Require fresh confirmation", "IP-03", "T09,T14,T35", "OPEN: no approval runtime"),
     _ip(8, "Evidence/validation/monitoring freshness", "AUD-02,VAL-06,MON-01", "EVI,VAL,MON", "EVI + VAL + MON", "Approve freshness crosswalk", P.OPEN, "Unassessed/stale cannot authorize", "IP-05", "T05,T20,T27", "OPEN: UNASSESSED is explicit"),
@@ -72,7 +72,7 @@ PRECONDITIONS = (
     _ip(11, "Data quality/reconciliation semantics", "DAT-01,DAT-02,DAT-03,DAT-04,DAT-05", "DAT", "DAT + GOV", "Approve source contracts", P.OPEN, "Quarantine unknown/conflict", "IP-04,IP-05", "T15,T16,T32", "OPEN: outside Sprint 1"),
     _ip(12, "Retention/privacy/licensing/legal policy", "AUD-01,AUD-02,AUD-03,DAT-01", "AUD,DAT,ledgers", "GOV + Legal + Data", "Approve policy", P.OPEN, "Preserve and restrict", "", "T25,T30", "OPEN: no persistence/deletion"),
     _ip(13, "Trust-boundary threat model/adapters", "IAM-01,HUM-01,ORC-01", "adapters,MACP,SMI", "Security + IAM", "Approve threat model", P.OPEN, "Adapters disabled", "IP-01,IP-02", "T22,T37", "OPEN: no network adapters"),
-    _ip(14, "Implementation governance/change/release", "GOV-01,GOV-02,AUD-03", "Phase 3", "GOV + QA + AUD", "Approve wave gates", P.PARTIALLY_RESOLVED, "No wave promotion", "", "T30,T31,T38", "PARTIAL: package/CI/traceability; release criteria open"),
+    _ip(14, "Implementation governance/change/release", "GOV-01,GOV-02,AUD-03", "Phase 3", "GOV + QA + AUD", "Approve wave gates", P.PARTIALLY_RESOLVED, "No wave promotion", "", "T30,T31,T38", "PARTIAL: codec contracts/golden CI/traceability; release criteria open"),
 )
 
 
