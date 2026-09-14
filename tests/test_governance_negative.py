@@ -1,3 +1,4 @@
+# fmt: off  # Capability attack cases are intentionally kept as one matrix.
 import inspect
 
 import pytest
@@ -43,3 +44,4 @@ def test_package_exposes_no_execution_function() -> None:
     prohibited = {"buy", "sell", "order", "position", "capital", "broker", "exchange", "webhook"}
     exported = {name.lower() for name, _ in inspect.getmembers(ai_quant_lab)}
     assert not prohibited.intersection(exported)
+# fmt: on
