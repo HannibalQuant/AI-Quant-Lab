@@ -1,14 +1,31 @@
-# fmt: off  # Constructor layout keeps governed fields visually grouped.
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
 
 import pytest
 
 from ai_quant_lab.core.model import (
-    AgentId, ArtifactEnvelope, ArtifactId, ArtifactLifecycle, AuditEvent, AuditEventId,
-    AuditResult, EvidenceEnvelope, EvidenceId, EvidenceState, FreshnessState,
-    InvalidIdentifier, InvalidRecord, InvalidSerialization, InvalidVersion, ObjectVersion,
-    ProvenanceId, ProvenanceRecord, VersionedRef, canonical_json, canonical_loads, fingerprint,
+    AgentId,
+    ArtifactEnvelope,
+    ArtifactId,
+    ArtifactLifecycle,
+    AuditEvent,
+    AuditEventId,
+    AuditResult,
+    EvidenceEnvelope,
+    EvidenceId,
+    EvidenceState,
+    FreshnessState,
+    InvalidIdentifier,
+    InvalidRecord,
+    InvalidSerialization,
+    InvalidVersion,
+    ObjectVersion,
+    ProvenanceId,
+    ProvenanceRecord,
+    VersionedRef,
+    canonical_json,
+    canonical_loads,
+    fingerprint,
 )
 
 
@@ -57,13 +74,31 @@ def test_provenance_requires_utc_and_process() -> None:
 
 
 def test_artifact_is_immutable_and_requires_fingerprint() -> None:
-    item = ArtifactEnvelope(AID, "report", ObjectVersion(1), NOW, AGENT, PROV,
-                            ObjectVersion(1), ArtifactLifecycle.FROZEN, fingerprint({"x": 1}))
+    item = ArtifactEnvelope(
+        AID,
+        "report",
+        ObjectVersion(1),
+        NOW,
+        AGENT,
+        PROV,
+        ObjectVersion(1),
+        ArtifactLifecycle.FROZEN,
+        fingerprint({"x": 1}),
+    )
     with pytest.raises(FrozenInstanceError):
         item.artifact_type = "changed"  # type: ignore[misc]
     with pytest.raises(InvalidRecord):
-        ArtifactEnvelope(AID, "report", ObjectVersion(1), NOW, AGENT, PROV,
-                         ObjectVersion(1), ArtifactLifecycle.FROZEN, "bad")
+        ArtifactEnvelope(
+            AID,
+            "report",
+            ObjectVersion(1),
+            NOW,
+            AGENT,
+            PROV,
+            ObjectVersion(1),
+            ArtifactLifecycle.FROZEN,
+            "bad",
+        )
 
 
 def test_evidence_is_not_result_and_requires_artifact_reference() -> None:
@@ -71,9 +106,14 @@ def test_evidence_is_not_result_and_requires_artifact_reference() -> None:
     assert item.admissibility is EvidenceState.UNASSESSED
     assert item.freshness is FreshnessState.UNASSESSED
     with pytest.raises(InvalidRecord):
-        EvidenceEnvelope(EvidenceId("x"), "test",
-                         VersionedRef(EvidenceId("wrong"), ObjectVersion(1)),
-                         PROV, NOW, "scope")
+        EvidenceEnvelope(
+            EvidenceId("x"),
+            "test",
+            VersionedRef(EvidenceId("wrong"), ObjectVersion(1)),
+            PROV,
+            NOW,
+            "scope",
+        )
 
 
 def test_audit_records_but_does_not_authorize() -> None:
@@ -98,4 +138,3 @@ def test_malformed_or_noncanonical_serialization_fails() -> None:
         canonical_loads('{"b":1, "a":2}')
     with pytest.raises(InvalidSerialization):
         canonical_json({"x": float("nan")})
-# fmt: on
