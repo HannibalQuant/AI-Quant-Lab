@@ -244,6 +244,7 @@ class IngestionResult:
     session: IngestionSession
     accepted_observations: tuple[RawObservation, ...]
     quarantined_observations: tuple[RawObservation, ...]
+    superseded_observations: tuple[RawObservation, ...]
     rejected: tuple[RejectionRecord, ...]
     reconciliation: tuple[ReconciliationRecord, ...]
     manifest: DatasetManifest
@@ -534,7 +535,7 @@ class IngestionKernel:
                     )
                 )
 
-        accepted, quarantined, reconciled = self._reconcile(
+        accepted, quarantined, superseded, reconciled = self._reconcile(
             request, parsed, prior_observations
         )
         if not accepted:
@@ -612,6 +613,17 @@ class IngestionKernel:
                 ),
             )
         )
+        audits.append(
+            _audit(
+                session,
+                request.actor_id,
+                len(audits),
+                "ingestion.completed",
+                VersionedRef(session.session_id, session.version),
+                AuditResult.ACCEPTED,
+                clock,
+            )
+        )
         completed = IngestionSession(
             session.session_id,
             session.version,
@@ -624,6 +636,7 @@ class IngestionKernel:
             completed,
             tuple(accepted),
             tuple(quarantined),
+            tuple(superseded),
             tuple(rejected),
             tuple(reconciled),
             manifest,
@@ -670,19 +683,17 @@ class IngestionKernel:
         request: IngestionRequest,
         parsed: list[_ParsedCandidate],
         prior: tuple[RawObservation, ...],
-    ) -> tuple[list[RawObservation], list[RawObservation], list[ReconciliationRecord]]:
+    ) -> tuple[
+        list[RawObservation],
+        list[RawObservation],
+        list[RawObservation],
+        list[ReconciliationRecord],
+    ]:
         accepted: list[RawObservation] = []
         quarantined: list[RawObservation] = []
+        superseded: list[RawObservation] = []
         records: list[ReconciliationRecord] = []
         prior_by_ref = {_record_ref(item): item for item in prior}
-        parsed_by_ref = {
-            TraceabilityRef(
-                item.candidate.observation_id,
-                item.candidate.version,
-                None,
-            ): item
-            for item in parsed
-        }
         corrections: list[_ParsedCandidate] = []
         normal: list[_ParsedCandidate] = []
         for item in parsed:
@@ -791,6 +802,7 @@ class IngestionKernel:
             )
             if batch_record is not None:
                 accepted.remove(batch_record)
+                superseded.append(batch_record)
             accepted.append(correction)
             accepted_refs[(correction.observation_id, correction.version)] = correction
             records.append(
@@ -804,7 +816,8 @@ class IngestionKernel:
         accepted.sort(key=lambda item: (item.temporal.event_time, str(item.observation_id)))
         quarantined.sort(key=lambda item: str(item.observation_id))
         records.sort(key=lambda item: str(item.observation_ref.object_id))
-        return accepted, quarantined, records
+        superseded.sort(key=lambda item: str(item.observation_id))
+        return accepted, quarantined, superseded, records
 
     @staticmethod
     def _assemble_manifest(
