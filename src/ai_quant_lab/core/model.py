@@ -106,7 +106,9 @@ class VersionedRef:
     version: ObjectVersion
 
     def __post_init__(self) -> None:
-        if not isinstance(self.object_id, GovernedId) or not isinstance(\n            self.version, ObjectVersion\n        ):
+        if not isinstance(self.object_id, GovernedId) or not isinstance(
+            self.version, ObjectVersion
+        ):
             raise InvalidVersion("exact typed identity and ObjectVersion are required")
 
 
@@ -164,7 +166,11 @@ class StateAssignment:
     value: str
 
     def __post_init__(self) -> None:
-        if (\n            not isinstance(self.axis, StateAxis)\n            or not isinstance(self.value, str)\n            or not self.value\n        ):
+        if (
+            not isinstance(self.axis, StateAxis)
+            or not isinstance(self.value, str)
+            or not self.value
+        ):
             raise InvalidState("state requires an explicit axis and value")
         if self.axis is StateAxis.EXECUTION and self.value != ExecutionState.PLANNED_CLOSED:
             raise InvalidState("EXE-01 supports only PLANNED_CLOSED")
@@ -288,7 +294,10 @@ def _canonical(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return {\n            field.name: _canonical(getattr(value, field.name))\n            for field in dataclasses.fields(value)\n        }
+        return {
+            field.name: _canonical(getattr(value, field.name))
+            for field in dataclasses.fields(value)
+        }
     if isinstance(value, dict):
         if not all(isinstance(key, str) for key in value):
             raise InvalidSerialization("mapping keys must be strings")
@@ -305,7 +314,11 @@ def _canonical(value: Any) -> Any:
 def canonical_json(value: Any) -> str:
     try:
         return json.dumps(
-            _canonical(value),\n            ensure_ascii=False,\n            allow_nan=False,\n            sort_keys=True,\n            separators=(",", ":"),
+            _canonical(value),
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
         )
     except (TypeError, ValueError) as exc:
         raise InvalidSerialization("cannot serialize canonical JSON v1") from exc
