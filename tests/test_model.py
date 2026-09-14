@@ -59,7 +59,9 @@ def test_invalid_versions_rejected(value: int) -> None:
 
 
 def test_version_is_not_identity_or_latest() -> None:
-    assert type(AID) is not type(ObjectVersion(1))
+    identity: object = AID
+    version: object = ObjectVersion(1)
+    assert identity != version
     with pytest.raises(InvalidVersion):
         ObjectVersion.parse("latest")
 
