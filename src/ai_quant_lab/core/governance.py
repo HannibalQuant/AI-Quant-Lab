@@ -44,13 +44,16 @@ class ImplementationPrecondition:
             )
 
 
+def _split(value: str) -> tuple[str, ...]:
+    return tuple(item for item in value.split(",") if item)
+
+
 def _ip(number: int, title: str, modules: str, domains: str, owner: str, decision: str,
         status: PreconditionStatus, default: str, deps: str, tests: str, note: str
         ) -> ImplementationPrecondition:
-    split = lambda value: tuple(filter(None, value.split(",")))
     return ImplementationPrecondition(
-        f"IP-{number:02d}", title, split(modules), split(domains), owner, decision, status,
-        default, split(deps), split(tests), note
+        f"IP-{number:02d}", title, _split(modules), _split(domains), owner, decision, status,
+        default, _split(deps), _split(tests), note
     )
 
 
