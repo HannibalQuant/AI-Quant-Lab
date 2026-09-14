@@ -90,12 +90,16 @@ CI executes on Python 3.12 and 3.13:
 `pytest`
 `pytest tests/test_governance_negative.py`
 
+GitHub Actions run 13 passed both matrix jobs. Per interpreter: format **87 files
+formatted**, lint **all checks passed**, mypy **no issues in 8 source files**, pytest
+**48 passed**, and the focused execution/governance-negative suite **14 passed**.
+
 Tests require no network or current market data. The diff must contain no executable trading
 concepts except negative tests and explicit prohibitions.
 
 ## Readiness after Sprint 1
 
-- **CORE_READY** after CI passes: IDs, versions, immutable envelopes, serialization, audit metadata.
+- **CORE_READY**: IDs, versions, immutable envelopes, serialization, audit metadata.
 - **DATA_FOUNDATION_NOT_READY**: IP-05/IP-11/IP-12 remain.
 - **EXPERIMENT_NOT_READY**: data and authority dependencies remain.
 - **VALIDATION_NOT_READY**: IP-08/IP-09 remain.
