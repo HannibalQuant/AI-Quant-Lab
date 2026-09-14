@@ -7,6 +7,29 @@ import re
 from datetime import UTC, datetime
 from typing import Any, Final, cast
 
+from ai_quant_lab.core.data import (
+    DataQualityState,
+    DatasetLock,
+    DatasetLockId,
+    DatasetLockState,
+    DatasetManifest,
+    DecimalValue,
+    InstrumentClass,
+    InstrumentId,
+    InstrumentIdentity,
+    ObservationId,
+    RawField,
+    RawObservation,
+    ReconciliationDisposition,
+    SourceId,
+    SourceIdentity,
+    SourceType,
+    TemporalCoordinates,
+    TemporalPolicy,
+    VenueId,
+    VenueIdentity,
+    VenueType,
+)
 from ai_quant_lab.core.model import (
     AgentId,
     ArtifactEnvelope,
@@ -43,7 +66,18 @@ REPRESENTATION_VERSION: Final = 1
 _TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")
 _FINGERPRINT = re.compile(r"^sha256:[0-9a-f]{64}$")
 
-type GovernedRecord = ArtifactEnvelope | EvidenceEnvelope | ProvenanceRecord | AuditEvent
+type GovernedRecord = (
+    ArtifactEnvelope
+    | EvidenceEnvelope
+    | ProvenanceRecord
+    | AuditEvent
+    | VenueIdentity
+    | SourceIdentity
+    | InstrumentIdentity
+    | RawObservation
+    | DatasetManifest
+    | DatasetLock
+)
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
     "agent": AgentId,
@@ -60,12 +94,23 @@ _ID_TYPES: dict[str, type[GovernedId]] = {
     "run": RunId,
     "trial": TrialId,
     "validation": ValidationId,
+    "source": SourceId,
+    "venue": VenueId,
+    "instrument": InstrumentId,
+    "observation": ObservationId,
+    "dataset-lock": DatasetLockId,
 }
 _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ArtifactEnvelope: "ArtifactEnvelope",
     EvidenceEnvelope: "EvidenceEnvelope",
     ProvenanceRecord: "ProvenanceRecord",
     AuditEvent: "AuditEvent",
+    VenueIdentity: "VenueIdentity",
+    SourceIdentity: "SourceIdentity",
+    InstrumentIdentity: "InstrumentIdentity",
+    RawObservation: "RawObservation",
+    DatasetManifest: "DatasetManifest",
+    DatasetLock: "DatasetLock",
 }
 
 
@@ -93,6 +138,10 @@ def _text(value: Any, field: str) -> str:
     if not isinstance(value, str):
         raise InvalidSerialization(f"{field} must be text")
     return value
+
+
+def _optional_text(value: Any, field: str) -> str | None:
+    return None if value is None else _text(value, field)
 
 
 def _version(value: Any, field: str) -> ObjectVersion:
@@ -164,6 +213,73 @@ def _metadata(value: Any, field: str) -> tuple[tuple[str, str], ...]:
     return tuple(result)
 
 
+def _trace_ref_payload(reference: TraceabilityRef) -> dict[str, Any]:
+    return {
+        "object_id": str(reference.object_id),
+        "version": reference.version.number,
+        "expected_fingerprint": reference.expected_fingerprint,
+    }
+
+
+def _trace_ref(value: Any, field: str) -> TraceabilityRef:
+    item = _strict_object(value, {"object_id", "version", "expected_fingerprint"}, field)
+    fingerprint = item["expected_fingerprint"]
+    if fingerprint is not None and (
+        not isinstance(fingerprint, str) or not _FINGERPRINT.fullmatch(fingerprint)
+    ):
+        raise InvalidSerialization(f"{field}.expected_fingerprint is invalid")
+    return TraceabilityRef(
+        _id(item["object_id"], f"{field}.object_id"),
+        _version(item["version"], f"{field}.version"),
+        fingerprint,
+    )
+
+
+def _optional_trace_ref(value: Any, field: str) -> TraceabilityRef | None:
+    return None if value is None else _trace_ref(value, field)
+
+
+def _trace_refs(value: Any, field: str) -> tuple[TraceabilityRef, ...]:
+    if not isinstance(value, list):
+        raise InvalidSerialization(f"{field} must be an array")
+    return tuple(_trace_ref(item, f"{field}[]") for item in value)
+
+
+def _timestamp_payload(value: datetime) -> str:
+    return value.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _raw_value_payload(value: str | int | bool | DecimalValue | None) -> dict[str, Any]:
+    if value is None:
+        return {"kind": "null", "value": None}
+    if isinstance(value, bool):
+        return {"kind": "boolean", "value": value}
+    if isinstance(value, int):
+        return {"kind": "integer", "value": value}
+    if isinstance(value, DecimalValue):
+        return {"kind": "decimal", "value": value.text}
+    if isinstance(value, str):
+        return {"kind": "text", "value": value}
+    raise InvalidSerialization("unsupported raw scalar")
+
+
+def _raw_value(value: Any, field: str) -> str | int | bool | DecimalValue | None:
+    item = _strict_object(value, {"kind", "value"}, field)
+    kind = _text(item["kind"], f"{field}.kind")
+    scalar = item["value"]
+    if kind == "null" and scalar is None:
+        return None
+    if kind == "boolean" and isinstance(scalar, bool):
+        return scalar
+    if kind == "integer" and isinstance(scalar, int) and not isinstance(scalar, bool):
+        return scalar
+    if kind == "text" and isinstance(scalar, str):
+        return scalar
+    if kind == "decimal" and isinstance(scalar, str):
+        return DecimalValue(scalar)
+    raise InvalidSerialization(f"{field} has invalid typed raw value")
+
+
 def _payload(record: GovernedRecord) -> dict[str, Any]:
     if isinstance(record, ArtifactEnvelope):
         return {
@@ -224,6 +340,93 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             ),
             "result": record.result.value,
             "context": [list(item) for item in record.context],
+        }
+    if isinstance(record, VenueIdentity):
+        return {
+            "venue_id": str(record.venue_id),
+            "version": record.version.number,
+            "name": record.name,
+            "venue_type": record.venue_type.value,
+            "jurisdiction": record.jurisdiction,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, SourceIdentity):
+        return {
+            "source_id": str(record.source_id),
+            "version": record.version.number,
+            "provider": record.provider,
+            "source_type": record.source_type.value,
+            "feed": record.feed,
+            "source_version": record.source_version,
+            "venue_ref": (
+                None if record.venue_ref is None else _trace_ref_payload(record.venue_ref)
+            ),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, InstrumentIdentity):
+        return {
+            "instrument_id": str(record.instrument_id),
+            "version": record.version.number,
+            "symbol": record.symbol,
+            "instrument_class": record.instrument_class.value,
+            "base_asset": record.base_asset,
+            "quote_asset": record.quote_asset,
+            "settlement_asset": record.settlement_asset,
+            "venue_ref": (
+                None if record.venue_ref is None else _trace_ref_payload(record.venue_ref)
+            ),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, RawObservation):
+        return {
+            "observation_id": str(record.observation_id),
+            "version": record.version.number,
+            "source_ref": _trace_ref_payload(record.source_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "temporal": {
+                "event_time": _timestamp_payload(record.temporal.event_time),
+                "availability_time": _timestamp_payload(record.temporal.availability_time),
+                "ingestion_time": _timestamp_payload(record.temporal.ingestion_time),
+                "policy": record.temporal.policy.value,
+            },
+            "payload": [
+                {"name": field.name, "value": _raw_value_payload(field.value)}
+                for field in record.payload
+            ],
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "source_sequence": record.source_sequence,
+            "quality": record.quality.value,
+            "reconciliation": record.reconciliation.value,
+            "supersedes": (
+                None if record.supersedes is None else _trace_ref_payload(record.supersedes)
+            ),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, DatasetManifest):
+        return {
+            "dataset_id": str(record.dataset_id),
+            "version": record.version.number,
+            "created_at": _timestamp_payload(record.created_at),
+            "observation_refs": [_trace_ref_payload(item) for item in record.observation_refs],
+            "source_refs": [_trace_ref_payload(item) for item in record.source_refs],
+            "instrument_refs": [_trace_ref_payload(item) for item in record.instrument_refs],
+            "event_time_start": _timestamp_payload(record.event_time_start),
+            "event_time_end": _timestamp_payload(record.event_time_end),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+            "membership_policy": record.membership_policy,
+        }
+    if isinstance(record, DatasetLock):
+        return {
+            "lock_id": str(record.lock_id),
+            "version": record.version.number,
+            "dataset_ref": _trace_ref_payload(record.dataset_ref),
+            "manifest_ref": _trace_ref_payload(record.manifest_ref),
+            "locked_at": _timestamp_payload(record.locked_at),
+            "temporal_cutoff": _timestamp_payload(record.temporal_cutoff),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "state": record.state.value,
+            "contract_version": record.contract_version.number,
         }
     raise InvalidSerialization(f"unsupported governed type: {type(record).__name__}")
 
@@ -350,17 +553,232 @@ def _decode_audit(payload: Any) -> AuditEvent:
     )
 
 
+def _decode_venue(payload: Any) -> VenueIdentity:
+    item = _strict_object(
+        payload,
+        {"venue_id", "version", "name", "venue_type", "jurisdiction", "contract_version"},
+        "VenueIdentity.payload",
+    )
+    jurisdiction = item["jurisdiction"]
+    if jurisdiction is not None:
+        jurisdiction = _text(jurisdiction, "jurisdiction")
+    return VenueIdentity(
+        cast(VenueId, _typed_id(item["venue_id"], VenueId, "venue_id")),
+        _version(item["version"], "version"),
+        _text(item["name"], "name"),
+        VenueType(_text(item["venue_type"], "venue_type")),
+        jurisdiction,
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_source(payload: Any) -> SourceIdentity:
+    item = _strict_object(
+        payload,
+        {
+            "source_id",
+            "version",
+            "provider",
+            "source_type",
+            "feed",
+            "source_version",
+            "venue_ref",
+            "contract_version",
+        },
+        "SourceIdentity.payload",
+    )
+    return SourceIdentity(
+        cast(SourceId, _typed_id(item["source_id"], SourceId, "source_id")),
+        _version(item["version"], "version"),
+        _text(item["provider"], "provider"),
+        SourceType(_text(item["source_type"], "source_type")),
+        _text(item["feed"], "feed"),
+        _text(item["source_version"], "source_version"),
+        _optional_trace_ref(item["venue_ref"], "venue_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_instrument(payload: Any) -> InstrumentIdentity:
+    item = _strict_object(
+        payload,
+        {
+            "instrument_id",
+            "version",
+            "symbol",
+            "instrument_class",
+            "base_asset",
+            "quote_asset",
+            "settlement_asset",
+            "venue_ref",
+            "contract_version",
+        },
+        "InstrumentIdentity.payload",
+    )
+    return InstrumentIdentity(
+        cast(InstrumentId, _typed_id(item["instrument_id"], InstrumentId, "instrument_id")),
+        _version(item["version"], "version"),
+        _text(item["symbol"], "symbol"),
+        InstrumentClass(_text(item["instrument_class"], "instrument_class")),
+        _optional_text(item["base_asset"], "base_asset"),
+        _optional_text(item["quote_asset"], "quote_asset"),
+        _optional_text(item["settlement_asset"], "settlement_asset"),
+        _optional_trace_ref(item["venue_ref"], "venue_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_temporal(value: Any) -> TemporalCoordinates:
+    item = _strict_object(
+        value, {"event_time", "availability_time", "ingestion_time", "policy"}, "temporal"
+    )
+    return TemporalCoordinates(
+        _timestamp(item["event_time"], "event_time"),
+        _timestamp(item["availability_time"], "availability_time"),
+        _timestamp(item["ingestion_time"], "ingestion_time"),
+        TemporalPolicy(_text(item["policy"], "policy")),
+    )
+
+
+def _decode_raw_fields(value: Any) -> tuple[RawField, ...]:
+    if not isinstance(value, list):
+        raise InvalidSerialization("payload fields must be an array")
+    fields: list[RawField] = []
+    for raw in value:
+        item = _strict_object(raw, {"name", "value"}, "payload[]")
+        name = _text(item["name"], "payload[].name")
+        fields.append(RawField(name, _raw_value(item["value"], f"payload[{name}].value")))
+    return tuple(fields)
+
+
+def _decode_observation(payload: Any) -> RawObservation:
+    item = _strict_object(
+        payload,
+        {
+            "observation_id",
+            "version",
+            "source_ref",
+            "instrument_ref",
+            "temporal",
+            "payload",
+            "provenance_ref",
+            "source_sequence",
+            "quality",
+            "reconciliation",
+            "supersedes",
+            "contract_version",
+        },
+        "RawObservation.payload",
+    )
+    sequence = item["source_sequence"]
+    if sequence is not None:
+        sequence = _text(sequence, "source_sequence")
+    return RawObservation(
+        cast(ObservationId, _typed_id(item["observation_id"], ObservationId, "observation_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_ref"], "source_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _decode_temporal(item["temporal"]),
+        _decode_raw_fields(item["payload"]),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        sequence,
+        DataQualityState(_text(item["quality"], "quality")),
+        ReconciliationDisposition(_text(item["reconciliation"], "reconciliation")),
+        _optional_trace_ref(item["supersedes"], "supersedes"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_manifest(payload: Any) -> DatasetManifest:
+    item = _strict_object(
+        payload,
+        {
+            "dataset_id",
+            "version",
+            "created_at",
+            "observation_refs",
+            "source_refs",
+            "instrument_refs",
+            "event_time_start",
+            "event_time_end",
+            "provenance_ref",
+            "contract_version",
+            "membership_policy",
+        },
+        "DatasetManifest.payload",
+    )
+    return DatasetManifest(
+        cast(DatasetId, _typed_id(item["dataset_id"], DatasetId, "dataset_id")),
+        _version(item["version"], "version"),
+        _timestamp(item["created_at"], "created_at"),
+        _trace_refs(item["observation_refs"], "observation_refs"),
+        _trace_refs(item["source_refs"], "source_refs"),
+        _trace_refs(item["instrument_refs"], "instrument_refs"),
+        _timestamp(item["event_time_start"], "event_time_start"),
+        _timestamp(item["event_time_end"], "event_time_end"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+        _text(item["membership_policy"], "membership_policy"),
+    )
+
+
+def _decode_lock(payload: Any) -> DatasetLock:
+    item = _strict_object(
+        payload,
+        {
+            "lock_id",
+            "version",
+            "dataset_ref",
+            "manifest_ref",
+            "locked_at",
+            "temporal_cutoff",
+            "provenance_ref",
+            "state",
+            "contract_version",
+        },
+        "DatasetLock.payload",
+    )
+    return DatasetLock(
+        cast(DatasetLockId, _typed_id(item["lock_id"], DatasetLockId, "lock_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["dataset_ref"], "dataset_ref"),
+        _trace_ref(item["manifest_ref"], "manifest_ref"),
+        _timestamp(item["locked_at"], "locked_at"),
+        _timestamp(item["temporal_cutoff"], "temporal_cutoff"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DatasetLockState(_text(item["state"], "state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
     "ProvenanceRecord": _decode_provenance,
     "AuditEvent": _decode_audit,
+    "VenueIdentity": _decode_venue,
+    "SourceIdentity": _decode_source,
+    "InstrumentIdentity": _decode_instrument,
+    "RawObservation": _decode_observation,
+    "DatasetManifest": _decode_manifest,
+    "DatasetLock": _decode_lock,
 }
 
 
-def decode[T: (ArtifactEnvelope, EvidenceEnvelope, ProvenanceRecord, AuditEvent)](
-    data: bytes, expected_type: type[T]
-) -> T:
+def decode[
+    T: (
+        ArtifactEnvelope,
+        EvidenceEnvelope,
+        ProvenanceRecord,
+        AuditEvent,
+        VenueIdentity,
+        SourceIdentity,
+        InstrumentIdentity,
+        RawObservation,
+        DatasetManifest,
+        DatasetLock,
+    )
+](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
     if not isinstance(data, bytes):
         raise InvalidSerialization("canonical representation must be bytes")

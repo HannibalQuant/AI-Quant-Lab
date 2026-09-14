@@ -1,0 +1,35 @@
+{
+  "representation_version": 1,
+  "vectors": [
+    {
+      "name": "venue",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"VenueIdentity\",\"payload\":{\"contract_version\":1,\"jurisdiction\":\"ZZ\",\"name\":\"Synthetic Venue\",\"venue_id\":\"venue:venue-001\",\"venue_type\":\"synthetic\",\"version\":1}}",
+      "fingerprint": "sha256:554d048c3756b2b63d40272e5760c8d8411b806b1cf0a1d2a10d3ce3a601954c"
+    },
+    {
+      "name": "source",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"SourceIdentity\",\"payload\":{\"contract_version\":1,\"feed\":\"trades\",\"provider\":\"Synthetic Provider\",\"source_id\":\"source:source-001\",\"source_type\":\"synthetic_fixture\",\"source_version\":\"fixture-v1\",\"venue_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"venue:venue-001\",\"version\":1},\"version\":1}}",
+      "fingerprint": "sha256:5f71e9191df8ee290527e8da429ad5b4a2bf88c29c7278f200742cfb0c3c588f"
+    },
+    {
+      "name": "instrument",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"InstrumentIdentity\",\"payload\":{\"base_asset\":\"SOL\",\"contract_version\":1,\"instrument_class\":\"spot\",\"instrument_id\":\"instrument:sol-usd-spot-001\",\"quote_asset\":\"USD\",\"settlement_asset\":\"USD\",\"symbol\":\"SOLUSD\",\"venue_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"venue:venue-001\",\"version\":1},\"version\":1}}",
+      "fingerprint": "sha256:d7151a5714ed70b857fd2b14556e4d67a40e1795c67da74add6c938b923aeae0"
+    },
+    {
+      "name": "observation",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"RawObservation\",\"payload\":{\"contract_version\":1,\"instrument_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"instrument:sol-usd-spot-001\",\"version\":1},\"observation_id\":\"observation:observation-001\",\"payload\":[{\"name\":\"price\",\"value\":{\"kind\":\"decimal\",\"value\":\"123.45\"}},{\"name\":\"size\",\"value\":{\"kind\":\"integer\",\"value\":2}}],\"provenance_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"provenance:data-prov-001\",\"version\":1},\"quality\":\"accepted\",\"reconciliation\":\"unique\",\"source_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"source:source-001\",\"version\":1},\"source_sequence\":\"42\",\"supersedes\":null,\"temporal\":{\"availability_time\":\"2026-01-02T09:30:00.250000Z\",\"event_time\":\"2026-01-02T09:30:00.000000Z\",\"ingestion_time\":\"2026-01-02T09:30:02.250000Z\",\"policy\":\"event_lte_availability_lte_ingestion\"},\"version\":1}}",
+      "fingerprint": "sha256:fae5ecf39c0d96c6ecfa00e35976e429cafb02a004a6ca61629aa8a3a227fc9b"
+    },
+    {
+      "name": "manifest",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"DatasetManifest\",\"payload\":{\"contract_version\":1,\"created_at\":\"2026-01-02T09:30:02.250000Z\",\"dataset_id\":\"dataset:dataset-001\",\"event_time_end\":\"2026-01-02T09:30:00.000000Z\",\"event_time_start\":\"2026-01-02T09:30:00.000000Z\",\"instrument_refs\":[{\"expected_fingerprint\":\"sha256:d7151a5714ed70b857fd2b14556e4d67a40e1795c67da74add6c938b923aeae0\",\"object_id\":\"instrument:sol-usd-spot-001\",\"version\":1}],\"membership_policy\":\"accepted_only\",\"observation_refs\":[{\"expected_fingerprint\":\"sha256:fae5ecf39c0d96c6ecfa00e35976e429cafb02a004a6ca61629aa8a3a227fc9b\",\"object_id\":\"observation:observation-001\",\"version\":1}],\"provenance_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"provenance:manifest-prov-001\",\"version\":1},\"source_refs\":[{\"expected_fingerprint\":\"sha256:5f71e9191df8ee290527e8da429ad5b4a2bf88c29c7278f200742cfb0c3c588f\",\"object_id\":\"source:source-001\",\"version\":1}],\"version\":1}}",
+      "fingerprint": "sha256:aa98d3f95d594335e94ef996b1a42d50d131b9da095b015cd3cd592ce58c2636"
+    },
+    {
+      "name": "lock",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"DatasetLock\",\"payload\":{\"contract_version\":1,\"dataset_ref\":{\"expected_fingerprint\":\"sha256:aa98d3f95d594335e94ef996b1a42d50d131b9da095b015cd3cd592ce58c2636\",\"object_id\":\"dataset:dataset-001\",\"version\":1},\"lock_id\":\"dataset-lock:lock-001\",\"locked_at\":\"2026-01-02T09:30:03.250000Z\",\"manifest_ref\":{\"expected_fingerprint\":\"sha256:aa98d3f95d594335e94ef996b1a42d50d131b9da095b015cd3cd592ce58c2636\",\"object_id\":\"dataset:dataset-001\",\"version\":1},\"provenance_ref\":{\"expected_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_id\":\"provenance:lock-prov-001\",\"version\":1},\"state\":\"locked\",\"temporal_cutoff\":\"2026-01-02T09:30:00.250000Z\",\"version\":1}}",
+      "fingerprint": "sha256:fdeb6c30385b1c4db5b6eaafc3bd012d84268d2e409ff86442bdb8c3008a45fe"
+    }
+  ]
+}

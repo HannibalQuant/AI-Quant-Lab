@@ -31,5 +31,5 @@ def test_open_precondition_blocks_affected_domain() -> None:
 def test_status_summary_is_honest() -> None:
     statuses = [item.status for item in PRECONDITIONS]
     assert statuses.count(PreconditionStatus.RESOLVED) == 0
-    assert statuses.count(PreconditionStatus.PARTIALLY_RESOLVED) == 4
-    assert statuses.count(PreconditionStatus.OPEN) == 10
+    assert statuses.count(PreconditionStatus.PARTIALLY_RESOLVED) == 5
+    assert statuses.count(PreconditionStatus.OPEN) == 9
