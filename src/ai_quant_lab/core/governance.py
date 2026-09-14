@@ -1,6 +1,4 @@
-"""Exact Sprint 12 implementation-precondition registry."""
-
-# fmt: off  # Dense governed register mirrors Sprint 12 Section 48.
+"""Exact Sprint 12 implementation-precondition registry."""\n\n# fmt: off  # Dense governed register mirrors Sprint 12 Section 48.
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -77,5 +75,4 @@ def precondition(precondition_id: str) -> ImplementationPrecondition:
     try:
         return next(item for item in PRECONDITIONS if item.precondition_id == precondition_id)
     except StopIteration as exc:
-        raise KeyError(precondition_id) from exc
-# fmt: on
+        raise KeyError(precondition_id) from exc\n# fmt: on\n

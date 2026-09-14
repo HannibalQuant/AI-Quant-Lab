@@ -1,4 +1,5 @@
-# fmt: off  # Constructor layout keeps governed fields visually grouped.\nfrom dataclasses import FrozenInstanceError
+# fmt: off  # Constructor layout keeps governed fields visually grouped.
+from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
 
 import pytest
@@ -96,4 +97,5 @@ def test_malformed_or_noncanonical_serialization_fails() -> None:
     with pytest.raises(InvalidSerialization):
         canonical_loads('{"b":1, "a":2}')
     with pytest.raises(InvalidSerialization):
-        canonical_json({"x": float("nan")})\n# fmt: on\n
+        canonical_json({"x": float("nan")})
+# fmt: on
