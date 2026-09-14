@@ -148,6 +148,29 @@ class VersionedRef:
             raise InvalidVersion("exact typed identity and ObjectVersion are required")
 
 
+@dataclass(frozen=True, slots=True)
+class TraceabilityRef:
+    """Exact, non-following reference to a governed object version."""
+
+    object_id: GovernedId
+    version: ObjectVersion
+    expected_fingerprint: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.object_id, GovernedId) or not isinstance(
+            self.version, ObjectVersion
+        ):
+            raise InvalidVersion("traceability requires exact typed identity and version")
+        if self.expected_fingerprint is not None and not re.fullmatch(
+            r"sha256:[0-9a-f]{64}", self.expected_fingerprint
+        ):
+            raise InvalidRecord("expected_fingerprint must be canonical SHA-256")
+
+    @property
+    def versioned_ref(self) -> VersionedRef:
+        return VersionedRef(self.object_id, self.version)
+
+
 def require_utc(value: datetime, field: str = "timestamp") -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise InvalidRecord(f"{field} must be timezone-aware")
@@ -245,6 +268,11 @@ class ProvenanceRecord:
         require_utc(self.produced_at, "produced_at")
         if not self.process.strip():
             raise InvalidRecord("process is required")
+        references = self.input_refs + (
+            () if self.transformation_ref is None else (self.transformation_ref,)
+        )
+        if any(reference.object_id == self.provenance_id for reference in references):
+            raise InvalidRecord("provenance cannot directly reference itself")
         _metadata(self.metadata)
 
 
@@ -268,6 +296,9 @@ class ArtifactEnvelope:
             raise InvalidRecord("artifact_type is required")
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", self.content_fingerprint):
             raise InvalidRecord("content_fingerprint must be canonical SHA-256")
+        own_ref = VersionedRef(self.artifact_id, self.version)
+        if own_ref in self.parent_refs:
+            raise InvalidRecord("artifact cannot declare its own exact version as parent")
         _metadata(self.metadata)
 
 

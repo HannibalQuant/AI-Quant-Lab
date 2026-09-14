@@ -1,0 +1,29 @@
+{
+  "representation_version": 1,
+  "vectors": [
+    {
+      "name": "artifact",
+      "type": "ArtifactEnvelope",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"ArtifactEnvelope\",\"payload\":{\"artifact_id\":\"artifact:report-001\",\"artifact_type\":\"research_report\",\"content_fingerprint\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"contract_version\":1,\"created_at\":\"2026-09-14T12:34:56.123456Z\",\"lifecycle\":\"frozen\",\"metadata\":[[\"desk\",\"quant\"]],\"parent_refs\":[{\"object_id\":\"dataset:data-001\",\"version\":2}],\"producer_id\":\"agent:producer-001\",\"provenance_id\":\"provenance:prov-001\",\"version\":1}}",
+      "fingerprint": "sha256:037e897b259daeee83296a92485bc90648b3098093f81b829896c1209328ba48"
+    },
+    {
+      "name": "evidence",
+      "type": "EvidenceEnvelope",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"EvidenceEnvelope\",\"payload\":{\"admissibility\":\"unassessed\",\"created_at\":\"2026-09-14T12:34:56.123456Z\",\"evidence_id\":\"evidence:evidence-001\",\"evidence_type\":\"quality_report\",\"freshness\":\"unassessed\",\"invalidates\":[],\"metadata\":[[\"quality\",\"review\"]],\"provenance_id\":\"provenance:prov-001\",\"scope\":\"research\",\"source_artifact\":{\"object_id\":\"artifact:report-001\",\"version\":1},\"supersedes\":null}}",
+      "fingerprint": "sha256:c7309d5813c22acf363516eaa48ae32541921839fdcdadd3b3dbfa2a81f92ffb"
+    },
+    {
+      "name": "provenance",
+      "type": "ProvenanceRecord",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"ProvenanceRecord\",\"payload\":{\"input_refs\":[{\"object_id\":\"dataset:data-001\",\"version\":2}],\"metadata\":[[\"source\",\"fixture\"]],\"process\":\"canonical-fixture\",\"produced_at\":\"2026-09-14T12:34:56.123456Z\",\"producer_id\":\"agent:producer-001\",\"provenance_id\":\"provenance:prov-001\",\"transformation_ref\":null}}",
+      "fingerprint": "sha256:aa5e992cb10dbb25e818f69274198a976eb42a883c1d4d5988450d9b5385eea5"
+    },
+    {
+      "name": "audit",
+      "type": "AuditEvent",
+      "canonical": "{\"$format\":\"ai-quant-lab.canonical-json\",\"$representation_version\":1,\"$type\":\"AuditEvent\",\"payload\":{\"action\":\"record\",\"actor_id\":\"agent:producer-001\",\"context\":[[\"reason\",\"fixture\"]],\"event_id\":\"audit-event:audit-001\",\"occurred_at\":\"2026-09-14T12:34:56.123456Z\",\"result\":\"recorded\",\"target\":{\"object_id\":\"artifact:report-001\",\"version\":1}}}",
+      "fingerprint": "sha256:3f064f1253e9d7f15cf129bdf05bd4aaa2cc92851b47720277689d68c08c2027"
+    }
+  ]
+}
