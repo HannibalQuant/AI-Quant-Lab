@@ -1,0 +1,15 @@
+{
+  "fixture_version": "synthetic-market-bar-fixture-v1",
+  "scenarios": [
+    {"name": "valid_1h", "expected_disposition": "final_bar", "fingerprint": "sha256:c76022942480dd8dd200d45cc7a29a4723b2db462f3083be5653f638e6e06ac6"},
+    {"name": "valid_4h", "expected_disposition": "final_bar", "fingerprint": "sha256:6f83d7a2a2be05c0bd48461e1dc5f96c1588d3b3f722a1439dd2908b1e99ccdc"},
+    {"name": "delayed_availability", "expected_disposition": "available_after_close", "fingerprint": "sha256:d6f030d03891663e59931834131e78e5fa60ec571600a3bd84c02f6f7052d21f"},
+    {"name": "missing_volume", "expected_disposition": "absent_not_zero", "fingerprint": "sha256:6196e299f55fbc05fe5c24307353d5d13ee753dc91716aa8eef76ec261ca2a4f"},
+    {"name": "zero_volume", "expected_disposition": "exact_zero", "fingerprint": "sha256:c76022942480dd8dd200d45cc7a29a4723b2db462f3083be5653f638e6e06ac6"},
+    {"name": "incomplete", "expected_disposition": "exclude_from_finalized_dataset", "fingerprint": "sha256:51d3ee78cb5c55c95f021ad226308fa3e00460044f81faf7913d55020471a383"},
+    {"name": "duplicate_pair", "expected_disposition": "duplicate"},
+    {"name": "conflicting_pair", "expected_disposition": "conflict"},
+    {"name": "mechanical_gap", "expected_disposition": "one_missing_interval"},
+    {"name": "correction_lineage", "expected_disposition": "new_identity_preserves_original"}
+  ]
+}
