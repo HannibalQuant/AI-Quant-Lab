@@ -382,7 +382,11 @@ def _parse_candidate(
         raise
     except InvalidDataContract as exc:
         raise TemporalGateError("candidate violates temporal acceptance policy") from exc
-    fields = tuple(sorted((_parse_field(field) for field in candidate.fields), key=lambda x: x.name))
+    if temporal.legitimate_knowledge_time > request.dataset_cutoff:
+        raise TemporalGateError("candidate availability exceeds exact dataset cutoff")
+    fields = tuple(
+        sorted((_parse_field(field) for field in candidate.fields), key=lambda x: x.name)
+    )
     return _ParsedCandidate(candidate, temporal, fields)
 
 
@@ -497,6 +501,8 @@ class IngestionKernel:
             )
         ]
         for index, candidate in enumerate(adapter.read(), start=1):
+            if not isinstance(candidate, CandidateObservation):
+                raise CriticalIntegrityFailure("adapter emitted unsupported candidate type")
             try:
                 parsed.append(_parse_candidate(candidate, request, clock))
             except CriticalIntegrityFailure:
@@ -519,9 +525,7 @@ class IngestionKernel:
                     else RejectionReason.INVALID_TIMESTAMP
                 )
                 rejected.append(
-                    _safe_rejection(
-                        candidate, session, index, RejectionStage.PARSE, reason, clock
-                    )
+                    _safe_rejection(candidate, session, index, RejectionStage.PARSE, reason, clock)
                 )
             except QualityGateError:
                 rejected.append(
@@ -535,26 +539,37 @@ class IngestionKernel:
                     )
                 )
 
+        identities = [(item.candidate.observation_id, item.candidate.version) for item in parsed]
+        if len(identities) != len(set(identities)):
+            raise CriticalIntegrityFailure(
+                "one session cannot reuse an observation identity/version"
+            )
         accepted, quarantined, superseded, reconciled = self._reconcile(
             request, parsed, prior_observations
         )
         if not accepted:
             raise DatasetAssemblyError("accepted_only assembly requires at least one observation")
 
-        manifest = self._assemble_manifest(request, accepted, clock)
-        manifest_fingerprint = fingerprint_record(manifest)
-        dataset_ref = TraceabilityRef(
-            manifest.dataset_id, manifest.version, manifest_fingerprint
-        )
-        lock = DatasetLock(
-            request.lock_id,
-            request.lock_version,
-            dataset_ref,
-            dataset_ref,
-            clock.now(),
-            request.dataset_cutoff,
-            request.lock_provenance_ref,
-        )
+        try:
+            manifest = self._assemble_manifest(request, accepted, clock)
+            manifest_fingerprint = fingerprint_record(manifest)
+            dataset_ref = TraceabilityRef(
+                manifest.dataset_id, manifest.version, manifest_fingerprint
+            )
+            lock = DatasetLock(
+                request.lock_id,
+                request.lock_version,
+                dataset_ref,
+                dataset_ref,
+                clock.now(),
+                request.dataset_cutoff,
+                request.lock_provenance_ref,
+            )
+            verify_integrity(manifest, manifest_fingerprint)
+        except (InvalidDataContract, IntegrityError) as exc:
+            raise CriticalIntegrityFailure(
+                "manifest/lock construction failed integrity gates"
+            ) from exc
         for item in accepted:
             audits.append(
                 _audit(
@@ -579,14 +594,26 @@ class IngestionKernel:
                     clock,
                 )
             )
-        for item in rejected:
+        for predecessor in superseded:
+            audits.append(
+                _audit(
+                    session,
+                    request.actor_id,
+                    len(audits),
+                    "observation.superseded_by_correction",
+                    VersionedRef(predecessor.observation_id, predecessor.version),
+                    AuditResult.RECORDED,
+                    clock,
+                )
+            )
+        for rejection in rejected:
             audits.append(
                 _audit(
                     session,
                     request.actor_id,
                     len(audits),
                     "candidate.rejected",
-                    VersionedRef(item.rejection_id, ObjectVersion(1)),
+                    VersionedRef(rejection.rejection_id, ObjectVersion(1)),
                     AuditResult.REJECTED,
                     clock,
                 )
@@ -694,6 +721,7 @@ class IngestionKernel:
         superseded: list[RawObservation] = []
         records: list[ReconciliationRecord] = []
         prior_by_ref = {_record_ref(item): item for item in prior}
+        prior_by_identity = {(item.observation_id, item.version): item for item in prior}
         corrections: list[_ParsedCandidate] = []
         normal: list[_ParsedCandidate] = []
         for item in parsed:
@@ -706,9 +734,7 @@ class IngestionKernel:
                 )
                 quarantined.append(record)
                 records.append(
-                    ReconciliationRecord(
-                        _record_ref(record), ReconciliationDisposition.UNRESOLVED
-                    )
+                    ReconciliationRecord(_record_ref(record), ReconciliationDisposition.UNRESOLVED)
                 )
             elif item.candidate.correction_of is not None:
                 corrections.append(item)
@@ -731,9 +757,7 @@ class IngestionKernel:
             }
             if len(content) > 1:
                 related = tuple(
-                    TraceabilityRef(
-                        item.candidate.observation_id, item.candidate.version, None
-                    )
+                    TraceabilityRef(item.candidate.observation_id, item.candidate.version, None)
                     for item in group
                 )
                 for item in group:
@@ -780,18 +804,31 @@ class IngestionKernel:
                     )
                 )
 
-        accepted_refs = {
-            (item.observation_id, item.version): item for item in accepted
-        }
+        accepted_refs = {(item.observation_id, item.version): item for item in accepted}
         for item in sorted(corrections, key=lambda value: str(value.candidate.observation_id)):
             correction_of = item.candidate.correction_of
             assert correction_of is not None
             prior_record = prior_by_ref.get(correction_of)
+            if not isinstance(correction_of.object_id, ObservationId):
+                raise CriticalIntegrityFailure("correction reference requires ObservationId")
             batch_key = (correction_of.object_id, correction_of.version)
             batch_record = accepted_refs.get(batch_key)
+            if batch_key in prior_by_identity and prior_record is None:
+                raise CriticalIntegrityFailure("correction target fingerprint mismatch")
             target = prior_record or batch_record
             if target is None:
                 raise ReconciliationError("correction target is not an exact known observation")
+            if (
+                target.source_ref != request.source_ref
+                or target.instrument_ref != request.instrument_ref
+            ):
+                raise CriticalIntegrityFailure(
+                    "correction target belongs to a different source/instrument"
+                )
+            if target.quality is not DataQualityState.ACCEPTED:
+                raise ReconciliationError(
+                    "non-accepted predecessor cannot be corrected into acceptance"
+                )
             if correction_of.expected_fingerprint != fingerprint_record(target):
                 raise CriticalIntegrityFailure("correction target fingerprint mismatch")
             correction = _make_observation(

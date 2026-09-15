@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -14,6 +17,7 @@ from ai_quant_lab.core.data import (
     InstrumentId,
     InstrumentIdentity,
     ObservationId,
+    RawObservation,
     ReconciliationDisposition,
     SourceId,
     SourceIdentity,
@@ -29,6 +33,7 @@ from ai_quant_lab.core.ingestion import (
     IngestionKernel,
     IngestionRequest,
     IngestionRequestId,
+    IngestionResult,
     IngestionSession,
     IngestionSessionId,
     ParseError,
@@ -73,33 +78,59 @@ def context(
     DeterministicClock,
 ]:
     source = SourceIdentity(
-        SourceId("synthetic-source"), V1, "Synthetic Lab", SourceType.SYNTHETIC_FIXTURE,
-        "synthetic-feed", "fixture-v1", None, V1,
+        SourceId("synthetic-source"),
+        V1,
+        "Synthetic Lab",
+        SourceType.SYNTHETIC_FIXTURE,
+        "synthetic-feed",
+        "fixture-v1",
+        None,
+        V1,
     )
     instrument = InstrumentIdentity(
-        InstrumentId("synthetic-instrument"), V1, "TESTUSD", InstrumentClass.SPOT,
-        "TEST", "USD", None, None, V1,
+        InstrumentId("synthetic-instrument"),
+        V1,
+        "TESTUSD",
+        InstrumentClass.SPOT,
+        "TEST",
+        "USD",
+        None,
+        None,
+        V1,
     )
     source_ref = TraceabilityRef(source.source_id, V1, fingerprint_record(source))
-    instrument_ref = TraceabilityRef(
-        instrument.instrument_id, V1, fingerprint_record(instrument)
-    )
+    instrument_ref = TraceabilityRef(instrument.instrument_id, V1, fingerprint_record(instrument))
     adapter_ref = TraceabilityRef(ArtifactId("synthetic-adapter"), V1, PLACEHOLDER)
     request = IngestionRequest(
-        IngestionRequestId("request-one"), V1, adapter_ref, source_ref, instrument_ref,
+        IngestionRequestId("request-one"),
+        V1,
+        adapter_ref,
+        source_ref,
+        instrument_ref,
         TraceabilityRef(ProvenanceId("observation-input"), V1, PLACEHOLDER),
         TraceabilityRef(ProvenanceId("manifest-input"), V1, PLACEHOLDER),
         TraceabilityRef(ProvenanceId("lock-input"), V1, PLACEHOLDER),
-        DatasetId("synthetic-dataset"), V1, DatasetLockId("synthetic-lock"), V1,
-        T2, AgentId("synthetic-producer"), V1,
+        DatasetId("synthetic-dataset"),
+        V1,
+        DatasetLockId("synthetic-lock"),
+        V1,
+        T2,
+        AgentId("synthetic-producer"),
+        V1,
     )
     session = IngestionSession(
-        IngestionSessionId(session_id), V1,
-        VersionedRef(request.request_id, request.version), T2,
+        IngestionSessionId(session_id),
+        V1,
+        VersionedRef(request.request_id, request.version),
+        T2,
     )
     return (
-        request, session, SyntheticInputAdapter(adapter_ref, candidates),
-        source, instrument, DeterministicClock(T3),
+        request,
+        session,
+        SyntheticInputAdapter(adapter_ref, candidates),
+        source,
+        instrument,
+        DeterministicClock(T3),
     )
 
 
@@ -116,10 +147,17 @@ def candidate(
 ) -> CandidateObservation:
     request, _, _, _, _, _ = context()
     return CandidateObservation(
-        ObservationId(name), V1, request.source_ref, request.instrument_ref,
-        stamp(event), stamp(available), None if ingested is None else stamp(ingested),
+        ObservationId(name),
+        V1,
+        request.source_ref,
+        request.instrument_ref,
+        stamp(event),
+        stamp(available),
+        None if ingested is None else stamp(ingested),
         (CandidateField("price", CandidateValueKind.DECIMAL, price),),
-        sequence, correction_of, quarantine_reason,
+        sequence,
+        correction_of,
+        quarantine_reason,
     )
 
 
@@ -127,11 +165,9 @@ def ingest(
     candidates: tuple[CandidateObservation, ...],
     *,
     session_id: str = "run-one",
-    prior: tuple = (),
-):
-    request, session, _, source, instrument, clock = context(
-        candidates, session_id=session_id
-    )
+    prior: tuple[RawObservation, ...] = (),
+) -> IngestionResult:
+    request, session, _, source, instrument, clock = context(candidates, session_id=session_id)
     adapter = SyntheticInputAdapter(request.adapter_ref, candidates)
     return IngestionKernel().ingest(
         request, session, adapter, source, instrument, clock, prior_observations=prior
@@ -173,7 +209,8 @@ def test_mixed_record_failures_do_not_leak_into_dataset() -> None:
     assert result.accepted_count == 1
     assert result.rejected_count == 2
     assert {record.reason for record in result.rejected} == {
-        RejectionReason.INVALID_TEMPORAL_ORDER, RejectionReason.INVALID_NUMERIC
+        RejectionReason.INVALID_TEMPORAL_ORDER,
+        RejectionReason.INVALID_NUMERIC,
     }
     assert len(result.manifest.observation_refs) == 1
     assert all(
@@ -212,13 +249,19 @@ def test_byte_duplicate_and_retransmission_are_explicit() -> None:
 
 
 def test_explicit_quarantine_excluded_from_accepted_only_membership() -> None:
-    result = ingest((
-        candidate(),
-        candidate(
-            "suspect", event=T1, available=T2, ingested=T3,
-            sequence="seq-two", quarantine_reason="structural review",
-        ),
-    ))
+    result = ingest(
+        (
+            candidate(),
+            candidate(
+                "suspect",
+                event=T1,
+                available=T2,
+                ingested=T3,
+                sequence="seq-two",
+                quarantine_reason="structural review",
+            ),
+        )
+    )
     assert result.quarantined_count == 1
     assert result.quarantined_refs[0] not in result.manifest.observation_refs
     assert result.quarantined_observations[0].quality is DataQualityState.QUARANTINED
@@ -226,10 +269,10 @@ def test_explicit_quarantine_excluded_from_accepted_only_membership() -> None:
 
 def test_correction_preserves_predecessor_and_changes_membership() -> None:
     original = ingest((candidate(),)).accepted_observations[0]
-    prior_ref = TraceabilityRef(original.observation_id, original.version, fingerprint_record(original))
-    correction = candidate(
-        "observation-corrected", price="1.1", correction_of=prior_ref
+    prior_ref = TraceabilityRef(
+        original.observation_id, original.version, fingerprint_record(original)
     )
+    correction = candidate("observation-corrected", price="1.1", correction_of=prior_ref)
     result = ingest((candidate(), correction))
     assert result.accepted_count == 1
     assert len(result.superseded_observations) == 1
@@ -238,7 +281,7 @@ def test_correction_preserves_predecessor_and_changes_membership() -> None:
     assert result.accepted_observations[0].reconciliation is ReconciliationDisposition.CORRECTION
     assert prior_ref not in result.manifest.observation_refs
     with pytest.raises(FrozenInstanceError):
-        original.quality = DataQualityState.INVALIDATED  # type: ignore[misc]
+        setattr(original, "quality", DataQualityState.INVALIDATED)  # noqa: B010 - negative immutable-contract test
 
 
 def test_unknown_or_self_correction_fails_closed() -> None:
@@ -275,17 +318,44 @@ def test_source_instrument_and_adapter_integrity_fail_session() -> None:
     request, session, adapter, source, instrument, clock = context((candidate(),))
     kernel = IngestionKernel()
     with pytest.raises(CriticalIntegrityFailure):
-        kernel.ingest(replace(request, source_ref=TraceabilityRef(
-            source.source_id, V1, PLACEHOLDER,
-        )), session, adapter, source, instrument, clock)
+        kernel.ingest(
+            replace(
+                request,
+                source_ref=TraceabilityRef(
+                    source.source_id,
+                    V1,
+                    PLACEHOLDER,
+                ),
+            ),
+            session,
+            adapter,
+            source,
+            instrument,
+            clock,
+        )
     with pytest.raises(CriticalIntegrityFailure):
-        kernel.ingest(request, session, SyntheticInputAdapter(
-            TraceabilityRef(ArtifactId("other-adapter"), V1, PLACEHOLDER), (candidate(),)
-        ), source, instrument, clock)
+        kernel.ingest(
+            request,
+            session,
+            SyntheticInputAdapter(
+                TraceabilityRef(ArtifactId("other-adapter"), V1, PLACEHOLDER), (candidate(),)
+            ),
+            source,
+            instrument,
+            clock,
+        )
     with pytest.raises(CriticalIntegrityFailure):
-        kernel.ingest(request, session, adapter, source, replace(
-            instrument, version=ObjectVersion(2),
-        ), clock)
+        kernel.ingest(
+            request,
+            session,
+            adapter,
+            source,
+            replace(
+                instrument,
+                version=ObjectVersion(2),
+            ),
+            clock,
+        )
 
 
 def test_candidate_mismatch_float_and_execution_field_rejected() -> None:
@@ -295,15 +365,20 @@ def test_candidate_mismatch_float_and_execution_field_rejected() -> None:
     )
     with pytest.raises(CriticalIntegrityFailure):
         IngestionKernel().ingest(
-            request, session, SyntheticInputAdapter(request.adapter_ref, (mismatched,)),
-            source, instrument, clock,
+            request,
+            session,
+            SyntheticInputAdapter(request.adapter_ref, (mismatched,)),
+            source,
+            instrument,
+            clock,
         )
     with pytest.raises(ParseError):
         CandidateField("price", CandidateValueKind.DECIMAL, 1.0)  # type: ignore[arg-type]
-    with pytest.raises(ParseError):
-        CandidateField("price", CandidateValueKind.DECIMAL, "Infinity")
-        # Numeric validity is enforced at the parsing boundary, not candidate construction.
-        ingest((candidate(price="Infinity"),))
+    # Numeric validity is enforced at parsing; a mixed batch records rejection.
+    infinite = candidate(
+        "infinite", event=T1, available=T2, ingested=T3, price="Infinity", sequence="seq-two"
+    )
+    assert ingest((candidate(), infinite)).rejected[0].reason is RejectionReason.INVALID_NUMERIC
     prohibited = replace(
         candidate("bad-signal", event=T1, available=T2, ingested=T3, sequence="seq-two"),
         fields=(CandidateField("signal_buy", CandidateValueKind.TEXT, "buy"),),
@@ -327,3 +402,126 @@ def test_tampering_and_execution_remain_disallowed() -> None:
         )
     assert tuple(ExecutionState) == (ExecutionState.PLANNED_CLOSED,)
     assert not hasattr(IngestionKernel(), "place_order")
+
+
+def test_cutoff_uses_availability_not_event_time() -> None:
+    late = candidate("late-knowledge", event=T0, available=T3, ingested=T3)
+    result = ingest((candidate(), late))
+    assert result.rejected_count == 1
+    assert result.rejected[0].reason is RejectionReason.INVALID_TEMPORAL_ORDER
+    assert len(result.manifest.observation_refs) == 1
+
+
+def test_identity_reuse_and_unsupported_contract_fail_entire_session() -> None:
+    duplicated = (candidate(), candidate())
+    with pytest.raises(CriticalIntegrityFailure):
+        ingest(duplicated)
+    request, session, adapter, source, instrument, clock = context((candidate(),))
+    with pytest.raises(CriticalIntegrityFailure):
+        replace(request, expected_contract_version=ObjectVersion(2))
+    with pytest.raises(CriticalIntegrityFailure):
+        IngestionKernel().ingest(
+            request,
+            replace(session, state=session.state.COMPLETED),
+            adapter,
+            source,
+            instrument,
+            clock,
+        )
+    with pytest.raises(CriticalIntegrityFailure):
+        IngestionKernel().ingest(
+            request,
+            session,
+            SyntheticInputAdapter(
+                request.adapter_ref, (cast(CandidateObservation, {"untrusted": "object"}),)
+            ),
+            source,
+            instrument,
+            clock,
+        )
+
+
+def test_external_prior_correction_has_exact_reference() -> None:
+    old = ingest((candidate(),)).accepted_observations[0]
+    reference = TraceabilityRef(old.observation_id, old.version, fingerprint_record(old))
+    corrected = candidate("external-correction", correction_of=reference, price="3")
+    result = ingest((corrected,), prior=(old,))
+    assert result.accepted_observations[0].supersedes == reference
+    assert old == ingest((candidate(),)).accepted_observations[0]
+
+
+def test_wrong_correction_fingerprint_blocks_session() -> None:
+    old = ingest((candidate(),)).accepted_observations[0]
+    reference = TraceabilityRef(old.observation_id, old.version, PLACEHOLDER)
+    with pytest.raises(CriticalIntegrityFailure):
+        ingest((candidate("external-correction", correction_of=reference),), prior=(old,))
+
+
+def test_nonaccepted_prior_cannot_launder_quarantine_through_correction() -> None:
+    old = replace(
+        ingest((candidate(),)).accepted_observations[0],
+        quality=DataQualityState.QUARANTINED,
+    )
+    reference = TraceabilityRef(old.observation_id, old.version, fingerprint_record(old))
+    with pytest.raises(ReconciliationError):
+        ingest((candidate("correction", correction_of=reference),), prior=(old,))
+
+
+def test_rejected_record_contains_metadata_not_unsafe_payload() -> None:
+    result = ingest(
+        (
+            candidate(),
+            candidate(
+                "bad",
+                event=T1,
+                available=T2,
+                ingested=T3,
+                price="NaN",
+                sequence="seq-two",
+            ),
+        )
+    )
+    rejection = result.rejected[0]
+    assert rejection.candidate_id == ObservationId("bad")
+    assert not hasattr(rejection, "payload")
+    assert rejection.session_ref.object_id == result.session.session_id
+
+
+def test_fingerprint_binding_changes_with_manifest_membership() -> None:
+    single = ingest((candidate(),))
+    additional = candidate(
+        "second",
+        event=T1,
+        available=T2,
+        ingested=T3,
+        sequence="seq-two",
+    )
+    larger = ingest((candidate(), additional))
+    assert fingerprint_record(single.manifest) != fingerprint_record(larger.manifest)
+    assert fingerprint_record(single.dataset_lock) != fingerprint_record(larger.dataset_lock)
+
+
+@pytest.mark.parametrize("scenario_index", (0, 1))
+def test_read_only_golden_synthetic_scenarios(scenario_index: int) -> None:
+    fixture = json.loads(
+        (Path(__file__).parent / "golden" / "ingestion_scenarios_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    scenario = fixture["scenarios"][scenario_index]
+    records = tuple(
+        candidate(
+            item["id"],
+            event=datetime.fromisoformat(item["event"].replace("Z", "+00:00")),
+            available=datetime.fromisoformat(item["available"].replace("Z", "+00:00")),
+            ingested=datetime.fromisoformat(item["ingested"].replace("Z", "+00:00")),
+            price=item["price"],
+        )
+        for item in scenario["records"]
+    )
+    result = ingest(records)
+    assert (result.accepted_count, result.quarantined_count, result.rejected_count) == (
+        scenario["accepted"],
+        scenario["quarantined"],
+        scenario["rejected"],
+    )
