@@ -30,6 +30,20 @@ from ai_quant_lab.core.data import (
     VenueIdentity,
     VenueType,
 )
+from ai_quant_lab.core.market_data import (
+    AlignmentKind,
+    BarFinality,
+    BarTimestampMeaning,
+    MarketBar,
+    MarketBarId,
+    MarketDataSchema,
+    MarketDataSchemaId,
+    NormalizedBarManifest,
+    TimeframeId,
+    TimeframeIdentity,
+    TimeframeUnit,
+    VolumeSemantic,
+)
 from ai_quant_lab.core.model import (
     AgentId,
     ArtifactEnvelope,
@@ -77,6 +91,10 @@ type GovernedRecord = (
     | RawObservation
     | DatasetManifest
     | DatasetLock
+    | TimeframeIdentity
+    | MarketDataSchema
+    | MarketBar
+    | NormalizedBarManifest
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -99,6 +117,9 @@ _ID_TYPES: dict[str, type[GovernedId]] = {
     "instrument": InstrumentId,
     "observation": ObservationId,
     "dataset-lock": DatasetLockId,
+    "timeframe": TimeframeId,
+    "market-data-schema": MarketDataSchemaId,
+    "market-bar": MarketBarId,
 }
 _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ArtifactEnvelope: "ArtifactEnvelope",
@@ -111,6 +132,10 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     RawObservation: "RawObservation",
     DatasetManifest: "DatasetManifest",
     DatasetLock: "DatasetLock",
+    TimeframeIdentity: "TimeframeIdentity",
+    MarketDataSchema: "MarketDataSchema",
+    MarketBar: "MarketBar",
+    NormalizedBarManifest: "NormalizedBarManifest",
 }
 
 
@@ -427,6 +452,75 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "state": record.state.value,
             "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, TimeframeIdentity):
+        return {
+            "timeframe_id": str(record.timeframe_id),
+            "version": record.version.number,
+            "unit": record.unit.value,
+            "count": record.count,
+            "alignment": record.alignment.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, MarketDataSchema):
+        return {
+            "schema_id": str(record.schema_id),
+            "version": record.version.number,
+            "timeframe_ref": _trace_ref_payload(record.timeframe_ref),
+            "timestamp_meaning": record.timestamp_meaning.value,
+            "open_time_field": record.open_time_field,
+            "close_time_field": record.close_time_field,
+            "open_field": record.open_field,
+            "high_field": record.high_field,
+            "low_field": record.low_field,
+            "close_field": record.close_field,
+            "volume_field": record.volume_field,
+            "finality_field": record.finality_field,
+            "volume_semantic": record.volume_semantic.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, MarketBar):
+        return {
+            "bar_id": str(record.bar_id),
+            "version": record.version.number,
+            "source_ref": _trace_ref_payload(record.source_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "timeframe_ref": _trace_ref_payload(record.timeframe_ref),
+            "schema_ref": _trace_ref_payload(record.schema_ref),
+            "normalization_version": record.normalization_version.number,
+            "bar_open": _timestamp_payload(record.bar_open),
+            "bar_close": _timestamp_payload(record.bar_close),
+            "availability_time": _timestamp_payload(record.availability_time),
+            "ingestion_time": _timestamp_payload(record.ingestion_time),
+            "open": record.open.text,
+            "high": record.high.text,
+            "low": record.low.text,
+            "close": record.close.text,
+            "volume": None if record.volume is None else record.volume.text,
+            "volume_semantic": record.volume_semantic.value,
+            "finality": record.finality.value,
+            "source_observation_ref": _trace_ref_payload(record.source_observation_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "supersedes": None
+            if record.supersedes is None
+            else _trace_ref_payload(record.supersedes),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, NormalizedBarManifest):
+        return {
+            "dataset_id": str(record.dataset_id),
+            "version": record.version.number,
+            "created_at": _timestamp_payload(record.created_at),
+            "bar_refs": [_trace_ref_payload(item) for item in record.bar_refs],
+            "source_refs": [_trace_ref_payload(item) for item in record.source_refs],
+            "instrument_refs": [_trace_ref_payload(item) for item in record.instrument_refs],
+            "timeframe_refs": [_trace_ref_payload(item) for item in record.timeframe_refs],
+            "schema_ref": _trace_ref_payload(record.schema_ref),
+            "normalization_version": record.normalization_version.number,
+            "raw_dataset_lock_ref": _trace_ref_payload(record.raw_dataset_lock_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+            "membership_policy": record.membership_policy,
         }
     raise InvalidSerialization(f"unsupported governed type: {type(record).__name__}")
 
@@ -751,6 +845,161 @@ def _decode_lock(payload: Any) -> DatasetLock:
     )
 
 
+def _decode_timeframe(payload: Any) -> TimeframeIdentity:
+    item = _strict_object(
+        payload,
+        {
+            "timeframe_id",
+            "version",
+            "unit",
+            "count",
+            "alignment",
+            "contract_version",
+        },
+        "TimeframeIdentity.payload",
+    )
+    count = item["count"]
+    if isinstance(count, bool) or not isinstance(count, int):
+        raise InvalidSerialization("timeframe count must be integer")
+    return TimeframeIdentity(
+        cast(TimeframeId, _typed_id(item["timeframe_id"], TimeframeId, "timeframe_id")),
+        _version(item["version"], "version"),
+        TimeframeUnit(_text(item["unit"], "unit")),
+        count,
+        AlignmentKind(_text(item["alignment"], "alignment")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_bar_schema(payload: Any) -> MarketDataSchema:
+    fields = {
+        "schema_id",
+        "version",
+        "timeframe_ref",
+        "timestamp_meaning",
+        "open_time_field",
+        "close_time_field",
+        "open_field",
+        "high_field",
+        "low_field",
+        "close_field",
+        "volume_field",
+        "finality_field",
+        "volume_semantic",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "MarketDataSchema.payload")
+    return MarketDataSchema(
+        cast(MarketDataSchemaId, _typed_id(item["schema_id"], MarketDataSchemaId, "schema_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["timeframe_ref"], "timeframe_ref"),
+        BarTimestampMeaning(_text(item["timestamp_meaning"], "timestamp_meaning")),
+        _text(item["open_time_field"], "open_time_field"),
+        _text(item["close_time_field"], "close_time_field"),
+        _text(item["open_field"], "open_field"),
+        _text(item["high_field"], "high_field"),
+        _text(item["low_field"], "low_field"),
+        _text(item["close_field"], "close_field"),
+        _optional_text(item["volume_field"], "volume_field"),
+        _text(item["finality_field"], "finality_field"),
+        VolumeSemantic(_text(item["volume_semantic"], "volume_semantic")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_market_bar(payload: Any) -> MarketBar:
+    item = _strict_object(
+        payload,
+        {
+            "bar_id",
+            "version",
+            "source_ref",
+            "instrument_ref",
+            "timeframe_ref",
+            "schema_ref",
+            "normalization_version",
+            "bar_open",
+            "bar_close",
+            "availability_time",
+            "ingestion_time",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "volume_semantic",
+            "finality",
+            "source_observation_ref",
+            "provenance_ref",
+            "supersedes",
+            "contract_version",
+        },
+        "MarketBar.payload",
+    )
+    volume = item["volume"]
+    return MarketBar(
+        cast(MarketBarId, _typed_id(item["bar_id"], MarketBarId, "bar_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_ref"], "source_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["timeframe_ref"], "timeframe_ref"),
+        _trace_ref(item["schema_ref"], "schema_ref"),
+        _version(item["normalization_version"], "normalization_version"),
+        _timestamp(item["bar_open"], "bar_open"),
+        _timestamp(item["bar_close"], "bar_close"),
+        _timestamp(item["availability_time"], "availability_time"),
+        _timestamp(item["ingestion_time"], "ingestion_time"),
+        DecimalValue(_text(item["open"], "open")),
+        DecimalValue(_text(item["high"], "high")),
+        DecimalValue(_text(item["low"], "low")),
+        DecimalValue(_text(item["close"], "close")),
+        None if volume is None else DecimalValue(_text(volume, "volume")),
+        VolumeSemantic(_text(item["volume_semantic"], "volume_semantic")),
+        BarFinality(_text(item["finality"], "finality")),
+        _trace_ref(item["source_observation_ref"], "source_observation_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _optional_trace_ref(item["supersedes"], "supersedes"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_normalized_manifest(payload: Any) -> NormalizedBarManifest:
+    item = _strict_object(
+        payload,
+        {
+            "dataset_id",
+            "version",
+            "created_at",
+            "bar_refs",
+            "source_refs",
+            "instrument_refs",
+            "timeframe_refs",
+            "schema_ref",
+            "normalization_version",
+            "raw_dataset_lock_ref",
+            "provenance_ref",
+            "contract_version",
+            "membership_policy",
+        },
+        "NormalizedBarManifest.payload",
+    )
+    return NormalizedBarManifest(
+        cast(DatasetId, _typed_id(item["dataset_id"], DatasetId, "dataset_id")),
+        _version(item["version"], "version"),
+        _timestamp(item["created_at"], "created_at"),
+        _trace_refs(item["bar_refs"], "bar_refs"),
+        _trace_refs(item["source_refs"], "source_refs"),
+        _trace_refs(item["instrument_refs"], "instrument_refs"),
+        _trace_refs(item["timeframe_refs"], "timeframe_refs"),
+        _trace_ref(item["schema_ref"], "schema_ref"),
+        _version(item["normalization_version"], "normalization_version"),
+        _trace_ref(item["raw_dataset_lock_ref"], "raw_dataset_lock_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+        _text(item["membership_policy"], "membership_policy"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -762,6 +1011,10 @@ _DECODERS = {
     "RawObservation": _decode_observation,
     "DatasetManifest": _decode_manifest,
     "DatasetLock": _decode_lock,
+    "TimeframeIdentity": _decode_timeframe,
+    "MarketDataSchema": _decode_bar_schema,
+    "MarketBar": _decode_market_bar,
+    "NormalizedBarManifest": _decode_normalized_manifest,
 }
 
 
@@ -777,6 +1030,10 @@ def decode[
         RawObservation,
         DatasetManifest,
         DatasetLock,
+        TimeframeIdentity,
+        MarketDataSchema,
+        MarketBar,
+        NormalizedBarManifest,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
