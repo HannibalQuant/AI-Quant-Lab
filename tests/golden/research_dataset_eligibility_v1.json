@@ -1,0 +1,13 @@
+{
+  "admission_fingerprint": "sha256:c54df9a202fb9f1e0c0f202f0669046a7cb929b2148addfd55c8b14718380363",
+  "eligibility_record_fingerprint": "sha256:d84a023b716d7ee323579d176ad0e3b26ed2b2eacb25ac0f090836baaec42dd9",
+  "eligibility_status": "ELIGIBLE",
+  "findings": [],
+  "normalized_lock_fingerprint": "sha256:f2ea6b0730927c92db80fdc2841ebc419bd8129ad15c123b22bb59278b3cb210",
+  "normalized_manifest_fingerprint": "sha256:6afe796805db12095e73ff9c00678a8fe185bfb8e8f861e7805015a46694e8a1",
+  "policy_fingerprint": "sha256:0d50fe12ba26972f2360934282a34c0925412fd42add9cd42a4698d3f9ccf41b",
+  "quality_context_fingerprint": "sha256:4d106f9965686158a0c6c1482a95816430052daa516211f1547d83d7ef72637c",
+  "raw_lock_fingerprint": "sha256:fa3af960611bf6145b4c19802f3ae0b98364c0fa7d2ff711d4549c7c7a5e1f4c",
+  "raw_manifest_fingerprint": "sha256:7150d0fd4cbeb697a9c242ce02f8d0166aaa24ba97f4677d478d602a223755bc",
+  "source_declaration_fingerprint": "sha256:2807f8a1deca21555bfb9a6693a9baa1ade75fc4c1c2f6f2e4d2f631d2668352"
+}
