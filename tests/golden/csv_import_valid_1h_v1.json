@@ -1,0 +1,23 @@
+{
+  "fixture": "tests/fixtures/market_data/valid_1h.csv",
+  "contract_version": 1,
+  "file_sha256": "bc103216eb5d2a063341fb28c43780b347fdf46a8fffdf7943b02ab9ef329853",
+  "rows": 3,
+  "accepted": 3,
+  "csv_rejected": 0,
+  "quarantined": 0,
+  "raw_sha256": [
+    "sha256:8f2bd001a420bff478b8c08dc0461217ed098050000cfb1b8451f87e1cbf81bc",
+    "sha256:464756238796cecd77b0f508d63365754c6bafffbdc7e5cf9e470776a0aa06ff",
+    "sha256:d12dc6bf290bac39eb09b9e7474db2296e70af58f297e91da6ac76f2491f4bd5"
+  ],
+  "bar_sha256": [
+    "sha256:d8fb37a59a83cb8e5ed1b7495b8605c083a13104dfcfbd9b15be073b51809016",
+    "sha256:2706fd591c79718a2720a252fc0aecadb334aac577129fec24cb992dd9c157fa",
+    "sha256:d94e8ebc57fc34f980466b8cda422f094e47e40ff51dc9b64bc8b1c0a6f2606a"
+  ],
+  "raw_manifest_sha256": "sha256:f47383e729ae5065bc47171361237bcb3a7db0feea22cb55183e3dca03c7393e",
+  "raw_lock_sha256": "sha256:244cdedb82982c5264b5690913442814cc2ba5f934aa02b89971fa037250fcd5",
+  "normalized_manifest_sha256": "sha256:4ae6d332fc1a1fa030893899035497be9b95c34c41b6a7e9f8cac387d321c4b2",
+  "normalized_lock_sha256": "sha256:04ba34a9f8eb8c864c84de52f4841dfbe8cd835d14131fc460a78a5b2bd3bf02"
+}
