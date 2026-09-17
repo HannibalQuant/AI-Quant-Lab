@@ -24,12 +24,22 @@ from ai_quant_lab.core.model import (
     ObjectVersion,
     TraceabilityRef,
 )
+from ai_quant_lab.core.real_csv_contracts import (
+    RealCsvAdmissionRecord,
+    RealCsvSourceDeclaration,
+)
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
 
 
-type StoredDatasetObject = DatasetManifest | DatasetLock | NormalizedBarManifest
+type StoredDatasetObject = (
+    DatasetManifest
+    | DatasetLock
+    | NormalizedBarManifest
+    | RealCsvSourceDeclaration
+    | RealCsvAdmissionRecord
+)
 
 
 class DatasetRepositoryError(ValueError):
@@ -74,6 +84,8 @@ class StoredObjectType(StrEnum):
     DATASET_MANIFEST = "dataset-manifest"
     DATASET_LOCK = "dataset-lock"
     NORMALIZED_BAR_MANIFEST = "normalized-bar-manifest"
+    REAL_CSV_SOURCE_DECLARATION = "real-csv-source-declaration"
+    REAL_CSV_ADMISSION_RECORD = "real-csv-admission-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -149,6 +161,8 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     DatasetManifest: StoredObjectType.DATASET_MANIFEST,
     DatasetLock: StoredObjectType.DATASET_LOCK,
     NormalizedBarManifest: StoredObjectType.NORMALIZED_BAR_MANIFEST,
+    RealCsvSourceDeclaration: StoredObjectType.REAL_CSV_SOURCE_DECLARATION,
+    RealCsvAdmissionRecord: StoredObjectType.REAL_CSV_ADMISSION_RECORD,
 }
 
 
@@ -164,6 +178,10 @@ def _stored_type(record_type: type[StoredDatasetObject]) -> StoredObjectType:
 def _object_id(record: StoredDatasetObject) -> str:
     if isinstance(record, DatasetLock):
         return str(record.lock_id)
+    if isinstance(record, RealCsvSourceDeclaration):
+        return str(record.provenance_id)
+    if isinstance(record, RealCsvAdmissionRecord):
+        return str(record.admission_id)
     return str(record.dataset_id)
 
 

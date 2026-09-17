@@ -1,4 +1,4 @@
-"""Bounded repository-fixture CSV boundary; acquisition and authority are absent."""
+"""Bounded local CSV parsing; acquisition, trust and research authority are absent."""
 
 from __future__ import annotations
 
@@ -66,6 +66,8 @@ from ai_quant_lab.core.model import (
 MAX_FILE_BYTES = 1_000_000
 MAX_ROWS = 2_000
 MAX_FIELD_LENGTH = 256
+MAX_LINE_BYTES = 4_096
+MAX_COLUMNS = 32
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
@@ -101,6 +103,11 @@ class CsvImportStatus(StrEnum):
     FAILED = "failed"
 
 
+class CsvInputScope(StrEnum):
+    REPOSITORY_FIXTURE = "repository_fixture"
+    CONTROLLED_HISTORICAL = "controlled_historical"
+
+
 @dataclass(frozen=True, slots=True)
 class CsvRowRejection:
     row_number: int
@@ -118,7 +125,7 @@ class CsvNormalizationRejection:
 
 @dataclass(frozen=True, slots=True)
 class CsvImportRequest:
-    """Exact pinned context; its fixture path grants no source or import authority."""
+    """Exact pinned context; its local path grants no source or import authority."""
 
     ingestion: IngestionRequest
     session: IngestionSession
@@ -180,37 +187,50 @@ def _csv_time(text: str) -> datetime:
     return parsed
 
 
-def _safe_file(root: Path, path: Path) -> BinaryIO:
+def _safe_file(root: Path, path: Path, scope: CsvInputScope) -> BinaryIO:
     if path.as_posix().startswith(("http:", "https:", "file:")) or ".." in path.parts:
         raise UnsafeCsvPath("URL or traversal path prohibited")
     if path.suffix != ".csv":
-        raise UnsafeCsvPath("only lowercase .csv fixtures are supported")
-    if (
-        root.name != "market_data"
-        or root.parent.name != "fixtures"
-        or root.parent.parent.name != "tests"
-    ):
-        raise UnsafeCsvPath("allowed root must be the explicit repository fixture tree")
+        raise UnsafeCsvPath("only lowercase .csv files are supported")
+    if scope is CsvInputScope.REPOSITORY_FIXTURE:
+        if (
+            root.name != "market_data"
+            or root.parent.name != "fixtures"
+            or root.parent.parent.name != "tests"
+        ):
+            raise UnsafeCsvPath("allowed root must be the explicit repository fixture tree")
+    elif scope is CsvInputScope.CONTROLLED_HISTORICAL:
+        if not root.is_absolute() or not path.is_absolute():
+            raise UnsafeCsvPath(
+                "controlled historical root and file must be explicit absolute paths"
+            )
+        if root.is_symlink() or not root.is_dir():
+            raise UnsafeCsvPath(
+                "controlled historical root must be an existing non-symlink directory"
+            )
+    else:
+        raise UnsafeCsvPath("unsupported CSV input scope")
     try:
         resolved_root = root.resolve(strict=True)
         resolved_path = path.resolve(strict=True)
         resolved_path.relative_to(resolved_root)
         if path.is_symlink() or not resolved_path.is_file():
-            raise UnsafeCsvPath("symlink or nonregular CSV fixture prohibited")
+            raise UnsafeCsvPath("symlink or nonregular CSV file prohibited")
         return resolved_path.open("rb")
     except (OSError, ValueError) as exc:
-        raise UnsafeCsvPath("fixture is missing or outside allowed root") from exc
+        raise UnsafeCsvPath("CSV file is missing or outside allowed root") from exc
 
 
 @dataclass(frozen=True, slots=True)
 class LocalCsvInputAdapter:
-    """Reads only a named repository-owned fixture; never judges data admissibility."""
+    """Reads one explicitly scoped local CSV; never judges source trust or authority."""
 
     adapter_ref: TraceabilityRef
     request: CsvImportRequest
     schema: MarketDataSchema
     timeframe: TimeframeIdentity
     clock: Clock
+    input_scope: CsvInputScope = CsvInputScope.REPOSITORY_FIXTURE
     prepared: ParsedCsvFile | None = None
 
     def _headers(self) -> set[str]:
@@ -240,10 +260,14 @@ class LocalCsvInputAdapter:
         if self.schema.timeframe_ref != self.request.timeframe_ref:
             raise CsvFileFailure("schema binds another timeframe")
         require_utc(self.clock.now(), "CSV deterministic clock")
-        with _safe_file(self.request.allowed_root, self.request.fixture_path) as stream:
+        if self.prepared is not None:
+            return self.prepared
+        with _safe_file(
+            self.request.allowed_root, self.request.fixture_path, self.input_scope
+        ) as stream:
             data = stream.read(MAX_FILE_BYTES + 1)
         if len(data) > MAX_FILE_BYTES:
-            raise CsvFileFailure("test-scale file byte bound exceeded")
+            raise CsvFileFailure("bounded CSV file byte bound exceeded")
         digest = hashlib.sha256(data).hexdigest()
         if (
             self.request.expected_file_sha256 is not None
@@ -256,13 +280,20 @@ class LocalCsvInputAdapter:
             raise CsvFileFailure("fixture must be strict UTF-8") from exc
         if text.startswith("\ufeff"):
             raise CsvFileFailure("UTF-8 BOM is not supported")
+        if "\x00" in text or any(
+            ord(character) < 32 and character not in {"\r", "\n"} for character in text
+        ):
+            raise CsvFileFailure("NUL or unsupported control character in CSV")
+        if any(len(line.encode("utf-8")) > MAX_LINE_BYTES for line in text.splitlines()):
+            raise CsvFileFailure("bounded CSV line length exceeded")
         reader = csv.reader(
             io.StringIO(text, newline=""), delimiter=",", quotechar='"', strict=True
         )
         try:
             headers = next(reader)
             if (
-                len(headers) != len(set(headers))
+                len(headers) > MAX_COLUMNS
+                or len(headers) != len(set(headers))
                 or any(not h or h.strip() != h for h in headers)
                 or set(headers) != self._headers()
             ):
@@ -277,7 +308,7 @@ class LocalCsvInputAdapter:
             for row in reader:
                 row_count += 1
                 if row_count > MAX_ROWS:
-                    raise CsvFileFailure("test-scale row bound exceeded")
+                    raise CsvFileFailure("bounded CSV row limit exceeded")
                 line = reader.line_num
                 if len(row) != len(headers):
                     rejected.append(CsvRowRejection(line, CsvRowReason.WIDTH, None))

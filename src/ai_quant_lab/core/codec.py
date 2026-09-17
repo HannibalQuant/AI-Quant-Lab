@@ -74,6 +74,21 @@ from ai_quant_lab.core.model import (
     VersionedRef,
     canonical_json,
 )
+from ai_quant_lab.core.real_csv_contracts import (
+    AcquisitionMethod,
+    AvailabilitySemantics,
+    CsvAdmissionStatus,
+    CsvTrustState,
+    DuplicatePolicy,
+    MissingDataPolicy,
+    OrderingPolicy,
+    RealCsvAdmissionRecord,
+    RealCsvSourceDeclaration,
+    ResearchEligibilityState,
+    RetentionClassification,
+    SourcePermissionState,
+    TimestampSemantics,
+)
 
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
 REPRESENTATION_VERSION: Final = 1
@@ -95,6 +110,8 @@ type GovernedRecord = (
     | MarketDataSchema
     | MarketBar
     | NormalizedBarManifest
+    | RealCsvSourceDeclaration
+    | RealCsvAdmissionRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -136,6 +153,8 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     MarketDataSchema: "MarketDataSchema",
     MarketBar: "MarketBar",
     NormalizedBarManifest: "NormalizedBarManifest",
+    RealCsvSourceDeclaration: "RealCsvSourceDeclaration",
+    RealCsvAdmissionRecord: "RealCsvAdmissionRecord",
 }
 
 
@@ -236,6 +255,12 @@ def _metadata(value: Any, field: str) -> tuple[tuple[str, str], ...]:
             raise InvalidSerialization(f"{field} entries must contain text")
         result.append((key, entry))
     return tuple(result)
+
+
+def _strings(value: Any, field: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise InvalidSerialization(f"{field} must be an array of text")
+    return tuple(value)
 
 
 def _trace_ref_payload(reference: TraceabilityRef) -> dict[str, Any]:
@@ -521,6 +546,66 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "contract_version": record.contract_version.number,
             "membership_policy": record.membership_policy,
+        }
+    if isinstance(record, RealCsvSourceDeclaration):
+        return {
+            "provenance_id": str(record.provenance_id),
+            "version": record.version.number,
+            "source_ref": _trace_ref_payload(record.source_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "timeframe_ref": _trace_ref_payload(record.timeframe_ref),
+            "schema_ref": _trace_ref_payload(record.schema_ref),
+            "provider_name": record.provider_name,
+            "acquisition_method": record.acquisition_method.value,
+            "declared_market": record.declared_market,
+            "timestamp_semantics": record.timestamp_semantics.value,
+            "availability_semantics": record.availability_semantics.value,
+            "timezone_rule": record.timezone_rule,
+            "column_mapping": [list(item) for item in record.column_mapping],
+            "ohlc_semantics": record.ohlc_semantics,
+            "volume_semantics": record.volume_semantics,
+            "finality_assumptions": record.finality_assumptions,
+            "missing_data_policy": record.missing_data_policy.value,
+            "duplicate_policy": record.duplicate_policy.value,
+            "ordering_policy": record.ordering_policy.value,
+            "permission_state": record.permission_state.value,
+            "license_reference": record.license_reference,
+            "retention_classification": record.retention_classification.value,
+            "deletion_restriction": record.deletion_restriction,
+            "redistribution_restriction": record.redistribution_restriction,
+            "operator_id": str(record.operator_id),
+            "provenance_note": record.provenance_note,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, RealCsvAdmissionRecord):
+        return {
+            "admission_id": str(record.admission_id),
+            "version": record.version.number,
+            "source_declaration_ref": _trace_ref_payload(record.source_declaration_ref),
+            "original_filename": record.original_filename,
+            "bounded_relative_path": record.bounded_relative_path,
+            "file_sha256": record.file_sha256,
+            "file_size": record.file_size,
+            "ingestion_time": _timestamp_payload(record.ingestion_time),
+            "parser_contract_version": record.parser_contract_version.number,
+            "row_count": record.row_count,
+            "status": record.status.value,
+            "findings": list(record.findings),
+            "raw_manifest_ref": None
+            if record.raw_manifest_ref is None
+            else _trace_ref_payload(record.raw_manifest_ref),
+            "raw_lock_ref": None
+            if record.raw_lock_ref is None
+            else _trace_ref_payload(record.raw_lock_ref),
+            "normalized_manifest_ref": None
+            if record.normalized_manifest_ref is None
+            else _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": None
+            if record.normalized_lock_ref is None
+            else _trace_ref_payload(record.normalized_lock_ref),
+            "trust_state": record.trust_state.value,
+            "research_eligibility": record.research_eligibility.value,
+            "contract_version": record.contract_version.number,
         }
     raise InvalidSerialization(f"unsupported governed type: {type(record).__name__}")
 
@@ -1000,6 +1085,122 @@ def _decode_normalized_manifest(payload: Any) -> NormalizedBarManifest:
     )
 
 
+def _decode_real_csv_source_declaration(payload: Any) -> RealCsvSourceDeclaration:
+    fields = {
+        "provenance_id",
+        "version",
+        "source_ref",
+        "instrument_ref",
+        "timeframe_ref",
+        "schema_ref",
+        "provider_name",
+        "acquisition_method",
+        "declared_market",
+        "timestamp_semantics",
+        "availability_semantics",
+        "timezone_rule",
+        "column_mapping",
+        "ohlc_semantics",
+        "volume_semantics",
+        "finality_assumptions",
+        "missing_data_policy",
+        "duplicate_policy",
+        "ordering_policy",
+        "permission_state",
+        "license_reference",
+        "retention_classification",
+        "deletion_restriction",
+        "redistribution_restriction",
+        "operator_id",
+        "provenance_note",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "RealCsvSourceDeclaration.payload")
+    return RealCsvSourceDeclaration(
+        cast(ProvenanceId, _typed_id(item["provenance_id"], ProvenanceId, "provenance_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_ref"], "source_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["timeframe_ref"], "timeframe_ref"),
+        _trace_ref(item["schema_ref"], "schema_ref"),
+        _text(item["provider_name"], "provider_name"),
+        AcquisitionMethod(_text(item["acquisition_method"], "acquisition_method")),
+        _text(item["declared_market"], "declared_market"),
+        TimestampSemantics(_text(item["timestamp_semantics"], "timestamp_semantics")),
+        AvailabilitySemantics(_text(item["availability_semantics"], "availability_semantics")),
+        _text(item["timezone_rule"], "timezone_rule"),
+        _metadata(item["column_mapping"], "column_mapping"),
+        _text(item["ohlc_semantics"], "ohlc_semantics"),
+        _text(item["volume_semantics"], "volume_semantics"),
+        _text(item["finality_assumptions"], "finality_assumptions"),
+        MissingDataPolicy(_text(item["missing_data_policy"], "missing_data_policy")),
+        DuplicatePolicy(_text(item["duplicate_policy"], "duplicate_policy")),
+        OrderingPolicy(_text(item["ordering_policy"], "ordering_policy")),
+        SourcePermissionState(_text(item["permission_state"], "permission_state")),
+        _optional_text(item["license_reference"], "license_reference"),
+        RetentionClassification(
+            _text(item["retention_classification"], "retention_classification")
+        ),
+        _optional_text(item["deletion_restriction"], "deletion_restriction"),
+        _optional_text(item["redistribution_restriction"], "redistribution_restriction"),
+        cast(AgentId, _typed_id(item["operator_id"], AgentId, "operator_id")),
+        _text(item["provenance_note"], "provenance_note"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_real_csv_admission(payload: Any) -> RealCsvAdmissionRecord:
+    fields = {
+        "admission_id",
+        "version",
+        "source_declaration_ref",
+        "original_filename",
+        "bounded_relative_path",
+        "file_sha256",
+        "file_size",
+        "ingestion_time",
+        "parser_contract_version",
+        "row_count",
+        "status",
+        "findings",
+        "raw_manifest_ref",
+        "raw_lock_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "trust_state",
+        "research_eligibility",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "RealCsvAdmissionRecord.payload")
+    file_size = item["file_size"]
+    row_count = item["row_count"]
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) for value in (file_size, row_count)
+    ):
+        raise InvalidSerialization("file_size and row_count must be integers")
+    return RealCsvAdmissionRecord(
+        cast(ArtifactId, _typed_id(item["admission_id"], ArtifactId, "admission_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_declaration_ref"], "source_declaration_ref"),
+        _text(item["original_filename"], "original_filename"),
+        _text(item["bounded_relative_path"], "bounded_relative_path"),
+        _text(item["file_sha256"], "file_sha256"),
+        file_size,
+        _timestamp(item["ingestion_time"], "ingestion_time"),
+        _version(item["parser_contract_version"], "parser_contract_version"),
+        row_count,
+        CsvAdmissionStatus(_text(item["status"], "status")),
+        _strings(item["findings"], "findings"),
+        _optional_trace_ref(item["raw_manifest_ref"], "raw_manifest_ref"),
+        _optional_trace_ref(item["raw_lock_ref"], "raw_lock_ref"),
+        _optional_trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _optional_trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        CsvTrustState(_text(item["trust_state"], "trust_state")),
+        ResearchEligibilityState(_text(item["research_eligibility"], "research_eligibility")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -1015,6 +1216,8 @@ _DECODERS = {
     "MarketDataSchema": _decode_bar_schema,
     "MarketBar": _decode_market_bar,
     "NormalizedBarManifest": _decode_normalized_manifest,
+    "RealCsvSourceDeclaration": _decode_real_csv_source_declaration,
+    "RealCsvAdmissionRecord": _decode_real_csv_admission,
 }
 
 
@@ -1034,6 +1237,8 @@ def decode[
         MarketDataSchema,
         MarketBar,
         NormalizedBarManifest,
+        RealCsvSourceDeclaration,
+        RealCsvAdmissionRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

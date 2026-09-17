@@ -1,4 +1,4 @@
-"""Deterministic local/synthetic ingestion kernel; no acquisition, storage, or execution."""
+"""Deterministic bounded ingestion kernel; no acquisition, storage, or execution."""
 
 from __future__ import annotations
 
@@ -90,6 +90,11 @@ class IngestionSessionState(StrEnum):
     STARTED = "started"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class IngestionSourceBoundary(StrEnum):
+    SYNTHETIC_ONLY = "synthetic_only"
+    CONTROLLED_FILE_SNAPSHOT = "controlled_file_snapshot"
 
 
 class CandidateValueKind(StrEnum):
@@ -188,6 +193,7 @@ class IngestionRequest:
     dataset_cutoff: datetime
     actor_id: AgentId
     expected_contract_version: ObjectVersion
+    source_boundary: IngestionSourceBoundary = IngestionSourceBoundary.SYNTHETIC_ONLY
 
     def __post_init__(self) -> None:
         _require_ref(self.adapter_ref, ArtifactId, "adapter_ref")
@@ -199,6 +205,8 @@ class IngestionRequest:
         require_utc(self.dataset_cutoff, "dataset_cutoff")
         if self.expected_contract_version != ObjectVersion(1):
             raise CriticalIntegrityFailure("unsupported data contract version")
+        if not isinstance(self.source_boundary, IngestionSourceBoundary):
+            raise CriticalIntegrityFailure("explicit ingestion source boundary is required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -687,8 +695,14 @@ class IngestionKernel:
             raise CriticalIntegrityFailure("session is not in STARTED state")
         if adapter.adapter_ref != request.adapter_ref:
             raise CriticalIntegrityFailure("adapter binding mismatch")
-        if source.source_type is not SourceType.SYNTHETIC_FIXTURE:
-            raise AdapterError("Sprint 4 permits synthetic sources only")
+        if source.source_type is SourceType.SYNTHETIC_FIXTURE:
+            if request.source_boundary is not IngestionSourceBoundary.SYNTHETIC_ONLY:
+                raise AdapterError("synthetic source requires synthetic-only boundary")
+        elif not (
+            source.source_type is SourceType.FILE_SNAPSHOT
+            and request.source_boundary is IngestionSourceBoundary.CONTROLLED_FILE_SNAPSHOT
+        ):
+            raise AdapterError("source type is outside the explicit ingestion boundary")
         try:
             verify_integrity(source, request.source_ref.expected_fingerprint or "")
             verify_integrity(instrument, request.instrument_ref.expected_fingerprint or "")
