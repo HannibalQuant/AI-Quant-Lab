@@ -1,0 +1,18 @@
+{
+  "admission_fingerprint": "sha256:187c2bb1aac470484c924c3792233bc63122e6a214d558c5f114c9654c66557a",
+  "admission_status": "ADMITTED",
+  "file_sha256": "a11cd62524b053d3965ad59dd1e76de35e9bc42494434c1c9a8bed0d0bf42935",
+  "file_size": 409,
+  "fixture": "tests/fixtures/real_csv/repository_owned_external_style_1h.csv",
+  "ingestion_configuration_fingerprint": "sha256:b323be12e0870b0b8a608ef919f85bc3fa740b6b7568e546de6ca13d93a02704",
+  "instrument_identity": "instrument:external-spot-one",
+  "normalized_lock_fingerprint": "sha256:987ba31f58109e5a01dbf9f410c6de011544876f7b61a098c4c6fcef63a1b619",
+  "normalized_manifest_fingerprint": "sha256:a21263ca0fa12741ce9009520f5fc9851fea3676af45b24f72c2c2e9e6a977a1",
+  "raw_dataset_fingerprint": "sha256:6a9d42fbad415946c5c16983679e0214805ae99c403d78642070e721abd8679d",
+  "raw_dataset_lock_fingerprint": "sha256:c4ccb69f7bef20d46f0dbb1c01f75651e1e8083f5a72be5bdd3e299d9de8ba90",
+  "raw_dataset_manifest_fingerprint": "sha256:6a9d42fbad415946c5c16983679e0214805ae99c403d78642070e721abd8679d",
+  "row_count": 3,
+  "source_declaration_fingerprint": "sha256:c1f3ac555df7c48d6003f41f941cd7da18ee6649730d4859b48523ada3c363bd",
+  "source_identity": "source:external-file-source-one",
+  "timeframe_identity": "timeframe:1h"
+}

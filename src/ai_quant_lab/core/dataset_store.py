@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Final, cast
 
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
-from ai_quant_lab.core.data import DatasetLock, DatasetLockId, DatasetManifest
+from ai_quant_lab.core.data import DatasetLock, DatasetLockId, DatasetManifest, RawObservation
 from ai_quant_lab.core.integrity import IntegrityError, fingerprint_record, verify_integrity
 from ai_quant_lab.core.market_data import MarketBar, NormalizedBarManifest
 from ai_quant_lab.core.model import (
@@ -24,12 +24,24 @@ from ai_quant_lab.core.model import (
     ObjectVersion,
     TraceabilityRef,
 )
+from ai_quant_lab.core.real_csv_contracts import (
+    RealCsvAdmissionRecord,
+    RealCsvSourceDeclaration,
+)
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
 
 
-type StoredDatasetObject = DatasetManifest | DatasetLock | NormalizedBarManifest
+type StoredDatasetObject = (
+    DatasetManifest
+    | DatasetLock
+    | NormalizedBarManifest
+    | RawObservation
+    | MarketBar
+    | RealCsvSourceDeclaration
+    | RealCsvAdmissionRecord
+)
 
 
 class DatasetRepositoryError(ValueError):
@@ -71,9 +83,13 @@ class DatasetLineageMismatch(DatasetRepositoryError):
 
 
 class StoredObjectType(StrEnum):
+    RAW_OBSERVATION = "raw-observation"
     DATASET_MANIFEST = "dataset-manifest"
     DATASET_LOCK = "dataset-lock"
+    MARKET_BAR = "market-bar"
     NORMALIZED_BAR_MANIFEST = "normalized-bar-manifest"
+    REAL_CSV_SOURCE_DECLARATION = "real-csv-source-declaration"
+    REAL_CSV_ADMISSION_RECORD = "real-csv-admission-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -146,9 +162,13 @@ class DatasetLineageVerification:
 
 
 _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
+    RawObservation: StoredObjectType.RAW_OBSERVATION,
     DatasetManifest: StoredObjectType.DATASET_MANIFEST,
     DatasetLock: StoredObjectType.DATASET_LOCK,
+    MarketBar: StoredObjectType.MARKET_BAR,
     NormalizedBarManifest: StoredObjectType.NORMALIZED_BAR_MANIFEST,
+    RealCsvSourceDeclaration: StoredObjectType.REAL_CSV_SOURCE_DECLARATION,
+    RealCsvAdmissionRecord: StoredObjectType.REAL_CSV_ADMISSION_RECORD,
 }
 
 
@@ -162,8 +182,16 @@ def _stored_type(record_type: type[StoredDatasetObject]) -> StoredObjectType:
 
 
 def _object_id(record: StoredDatasetObject) -> str:
+    if isinstance(record, RawObservation):
+        return str(record.observation_id)
     if isinstance(record, DatasetLock):
         return str(record.lock_id)
+    if isinstance(record, MarketBar):
+        return str(record.bar_id)
+    if isinstance(record, RealCsvSourceDeclaration):
+        return str(record.provenance_id)
+    if isinstance(record, RealCsvAdmissionRecord):
+        return str(record.admission_id)
     return str(record.dataset_id)
 
 
