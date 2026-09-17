@@ -78,7 +78,9 @@ not authenticated principals and not an invented delegation system.
 Technical admission alone cannot grant eligibility. Prohibited permission is
 `INELIGIBLE`; unknown or non-accepted restricted permission is `QUARANTINED`;
 unknown retention is `INCOMPLETE`. Restricted redistribution is allowed only when
-the exact policy explicitly permits bounded local research.
+the exact policy explicitly permits bounded local research. Unknown permission and
+unknown retention remain non-eligible even if listed by a policy allow-list: policy
+configuration cannot promote semantic uncertainty into research authority.
 
 ## 10. Temporal policy — IP-05
 

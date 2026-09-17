@@ -223,25 +223,18 @@ def _policy_outcome(
     if declaration.permission_state is SourcePermissionState.PROHIBITED:
         findings.add("source_permission_prohibited")
         priority.add(ResearchDatasetEligibilityStatus.INELIGIBLE)
-    elif declaration.permission_state not in policy.accepted_permission_states:
-        finding = (
-            "source_permission_unknown"
-            if declaration.permission_state is SourcePermissionState.UNKNOWN
-            else "source_permission_restricted"
-        )
-        findings.add(finding)
+    elif declaration.permission_state is SourcePermissionState.UNKNOWN:
+        findings.add("source_permission_unknown")
         priority.add(ResearchDatasetEligibilityStatus.QUARANTINED)
-    if declaration.retention_classification not in policy.accepted_retention_classifications:
-        findings.add(
-            "retention_unknown"
-            if declaration.retention_classification is RetentionClassification.UNKNOWN
-            else "retention_not_allowed_by_policy"
-        )
-        priority.add(
-            ResearchDatasetEligibilityStatus.INCOMPLETE
-            if declaration.retention_classification is RetentionClassification.UNKNOWN
-            else ResearchDatasetEligibilityStatus.QUARANTINED
-        )
+    elif declaration.permission_state not in policy.accepted_permission_states:
+        findings.add("source_permission_restricted")
+        priority.add(ResearchDatasetEligibilityStatus.QUARANTINED)
+    if declaration.retention_classification is RetentionClassification.UNKNOWN:
+        findings.add("retention_unknown")
+        priority.add(ResearchDatasetEligibilityStatus.INCOMPLETE)
+    elif declaration.retention_classification not in policy.accepted_retention_classifications:
+        findings.add("retention_not_allowed_by_policy")
+        priority.add(ResearchDatasetEligibilityStatus.QUARANTINED)
     if (
         declaration.redistribution_restriction is not None
         and not policy.allow_restricted_redistribution_for_local_research

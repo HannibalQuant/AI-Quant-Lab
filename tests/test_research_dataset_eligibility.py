@@ -52,6 +52,7 @@ from ai_quant_lab.core.research_eligibility import (
     ResearchDatasetEligibilityRequest,
     ResearchDatasetEligibilityResult,
     ResearchEligibilityError,
+    _policy_outcome,
     eligibility_quality_context_fingerprint,
     evaluate_research_dataset_eligibility,
     non_admitted_eligibility_context_fingerprint,
@@ -339,6 +340,70 @@ def test_policy_quality_and_calendar_requirements_fail_closed(tmp_path: Path) ->
         )
         assert decision.record.status is ResearchDatasetEligibilityStatus.INCOMPLETE
         assert expected_finding in decision.record.findings
+
+
+def test_unknown_permission_remains_blocked_when_policy_lists_it(tmp_path: Path) -> None:
+    onboarding, _, admitted = onboard(tmp_path, suffix="unknown-permission-policy")
+    assert admitted.report is not None
+    declaration = replace(
+        onboarding.declaration,
+        permission_state=SourcePermissionState.UNKNOWN,
+    )
+    eligibility_policy = replace(
+        policy(),
+        accepted_permission_states=tuple(
+            sorted(
+                (
+                    SourcePermissionState.DECLARED_PERMITTED,
+                    SourcePermissionState.UNKNOWN,
+                ),
+                key=lambda value: value.value,
+            )
+        ),
+    )
+
+    status, findings = _policy_outcome(
+        eligibility_policy,
+        admitted.admission,
+        declaration,
+        admitted.report,
+        DECISION_TIME,
+    )
+
+    assert status is ResearchDatasetEligibilityStatus.QUARANTINED
+    assert "source_permission_unknown" in findings
+
+
+def test_unknown_retention_remains_blocked_when_policy_lists_it(tmp_path: Path) -> None:
+    onboarding, _, admitted = onboard(tmp_path, suffix="unknown-retention-policy")
+    assert admitted.report is not None
+    declaration = replace(
+        onboarding.declaration,
+        retention_classification=RetentionClassification.UNKNOWN,
+    )
+    eligibility_policy = replace(
+        policy(),
+        accepted_retention_classifications=tuple(
+            sorted(
+                (
+                    RetentionClassification.DECLARED_LOCAL_ONLY,
+                    RetentionClassification.UNKNOWN,
+                ),
+                key=lambda value: value.value,
+            )
+        ),
+    )
+
+    status, findings = _policy_outcome(
+        eligibility_policy,
+        admitted.admission,
+        declaration,
+        admitted.report,
+        DECISION_TIME,
+    )
+
+    assert status is ResearchDatasetEligibilityStatus.INCOMPLETE
+    assert "retention_unknown" in findings
 
 
 def test_tampered_admission_wrong_declaration_and_missing_context_fail_closed(
