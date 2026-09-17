@@ -448,6 +448,12 @@ def verify_dataset_lineage(
     raw_observation_refs = set(raw_manifest.observation_refs)
     if any(bar.source_observation_ref not in raw_observation_refs for bar in bars):
         raise DatasetLineageMismatch("a bar source observation is absent from raw manifest")
+    raw_source_refs = set(raw_manifest.source_refs)
+    if any(bar.source_ref not in raw_source_refs for bar in bars):
+        raise DatasetLineageMismatch("a bar source is absent from raw manifest")
+    raw_instrument_refs = set(raw_manifest.instrument_refs)
+    if any(bar.instrument_ref not in raw_instrument_refs for bar in bars):
+        raise DatasetLineageMismatch("a bar instrument is absent from raw manifest")
 
     def exact_refs(refs: tuple[TraceabilityRef, ...]) -> tuple[TraceabilityRef, ...]:
         return tuple(

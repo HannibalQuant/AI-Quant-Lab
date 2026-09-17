@@ -278,6 +278,56 @@ def test_corrupted_bar_membership_fails_closed() -> None:
         )
 
 
+def test_bar_source_outside_raw_manifest_fails_even_when_normalized_scope_matches() -> None:
+    data = bundle()
+    outside_source = exact(SourceId("outside-source"), "sha256:" + "b" * 64)
+    changed_bar = replace(data.bar, source_ref=outside_source)
+    changed_manifest = replace(
+        data.normalized_manifest,
+        bar_refs=(exact(changed_bar.bar_id, fingerprint_record(changed_bar)),),
+        source_refs=(outside_source,),
+    )
+    changed_manifest_ref = exact(changed_manifest.dataset_id, fingerprint_record(changed_manifest))
+    changed_lock = replace(
+        data.normalized_lock,
+        dataset_ref=changed_manifest_ref,
+        manifest_ref=changed_manifest_ref,
+    )
+    with pytest.raises(DatasetLineageMismatch, match="bar source is absent from raw manifest"):
+        verify_dataset_lineage(
+            raw_manifest=data.raw_manifest,
+            raw_lock=data.raw_lock,
+            bars=(changed_bar,),
+            normalized_manifest=changed_manifest,
+            normalized_lock=changed_lock,
+        )
+
+
+def test_bar_instrument_outside_raw_manifest_fails_even_when_normalized_scope_matches() -> None:
+    data = bundle()
+    outside_instrument = exact(InstrumentId("outside-instrument"), "sha256:" + "b" * 64)
+    changed_bar = replace(data.bar, instrument_ref=outside_instrument)
+    changed_manifest = replace(
+        data.normalized_manifest,
+        bar_refs=(exact(changed_bar.bar_id, fingerprint_record(changed_bar)),),
+        instrument_refs=(outside_instrument,),
+    )
+    changed_manifest_ref = exact(changed_manifest.dataset_id, fingerprint_record(changed_manifest))
+    changed_lock = replace(
+        data.normalized_lock,
+        dataset_ref=changed_manifest_ref,
+        manifest_ref=changed_manifest_ref,
+    )
+    with pytest.raises(DatasetLineageMismatch, match="bar instrument is absent from raw manifest"):
+        verify_dataset_lineage(
+            raw_manifest=data.raw_manifest,
+            raw_lock=data.raw_lock,
+            bars=(changed_bar,),
+            normalized_manifest=changed_manifest,
+            normalized_lock=changed_lock,
+        )
+
+
 def overwrite(path: Path, data: bytes) -> None:
     path.write_bytes(data)
 

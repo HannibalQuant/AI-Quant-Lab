@@ -157,7 +157,9 @@ It requires:
 - normalized lock dataset and manifest references equal the exact normalized manifest;
 - normalized bar membership equals the exact provided bar references;
 - every bar source observation occurs in the raw manifest;
-- source, instrument, timeframe, schema and normalization-version scope matches.
+- every bar source and instrument occurs in the raw manifest's exact scope;
+- normalized source, instrument and timeframe scope matches the bars;
+- normalized schema and normalization-version scope matches the bars.
 
 The function returns fingerprints as technical verification evidence. It does not
 declare source authenticity, data quality acceptance, research eligibility or
@@ -232,7 +234,7 @@ empty. No database, cloud SDK or network client is added.
 
 ## 13. Tests and golden evidence
 
-`tests/test_dataset_store.py` contains 26 focused tests covering the required positive
+`tests/test_dataset_store.py` contains 28 focused tests covering the required positive
 and negative families, including parameterized supported-object and corruption cases:
 
 - manifest, lock and normalized-manifest store/load;
@@ -255,8 +257,8 @@ never rewrite it. All five prior golden files remain byte-identical.
 
 Quality evidence on Python 3.12 at implementation time:
 
-- focused Sprint 7: **26 passed**;
-- full suite: **242 passed**;
+- focused Sprint 7: **28 passed**;
+- full suite: **244 passed**;
 - governance-negative: **14 passed**;
 - `ruff format --check .`: required final gate;
 - `ruff check .`: required final gate;
