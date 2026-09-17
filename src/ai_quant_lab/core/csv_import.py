@@ -187,6 +187,16 @@ def _csv_time(text: str) -> datetime:
     return parsed
 
 
+def _reject_controlled_symlink_components(root: Path, path: Path) -> None:
+    candidate = root
+    if candidate.is_symlink():
+        raise UnsafeCsvPath("controlled historical path contains symlink component")
+    for component in path.relative_to(root).parts:
+        candidate /= component
+        if candidate.is_symlink():
+            raise UnsafeCsvPath("controlled historical path contains symlink component")
+
+
 def _safe_file(root: Path, path: Path, scope: CsvInputScope) -> BinaryIO:
     if path.as_posix().startswith(("http:", "https:", "file:")) or ".." in path.parts:
         raise UnsafeCsvPath("URL or traversal path prohibited")
@@ -204,19 +214,25 @@ def _safe_file(root: Path, path: Path, scope: CsvInputScope) -> BinaryIO:
             raise UnsafeCsvPath(
                 "controlled historical root and file must be explicit absolute paths"
             )
-        if root.is_symlink() or not root.is_dir():
+        if root.is_symlink():
+            raise UnsafeCsvPath("controlled historical path contains symlink component")
+        if not root.is_dir():
             raise UnsafeCsvPath(
                 "controlled historical root must be an existing non-symlink directory"
             )
     else:
         raise UnsafeCsvPath("unsupported CSV input scope")
     try:
+        if scope is CsvInputScope.CONTROLLED_HISTORICAL:
+            _reject_controlled_symlink_components(root, path)
         resolved_root = root.resolve(strict=True)
         resolved_path = path.resolve(strict=True)
         resolved_path.relative_to(resolved_root)
         if path.is_symlink() or not resolved_path.is_file():
             raise UnsafeCsvPath("symlink or nonregular CSV file prohibited")
         return resolved_path.open("rb")
+    except UnsafeCsvPath:
+        raise
     except (OSError, ValueError) as exc:
         raise UnsafeCsvPath("CSV file is missing or outside allowed root") from exc
 

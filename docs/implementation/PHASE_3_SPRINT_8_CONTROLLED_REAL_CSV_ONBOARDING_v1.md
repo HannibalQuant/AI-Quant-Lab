@@ -49,9 +49,10 @@ is automatically promoted to research use. `EXE-01 = PLANNED_CLOSED`.
 creating a second parser. The caller must provide an existing, absolute, non-symlink
 root and one absolute `.csv` path below it. The adapter does not scan directories.
 
-The boundary rejects URL-like paths, `..`, outside-root resolution, a symlink root,
-direct file symlinks, missing/non-regular inputs, extensions other than lowercase
-`.csv`, files over 1,000,000 bytes, more than 2,000 rows, lines over 4,096 bytes,
+The boundary rejects URL-like paths, `..`, outside-root resolution, symlinks in any
+caller-supplied path component from the allowed root through the final file,
+missing/non-regular inputs, extensions other than lowercase `.csv`, files over
+1,000,000 bytes, more than 2,000 rows, lines over 4,096 bytes,
 more than 32 columns, fields over 256 characters, strict-UTF-8 failures, BOM, NUL and
 unsupported control characters. CSV parsing remains strict for quoting and row width.
 Content is never executed, evaluated, passed to a shell or used to load code. Formula

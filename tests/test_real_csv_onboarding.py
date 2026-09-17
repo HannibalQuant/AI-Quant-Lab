@@ -513,6 +513,34 @@ def test_controlled_path_boundary_rejects_unsafe_inputs(tmp_path: Path, attack: 
         )
 
 
+def test_controlled_path_rejects_intermediate_symlink_inside_allowed_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "allowed"
+    real = root / "real"
+    real.mkdir(parents=True)
+    (real / "input.csv").write_bytes(VALID.read_bytes())
+    (root / "alias").symlink_to(real, target_is_directory=True)
+    request, source, instrument, schema, timeframe, repository = context(
+        tmp_path,
+        path=root / "alias" / "input.csv",
+        allowed_root=root.resolve(),
+        suffix="intermediate-symlink",
+    )
+    with pytest.raises(
+        UnsafeCsvPath, match="controlled historical path contains symlink component"
+    ):
+        onboard_real_csv(
+            request,
+            source=source,
+            instrument=instrument,
+            schema=schema,
+            timeframe=timeframe,
+            clock=CLOCK,
+            repository=repository,
+        )
+
+
 def test_oversized_binary_and_control_character_inputs_fail_closed(tmp_path: Path) -> None:
     root = tmp_path / "hostile"
     root.mkdir()
