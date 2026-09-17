@@ -1,0 +1,29 @@
+{
+  "format": "immutable-local-dataset-store-v1",
+  "objects": {
+    "normalized_lock": {
+      "canonical_byte_sha256": "986e38d2c65056b223e45bbc8785b826b512fde4d7bb0efd4fd80b2384a20780",
+      "fingerprint": "sha256:986e38d2c65056b223e45bbc8785b826b512fde4d7bb0efd4fd80b2384a20780",
+      "object_version": 1,
+      "repository_key": "objects/dataset-lock/v1/986e38d2c65056b223e45bbc8785b826b512fde4d7bb0efd4fd80b2384a20780.json"
+    },
+    "normalized_manifest": {
+      "canonical_byte_sha256": "e91d0bc25a7807f6db945b15653936bd04f133658170a595f2060c44f54a8d97",
+      "fingerprint": "sha256:e91d0bc25a7807f6db945b15653936bd04f133658170a595f2060c44f54a8d97",
+      "object_version": 1,
+      "repository_key": "objects/normalized-bar-manifest/v1/e91d0bc25a7807f6db945b15653936bd04f133658170a595f2060c44f54a8d97.json"
+    },
+    "raw_lock": {
+      "canonical_byte_sha256": "6dcd8af3e00a4ea0b5621409a30b3d79fba6d175c67b355bb2892216eb55f930",
+      "fingerprint": "sha256:6dcd8af3e00a4ea0b5621409a30b3d79fba6d175c67b355bb2892216eb55f930",
+      "object_version": 1,
+      "repository_key": "objects/dataset-lock/v1/6dcd8af3e00a4ea0b5621409a30b3d79fba6d175c67b355bb2892216eb55f930.json"
+    },
+    "raw_manifest": {
+      "canonical_byte_sha256": "c41ae8353dded08fc1f854e06290cbf9261ee07118359c2d82a6b127c72ec27c",
+      "fingerprint": "sha256:c41ae8353dded08fc1f854e06290cbf9261ee07118359c2d82a6b127c72ec27c",
+      "object_version": 1,
+      "repository_key": "objects/dataset-manifest/v1/c41ae8353dded08fc1f854e06290cbf9261ee07118359c2d82a6b127c72ec27c.json"
+    }
+  }
+}
