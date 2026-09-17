@@ -1,0 +1,2 @@
+bar_open_time,bar_close_time,open,high,low,close,volume,finality,availability_time
+2025-01-01T11:00:00.000000Z,2025-01-01T12:00:00.000000Z,1,2,0,1.5,10,final,2025-01-01T12:00:05.000000Z
