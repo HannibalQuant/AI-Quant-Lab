@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,7 +13,10 @@ import pytest
 
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
 from ai_quant_lab.core.csv_import import (
+    MAX_COLUMNS,
+    MAX_FIELD_LENGTH,
     MAX_FILE_BYTES,
+    MAX_LINE_BYTES,
     CsvFileFailure,
     CsvImportAssemblyFailure,
     CsvImportRequest,
@@ -65,6 +69,7 @@ from ai_quant_lab.core.real_csv_contracts import (
     DuplicatePolicy,
     MissingDataPolicy,
     OrderingPolicy,
+    PriceDomain,
     RealCsvAdmissionRecord,
     RealCsvSourceDeclaration,
     ResearchEligibilityState,
@@ -110,6 +115,7 @@ def context(
     timestamps: TimestampSemantics = TimestampSemantics.BAR_OPEN_AND_CLOSE_UTC,
     availability: AvailabilitySemantics = AvailabilitySemantics.EXPLICIT_SOURCE_AVAILABILITY_UTC,
     missing: MissingDataPolicy = MissingDataPolicy.RECORD_GAPS,
+    acquired_at: datetime | None = None,
 ) -> tuple[
     RealCsvOnboardingRequest,
     SourceIdentity,
@@ -174,6 +180,7 @@ def context(
         source.provider,
         AcquisitionMethod.OPERATOR_LOCAL_FILE,
         "declared-spot-market",
+        acquired_at,
         timestamps,
         availability,
         "explicit UTC Z timestamps; no filename inference",
@@ -188,8 +195,9 @@ def context(
             ("open", "open"),
             ("volume", "volume"),
         ),
+        PriceDomain.POSITIVE_ONLY,
         "declared OHLC bar geometry",
-        "declared base-asset volume",
+        VolumeSemantic.BASE,
         "final rows are available no earlier than bar close",
         missing,
         DuplicatePolicy.REJECT_ALL,
@@ -271,6 +279,7 @@ def run(
     timestamps: TimestampSemantics = TimestampSemantics.BAR_OPEN_AND_CLOSE_UTC,
     availability: AvailabilitySemantics = AvailabilitySemantics.EXPLICIT_SOURCE_AVAILABILITY_UTC,
     missing: MissingDataPolicy = MissingDataPolicy.RECORD_GAPS,
+    acquired_at: datetime | None = None,
 ) -> tuple[RealCsvOnboardingRequest, LocalDatasetRepository, RealCsvOnboardingResult]:
     request, source, instrument, schema, timeframe, repository = context(
         tmp_path,
@@ -282,6 +291,7 @@ def run(
         timestamps=timestamps,
         availability=availability,
         missing=missing,
+        acquired_at=acquired_at,
     )
     result = onboard_real_csv(
         request,
@@ -302,8 +312,11 @@ def test_valid_real_csv_is_admitted_persisted_reloaded_and_lineage_verified(
     assert result.admission.status is CsvAdmissionStatus.ADMITTED
     assert result.admission.trust_state is CsvTrustState.NOT_TRUSTED
     assert result.admission.research_eligibility is ResearchEligibilityState.NOT_RESEARCH_ELIGIBLE
+    assert result.admission.file_size == len(VALID.read_bytes())
+    assert result.admission.ingestion_configuration_fingerprint.startswith("sha256:")
+    assert request.declaration.declared_acquisition_time is None
     assert result.report is not None and len(result.report.normalized_bars) == 3
-    assert len(result.writes) == 6
+    assert len(result.writes) == 12
     loaded_declaration = repository.load(
         repository_key(request.declaration), RealCsvSourceDeclaration
     ).record
@@ -312,6 +325,20 @@ def test_valid_real_csv_is_admitted_persisted_reloaded_and_lineage_verified(
     ).record
     assert loaded_declaration == request.declaration
     assert loaded_admission == result.admission
+    assert (
+        tuple(
+            repository.load(repository_key(observation), type(observation)).record
+            for observation in result.report.ingestion.accepted_observations
+        )
+        == result.report.ingestion.accepted_observations
+    )
+    assert (
+        tuple(
+            repository.load(repository_key(bar), type(bar)).record
+            for bar in result.report.normalized_bars
+        )
+        == result.report.normalized_bars
+    )
     assert decode(encode(result.admission), RealCsvAdmissionRecord) == result.admission
     verification = verify_real_csv_lineage(
         admission=loaded_admission,
@@ -319,6 +346,45 @@ def test_valid_real_csv_is_admitted_persisted_reloaded_and_lineage_verified(
         report=result.report,
     )
     assert verification.file_sha256 == result.admission.file_sha256
+
+
+def test_declared_acquisition_time_and_deterministic_outputs_are_preserved(
+    tmp_path: Path,
+) -> None:
+    acquired = datetime(2025, 2, 1, 4, tzinfo=UTC)
+    request, source, instrument, schema, timeframe, first_repository = context(
+        tmp_path, acquired_at=acquired
+    )
+    first = onboard_real_csv(
+        request,
+        source=source,
+        instrument=instrument,
+        schema=schema,
+        timeframe=timeframe,
+        clock=CLOCK,
+        repository=first_repository,
+    )
+    second_repository = LocalDatasetRepository(
+        root=tmp_path / "vault-deterministic-restart", allowed_root=tmp_path
+    )
+    second = onboard_real_csv(
+        request,
+        source=source,
+        instrument=instrument,
+        schema=schema,
+        timeframe=timeframe,
+        clock=CLOCK,
+        repository=second_repository,
+    )
+    assert request.declaration.declared_acquisition_time == acquired
+    assert first.report is not None and second.report is not None
+    assert (
+        first.report.ingestion.accepted_observations
+        == second.report.ingestion.accepted_observations
+    )
+    assert first.report.ingestion.manifest == second.report.ingestion.manifest
+    assert first.report.ingestion.dataset_lock == second.report.ingestion.dataset_lock
+    assert first.admission == second.admission
 
 
 def test_file_identity_is_content_based_while_path_identity_remains_explicit(
@@ -384,7 +450,19 @@ def test_permission_and_time_ambiguity_never_promote_to_admitted(tmp_path: Path)
     assert "availability_time_unknown" in unavailable.admission.findings
 
 
-@pytest.mark.parametrize("attack", ["outside", "traversal", "symlink", "directory", "extension"])
+@pytest.mark.parametrize(
+    "attack",
+    [
+        "outside",
+        "traversal",
+        "relative",
+        "symlink",
+        "symlink-escape",
+        "directory",
+        "fifo",
+        "extension",
+    ],
+)
 def test_controlled_path_boundary_rejects_unsafe_inputs(tmp_path: Path, attack: str) -> None:
     root = tmp_path / "allowed"
     root.mkdir()
@@ -397,12 +475,23 @@ def test_controlled_path_boundary_rejects_unsafe_inputs(tmp_path: Path, attack: 
         path = outside.resolve()
     elif attack == "traversal":
         path = Path(str(root.resolve()) + "/../outside.csv")
+    elif attack == "relative":
+        path = Path("input.csv")
     elif attack == "symlink":
         path = root / "link.csv"
         path.symlink_to(valid)
+    elif attack == "symlink-escape":
+        outside_dir = tmp_path / "outside-directory"
+        outside_dir.mkdir()
+        (outside_dir / "input.csv").write_bytes(VALID.read_bytes())
+        (root / "escape").symlink_to(outside_dir, target_is_directory=True)
+        path = root / "escape" / "input.csv"
     elif attack == "directory":
         path = root / "directory.csv"
         path.mkdir()
+    elif attack == "fifo":
+        path = root / "pipe.csv"
+        os.mkfifo(path)
     elif attack == "extension":
         path = root / "input.CSV"
         path.write_bytes(VALID.read_bytes())
@@ -431,6 +520,7 @@ def test_oversized_binary_and_control_character_inputs_fail_closed(tmp_path: Pat
         ("oversized", b"x" * (MAX_FILE_BYTES + 1), "byte bound"),
         ("utf8", b"\xff", "strict UTF-8"),
         ("nul", (HEADER + ROW_1).encode() + b"\x00", "control character"),
+        ("binary", b"PK\x03\x04", "control character"),
     ):
         path = root / f"{suffix}.csv"
         path.write_bytes(data)
@@ -452,6 +542,53 @@ def test_oversized_binary_and_control_character_inputs_fail_closed(tmp_path: Pat
             )
 
 
+def test_line_column_and_field_resource_bounds_fail_closed(tmp_path: Path) -> None:
+    root = tmp_path / "resource-bounds"
+    root.mkdir()
+    attacks = (
+        ("line", HEADER + "x" * (MAX_LINE_BYTES + 1) + "\n", "line length"),
+        (
+            "columns",
+            ",".join(f"column_{index}" for index in range(MAX_COLUMNS + 1)) + "\n",
+            "header",
+        ),
+    )
+    for suffix, data, match in attacks:
+        path = root / f"{suffix}.csv"
+        path.write_text(data, encoding="utf-8")
+        request, source, instrument, schema, timeframe, repository = context(
+            tmp_path,
+            path=path.resolve(),
+            allowed_root=root.resolve(),
+            suffix=f"resource-{suffix}",
+        )
+        with pytest.raises(CsvFileFailure, match=match):
+            onboard_real_csv(
+                request,
+                source=source,
+                instrument=instrument,
+                schema=schema,
+                timeframe=timeframe,
+                clock=CLOCK,
+                repository=repository,
+            )
+
+    field_path = root / "field.csv"
+    oversized_field = "9" * (MAX_FIELD_LENGTH + 1)
+    field_path.write_text(
+        HEADER + ROW_1.replace(",100,102,", f",{oversized_field},102,"),
+        encoding="utf-8",
+    )
+    _, _, field_result = run(
+        tmp_path,
+        path=field_path.resolve(),
+        allowed_root=root.resolve(),
+        suffix="resource-field",
+    )
+    assert field_result.admission.status is CsvAdmissionStatus.QUARANTINED
+    assert "csv_row_resource_limit_none" in field_result.admission.findings
+
+
 def test_declared_gap_policy_controls_technical_admission(tmp_path: Path) -> None:
     root = tmp_path / "gaps"
     root.mkdir()
@@ -468,6 +605,70 @@ def test_declared_gap_policy_controls_technical_admission(tmp_path: Path) -> Non
     assert result.admission.status is CsvAdmissionStatus.QUARANTINED
     assert result.report is None
     assert "missing_intervals_rejected_by_policy" in result.admission.findings
+
+
+def test_declared_price_volume_and_timeframe_semantics_fail_closed(tmp_path: Path) -> None:
+    root = tmp_path / "semantic-attacks"
+    root.mkdir()
+
+    negative_path = root / "negative.csv"
+    negative_path.write_text(HEADER + ROW_1.replace(",100,102,", ",-1,102,"), encoding="utf-8")
+    _, _, negative = run(
+        tmp_path,
+        path=negative_path.resolve(),
+        allowed_root=root.resolve(),
+        suffix="negative",
+    )
+    assert negative.admission.status is CsvAdmissionStatus.QUARANTINED
+    assert "nonpositive_price_outside_declared_domain" in negative.admission.findings
+
+    interval_path = root / "interval.csv"
+    interval_path.write_text(
+        HEADER + ROW_1.replace("2025-02-01T01:00:00.000000Z", "2025-02-01T02:00:00.000000Z", 1),
+        encoding="utf-8",
+    )
+    _, _, interval = run(
+        tmp_path,
+        path=interval_path.resolve(),
+        allowed_root=root.resolve(),
+        suffix="interval",
+    )
+    assert interval.admission.status is CsvAdmissionStatus.QUARANTINED
+    assert any(finding.startswith("csv_row_interval_") for finding in interval.admission.findings)
+
+    request, source, instrument, schema, timeframe, repository = context(
+        tmp_path, suffix="volume-mismatch"
+    )
+    mismatch = replace(
+        request,
+        declaration=replace(request.declaration, volume_semantics=VolumeSemantic.QUOTE),
+    )
+    with pytest.raises(RealCsvOnboardingError, match="volume semantics"):
+        onboard_real_csv(
+            mismatch,
+            source=source,
+            instrument=instrument,
+            schema=schema,
+            timeframe=timeframe,
+            clock=CLOCK,
+            repository=repository,
+        )
+
+
+def test_conflicting_duplicate_timestamp_is_quarantined(tmp_path: Path) -> None:
+    root = tmp_path / "conflicting-duplicate"
+    root.mkdir()
+    path = root / "input.csv"
+    conflict = ROW_1.replace(",100,102,99,101,", ",100,103,99,102,")
+    path.write_text(HEADER + ROW_1 + conflict, encoding="utf-8")
+    _, _, result = run(
+        tmp_path,
+        path=path.resolve(),
+        allowed_root=root.resolve(),
+        suffix="conflicting-duplicate",
+    )
+    assert result.admission.status is CsvAdmissionStatus.QUARANTINED
+    assert "event_time_not_strictly_increasing" in result.admission.findings
 
 
 @pytest.mark.parametrize(
@@ -518,23 +719,42 @@ def test_csv_corruption_never_reaches_admitted(
         assert result.admission.status is not CsvAdmissionStatus.ADMITTED
 
 
-def test_wrong_source_declaration_and_changed_file_linkage_fail_closed(tmp_path: Path) -> None:
+def test_wrong_declared_identity_and_changed_file_linkage_fail_closed(tmp_path: Path) -> None:
     request, source, instrument, schema, timeframe, repository = context(tmp_path)
-    wrong = replace(
+    declaration = request.declaration
+
+    def wrong_ref(reference: TraceabilityRef) -> TraceabilityRef:
+        return TraceabilityRef(reference.object_id, reference.version, "sha256:" + "b" * 64)
+
+    wrong_declarations = (
+        replace(declaration, source_ref=wrong_ref(declaration.source_ref)),
+        replace(declaration, instrument_ref=wrong_ref(declaration.instrument_ref)),
+        replace(declaration, timeframe_ref=wrong_ref(declaration.timeframe_ref)),
+        replace(declaration, schema_ref=wrong_ref(declaration.schema_ref)),
+    )
+    for wrong_declaration in wrong_declarations:
+        with pytest.raises(RealCsvOnboardingError, match="exact governed identities"):
+            onboard_real_csv(
+                replace(request, declaration=wrong_declaration),
+                source=source,
+                instrument=instrument,
+                schema=schema,
+                timeframe=timeframe,
+                clock=CLOCK,
+                repository=repository,
+            )
+    vendor_source = replace(source, source_type=SourceType.DATA_VENDOR)
+    vendor_request = replace(
         request,
         declaration=replace(
-            request.declaration,
-            source_ref=TraceabilityRef(
-                request.declaration.source_ref.object_id,
-                V1,
-                "sha256:" + "b" * 64,
-            ),
+            declaration,
+            source_ref=exact(vendor_source, vendor_source.source_id),
         ),
     )
-    with pytest.raises(RealCsvOnboardingError, match="exact governed identities"):
+    with pytest.raises(RealCsvOnboardingError, match="file-snapshot source identity"):
         onboard_real_csv(
-            wrong,
-            source=source,
+            vendor_request,
+            source=vendor_source,
             instrument=instrument,
             schema=schema,
             timeframe=timeframe,
@@ -558,6 +778,16 @@ def test_wrong_source_declaration_and_changed_file_linkage_fail_closed(tmp_path:
             declaration=request.declaration,
             report=result.report,
         )
+    wrong_configuration = replace(
+        result.admission,
+        ingestion_configuration_fingerprint="sha256:" + "f" * 64,
+    )
+    with pytest.raises(RealCsvOnboardingError, match="exact ingestion configuration"):
+        verify_real_csv_lineage(
+            admission=wrong_configuration,
+            declaration=request.declaration,
+            report=result.report,
+        )
     assert result.admission.raw_manifest_ref is not None
     wrong_dataset = replace(
         result.admission,
@@ -570,6 +800,21 @@ def test_wrong_source_declaration_and_changed_file_linkage_fail_closed(tmp_path:
     with pytest.raises(RealCsvOnboardingError, match="exact dataset artifacts"):
         verify_real_csv_lineage(
             admission=wrong_dataset,
+            declaration=request.declaration,
+            report=result.report,
+        )
+    assert result.admission.raw_lock_ref is not None
+    wrong_lock = replace(
+        result.admission,
+        raw_lock_ref=TraceabilityRef(
+            result.admission.raw_lock_ref.object_id,
+            V1,
+            "sha256:" + "e" * 64,
+        ),
+    )
+    with pytest.raises(RealCsvOnboardingError, match="exact dataset artifacts"):
+        verify_real_csv_lineage(
+            admission=wrong_lock,
             declaration=request.declaration,
             report=result.report,
         )
@@ -587,13 +832,21 @@ def test_sprint_8_golden_evidence(tmp_path: Path) -> None:
     report = result.report
     assert golden == {
         "admission_fingerprint": fingerprint_record(result.admission),
+        "admission_status": result.admission.status.value,
         "file_sha256": result.admission.file_sha256.removeprefix("sha256:"),
+        "file_size": result.admission.file_size,
         "fixture": "tests/fixtures/real_csv/repository_owned_external_style_1h.csv",
+        "ingestion_configuration_fingerprint": (
+            result.admission.ingestion_configuration_fingerprint
+        ),
+        "instrument_identity": str(report.ingestion.manifest.instrument_refs[0].object_id),
         "normalized_lock_fingerprint": fingerprint_record(report.normalized_lock),
         "normalized_manifest_fingerprint": fingerprint_record(report.normalized_manifest),
+        "raw_dataset_fingerprint": fingerprint_record(report.ingestion.manifest),
         "raw_dataset_lock_fingerprint": fingerprint_record(report.ingestion.dataset_lock),
         "raw_dataset_manifest_fingerprint": fingerprint_record(report.ingestion.manifest),
         "row_count": result.admission.row_count,
         "source_declaration_fingerprint": fingerprint_record(request.declaration),
         "source_identity": str(report.ingestion.manifest.source_refs[0].object_id),
+        "timeframe_identity": str(report.normalized_manifest.timeframe_refs[0].object_id),
     }

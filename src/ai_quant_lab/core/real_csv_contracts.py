@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
+from ai_quant_lab.core.market_data import VolumeSemantic
 from ai_quant_lab.core.model import (
     AgentId,
     ArtifactId,
@@ -61,6 +62,11 @@ class OrderingPolicy(StrEnum):
     STRICT_ASCENDING_EVENT_TIME = "strict_ascending_event_time"
 
 
+class PriceDomain(StrEnum):
+    POSITIVE_ONLY = "positive_only"
+    SIGNED = "signed"
+
+
 class CsvAdmissionStatus(StrEnum):
     ADMITTED = "ADMITTED"
     REJECTED = "REJECTED"
@@ -105,12 +111,14 @@ class RealCsvSourceDeclaration:
     provider_name: str
     acquisition_method: AcquisitionMethod
     declared_market: str
+    declared_acquisition_time: datetime | None
     timestamp_semantics: TimestampSemantics
     availability_semantics: AvailabilitySemantics
     timezone_rule: str
     column_mapping: tuple[tuple[str, str], ...]
+    price_domain: PriceDomain
     ohlc_semantics: str
-    volume_semantics: str
+    volume_semantics: VolumeSemantic
     finality_assumptions: str
     missing_data_policy: MissingDataPolicy
     duplicate_policy: DuplicatePolicy
@@ -139,11 +147,16 @@ class RealCsvSourceDeclaration:
             ("declared_market", self.declared_market),
             ("timezone_rule", self.timezone_rule),
             ("ohlc_semantics", self.ohlc_semantics),
-            ("volume_semantics", self.volume_semantics),
             ("finality_assumptions", self.finality_assumptions),
             ("provenance_note", self.provenance_note),
         ):
             _required(value, name)
+        if self.declared_acquisition_time is not None:
+            require_utc(self.declared_acquisition_time, "declared_acquisition_time")
+        if not isinstance(self.price_domain, PriceDomain) or not isinstance(
+            self.volume_semantics, VolumeSemantic
+        ):
+            raise RealCsvContractError("price and volume semantics must be explicit enums")
         _optional(self.license_reference, "license_reference")
         _optional(self.deletion_restriction, "deletion_restriction")
         _optional(self.redistribution_restriction, "redistribution_restriction")
@@ -170,6 +183,8 @@ class RealCsvAdmissionRecord:
     file_size: int
     ingestion_time: datetime
     parser_contract_version: ObjectVersion
+    canonical_codec_version: ObjectVersion
+    ingestion_configuration_fingerprint: str
     row_count: int
     status: CsvAdmissionStatus
     findings: tuple[str, ...]
@@ -196,6 +211,10 @@ class RealCsvAdmissionRecord:
         require_utc(self.ingestion_time, "ingestion_time")
         if self.parser_contract_version != ObjectVersion(1):
             raise RealCsvContractError("unsupported parser contract version")
+        if self.canonical_codec_version != ObjectVersion(1):
+            raise RealCsvContractError("unsupported canonical codec version")
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", self.ingestion_configuration_fingerprint):
+            raise RealCsvContractError("ingestion configuration fingerprint must be SHA-256")
         if (
             len(self.findings) != len(set(self.findings))
             or tuple(sorted(self.findings)) != self.findings

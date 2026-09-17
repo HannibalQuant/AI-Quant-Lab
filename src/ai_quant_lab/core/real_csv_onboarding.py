@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from decimal import Decimal
 
-from ai_quant_lab.core.codec import GovernedRecord
+from ai_quant_lab.core.codec import REPRESENTATION_VERSION, GovernedRecord
 from ai_quant_lab.core.csv_import import (
     CsvImportKernel,
     CsvImportReport,
@@ -23,12 +24,19 @@ from ai_quant_lab.core.dataset_store import (
 from ai_quant_lab.core.ingestion import Clock, IngestionSourceBoundary
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.market_data import MarketDataSchema, TimeframeIdentity
-from ai_quant_lab.core.model import ArtifactId, GovernedId, ObjectVersion, TraceabilityRef
+from ai_quant_lab.core.model import (
+    ArtifactId,
+    GovernedId,
+    ObjectVersion,
+    TraceabilityRef,
+    fingerprint,
+)
 from ai_quant_lab.core.real_csv_contracts import (
     AvailabilitySemantics,
     CsvAdmissionStatus,
     CsvTrustState,
     MissingDataPolicy,
+    PriceDomain,
     RealCsvAdmissionRecord,
     RealCsvSourceDeclaration,
     ResearchEligibilityState,
@@ -91,6 +99,40 @@ def _expected_mapping(schema: MarketDataSchema) -> tuple[tuple[str, str], ...]:
     return tuple(sorted(values.items()))
 
 
+def _ingestion_configuration_fingerprint(request: CsvImportRequest) -> str:
+    """Fingerprint semantic configuration without treating a physical path as authority."""
+    ingestion = request.ingestion
+    return fingerprint(
+        {
+            "request_id": ingestion.request_id,
+            "request_version": ingestion.version,
+            "adapter_ref": ingestion.adapter_ref,
+            "source_ref": ingestion.source_ref,
+            "instrument_ref": ingestion.instrument_ref,
+            "observation_provenance_ref": ingestion.observation_provenance_ref,
+            "manifest_provenance_ref": ingestion.manifest_provenance_ref,
+            "lock_provenance_ref": ingestion.lock_provenance_ref,
+            "raw_dataset_id": ingestion.dataset_id,
+            "raw_dataset_version": ingestion.dataset_version,
+            "raw_lock_id": ingestion.lock_id,
+            "raw_lock_version": ingestion.lock_version,
+            "dataset_cutoff": ingestion.dataset_cutoff,
+            "actor_id": ingestion.actor_id,
+            "source_boundary": ingestion.source_boundary,
+            "schema_ref": request.schema_ref,
+            "timeframe_ref": request.timeframe_ref,
+            "normalized_dataset_id": request.normalized_dataset_id,
+            "normalized_dataset_version": request.normalized_dataset_version,
+            "normalized_lock_id": request.normalized_lock_id,
+            "normalized_lock_version": request.normalized_lock_version,
+            "normalization_version": request.normalization_version,
+            "normalization_provenance_ref": request.normalization_provenance_ref,
+            "normalized_provenance_ref": request.normalized_provenance_ref,
+            "contract_version": request.contract_version,
+        }
+    )
+
+
 def _validate_bindings(
     request: RealCsvOnboardingRequest,
     source: SourceIdentity,
@@ -113,8 +155,8 @@ def _validate_bindings(
     )
     if actual != expected:
         raise RealCsvOnboardingError("source declaration does not bind exact governed identities")
-    if source.source_type is SourceType.SYNTHETIC_FIXTURE:
-        raise RealCsvOnboardingError("real onboarding rejects synthetic source identity")
+    if source.source_type is not SourceType.FILE_SNAPSHOT:
+        raise RealCsvOnboardingError("real CSV onboarding requires file-snapshot source identity")
     if declaration.provider_name != source.provider:
         raise RealCsvOnboardingError("declared provider does not match source identity")
     if declaration.operator_id != request.csv_request.ingestion.actor_id:
@@ -126,6 +168,8 @@ def _validate_bindings(
         raise RealCsvOnboardingError("real CSV requires controlled file-snapshot boundary")
     if declaration.column_mapping != _expected_mapping(schema):
         raise RealCsvOnboardingError("declared column mapping does not match parser schema")
+    if declaration.volume_semantics is not schema.volume_semantic:
+        raise RealCsvOnboardingError("declared volume semantics do not match parser schema")
     declaration_ref = _exact(declaration, declaration.provenance_id, declaration.version)
     provenance_refs = (
         request.csv_request.ingestion.observation_provenance_ref,
@@ -207,6 +251,8 @@ def _admission(
         file_size,
         adapter.clock.now(),
         adapter.request.contract_version,
+        ObjectVersion(REPRESENTATION_VERSION),
+        _ingestion_configuration_fingerprint(adapter.request),
         row_count,
         status,
         tuple(sorted(findings)),
@@ -270,6 +316,24 @@ def onboard_real_csv(
         quality_findings.append("event_time_not_strictly_increasing")
     if prepared.rejected:
         quality_findings.append("csv_rows_rejected")
+        quality_findings.extend(
+            f"csv_row_{rejection.reason.value}_{rejection.column or 'none'}"
+            for rejection in prepared.rejected
+        )
+    if request.declaration.price_domain is PriceDomain.POSITIVE_ONLY:
+        price_fields = {
+            schema.open_field,
+            schema.high_field,
+            schema.low_field,
+            schema.close_field,
+        }
+        if any(
+            Decimal(str(field.value)) <= 0
+            for candidate in prepared.candidates
+            for field in candidate.fields
+            if field.name in price_fields
+        ):
+            quality_findings.append("nonpositive_price_outside_declared_domain")
     if quality_findings:
         admission = _admission(
             request,
@@ -318,9 +382,17 @@ def onboard_real_csv(
     writes: list[RepositoryWriteResult] = [repository.store(request.declaration)]
     if admitted:
         writes.extend(
+            repository.store(observation) for observation in report.ingestion.accepted_observations
+        )
+        writes.extend(
             (
                 repository.store(report.ingestion.manifest),
                 repository.store(report.ingestion.dataset_lock),
+            )
+        )
+        writes.extend(repository.store(bar) for bar in report.normalized_bars)
+        writes.extend(
+            (
                 repository.store(report.normalized_manifest),
                 repository.store(report.normalized_lock),
             )
@@ -341,8 +413,19 @@ def verify_real_csv_lineage(
     declaration_ref = _exact(declaration, declaration.provenance_id, declaration.version)
     if admission.source_declaration_ref != declaration_ref:
         raise RealCsvOnboardingError("admission does not bind the exact source declaration")
-    if admission.file_sha256 != "sha256:" + report.file_sha256:
+    if (
+        admission.file_sha256 != "sha256:" + report.file_sha256
+        or admission.file_size != report.file_size
+        or admission.row_count != report.row_count
+    ):
         raise RealCsvOnboardingError("admission does not bind the exact evaluated file")
+    if (
+        admission.parser_contract_version != report.request.contract_version
+        or admission.canonical_codec_version != ObjectVersion(REPRESENTATION_VERSION)
+        or admission.ingestion_configuration_fingerprint
+        != _ingestion_configuration_fingerprint(report.request)
+    ):
+        raise RealCsvOnboardingError("admission does not bind the exact ingestion configuration")
     expected_refs = (
         _exact(
             report.ingestion.manifest,

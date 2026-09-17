@@ -69,10 +69,11 @@ record. It binds exact fingerprint-bearing references to `SourceIdentity`,
 `InstrumentIdentity`, `TimeframeIdentity` and `MarketDataSchema`, plus:
 
 - declared provider and market;
-- acquisition method (`operator_local_file` only in v1);
+- acquisition method (`operator_local_file` only in v1) and optional declared
+  acquisition time when actually known;
 - UTC timestamp and source-availability semantics;
 - exact sorted column mapping;
-- OHLC, volume and finality semantics;
+- positive-or-signed price domain plus exact OHLC, volume and finality semantics;
 - missing-data, duplicate and ordering policies;
 - declared permission and license reference;
 - retention, deletion and redistribution declarations;
@@ -103,6 +104,7 @@ Before row admission the existing adapter reads bounded bytes and records:
 - original basename;
 - exact path relative to the allowed root;
 - caller-supplied immutable admission-attempt ID;
+- canonical parser/codec versions and deterministic ingestion-configuration fingerprint;
 - injected deterministic ingestion time.
 
 The parser request is then pinned to the computed file digest before ingestion. The
@@ -174,7 +176,10 @@ The source declaration is a separate immutable provenance object so manifests ca
 bind its exact fingerprint without a circular hash. All observation, manifest, lock
 and normalization provenance references must equal that exact declaration reference.
 The post-import admission record binds the file identity and exact fingerprint-bearing
-references to both manifests and both locks.
+references to both manifests and both locks. It also binds canonical parser/codec
+versions and a deterministic fingerprint of the IDs, references, cutoff, actor,
+schema, timeframe, normalization and dataset/lock configuration used by ingestion;
+the physical path remains separately recorded context rather than authority.
 
 `verify_real_csv_lineage()` checks the declaration fingerprint, evaluated file hash,
 all four admission-to-dataset references and manifest/lock provenance, then delegates
@@ -185,16 +190,19 @@ The function verifies integrity and lineage, not authenticity or permission trut
 ## 13. Persistence integration
 
 Sprint 8 reuses `LocalDatasetRepository`. Its supported set is minimally extended by
-`RealCsvSourceDeclaration` and `RealCsvAdmissionRecord`, both using canonical JSON v1,
-the existing fingerprint algorithm, type/version-separated immutable keys and strict
-typed reload. Admitted results store six objects: declaration, raw manifest, raw lock,
-normalized manifest, normalized lock and admission record. Non-admitted policy
-outcomes store only the declaration and outcome record.
+`RawObservation`, `MarketBar`, `RealCsvSourceDeclaration` and
+`RealCsvAdmissionRecord`, all using canonical JSON v1, the existing fingerprint
+algorithm, type/version-separated immutable keys and strict typed reload. Admitted
+results store the declaration, every accepted raw observation, raw manifest and lock,
+every finalized market bar, normalized manifest and lock, then the admission record.
+Non-admitted policy outcomes store only the declaration and outcome record.
 
 New deterministic paths are:
 
 ```text
 <root>/objects/real-csv-source-declaration/v1/<sha256>.json
+<root>/objects/raw-observation/v1/<sha256>.json
+<root>/objects/market-bar/v1/<sha256>.json
 <root>/objects/real-csv-admission-record/v1/<sha256>.json
 ```
 
@@ -225,15 +233,17 @@ trace without using storage or status as authority.
 
 ## 15. Tests and golden evidence
 
-`tests/test_real_csv_onboarding.py` adds 22 focused tests (with parameterization) for:
+`tests/test_real_csv_onboarding.py` adds 29 focused tests (with parameterization) for:
 
 - valid source declaration, file identity, deterministic parse, manifests/locks,
   immutable persistence/reload and exact lineage;
 - same/different bytes and same/different filenames;
-- outside root, traversal, symlink, non-regular file, extension and size rejection;
+- relative/outside/traversal paths, direct and escaping symlinks, FIFO/non-regular
+  inputs, extension and size rejection;
 - malformed UTF-8, NUL/control characters, quoting, duplicate/missing/extra headers;
-- malformed timestamp/numeric, NaN/Infinity, invalid OHLC, duplicate and out-of-order
-  timestamps;
+- pathological line/column/field bounds, malformed timestamp/numeric, NaN/Infinity,
+  nonpositive declared-price-domain values, invalid OHLC, duplicate, conflicting and
+  out-of-order timestamps, timeframe and volume-semantics mismatch;
 - explicit UTC, unknown availability, ambiguous time, permission and retention gates;
 - unchanged `NOT_TRUSTED`, `NOT_RESEARCH_ELIGIBLE` and execution closure;
 - wrong source declaration, changed file linkage and typed canonical reload.
@@ -241,14 +251,16 @@ trace without using storage or status as authority.
 The repository-owned fixture
 `tests/fixtures/real_csv/repository_owned_external_style_1h.csv` contains three tiny
 synthetic external-style bars and no vendor data. The read-only golden
-`tests/golden/real_csv_onboarding_v1.json` pins file SHA-256, row count, source ID,
-declaration, raw/normalized manifest, raw/normalized lock and admission fingerprints.
+`tests/golden/real_csv_onboarding_v1.json` pins file SHA-256 and size, source,
+instrument and timeframe IDs, row count, admission status, ingestion-configuration,
+declaration, raw dataset/manifest/lock, normalized manifest/lock and admission
+fingerprints.
 No prior golden file was changed or regenerated.
 
 Implementation-time Python 3.12 evidence before PR creation:
 
-- focused Sprint 8: **22 passed**;
-- full suite: **266 passed**;
+- focused Sprint 8: **29 passed**;
+- full suite: **273 passed**;
 - `ruff format --check .`: passed;
 - `ruff check .`: passed;
 - strict `mypy`: passed;
@@ -286,6 +298,7 @@ DEFERRED 0 -> 0**. Descriptions were aligned to evidence; no status changed.
 | Versioned source declaration | `SOURCE_DECLARATION_READY` |
 | Bounded technical admission | `REAL_CSV_TECHNICAL_ADMISSION_READY` |
 | File-to-dataset provenance | `REAL_DATA_PROVENANCE_READY` |
+| Immutable admitted-data custody | `IMMUTABLE_REAL_DATA_CUSTODY_READY` |
 | Research dataset eligibility | `RESEARCH_DATASET_ELIGIBILITY_NOT_READY` |
 | Experiment foundation | `EXPERIMENT_FOUNDATION_NOT_READY` |
 | Backtesting | `BACKTESTING_NOT_READY` |
