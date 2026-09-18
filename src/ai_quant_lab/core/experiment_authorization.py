@@ -114,12 +114,12 @@ def _policy_outcome(
     if spec.family not in policy.allowed_families:
         findings.add("experiment_family_not_allowed")
         priorities.add(ExperimentAuthorizationDecision.UNSUPPORTED)
-    if spec.no_lookahead is not policy.required_no_lookahead:
-        findings.add("lookahead_contract_missing")
-        priorities.add(ExperimentAuthorizationDecision.UNSUPPORTED)
     if spec.no_lookahead is NoLookaheadSemantics.UNKNOWN:
         findings.add("lookahead_contract_unknown")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
+    elif spec.no_lookahead is not policy.required_no_lookahead:
+        findings.add("lookahead_contract_missing")
+        priorities.add(ExperimentAuthorizationDecision.UNSUPPORTED)
     if spec.calendar_semantics not in policy.accepted_calendars:
         findings.add("calendar_semantics_unknown")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
