@@ -159,7 +159,7 @@ def authorize(tmp_path: Path, *, spec_mutator=None, policy_mutator=None, actor_v
 
 
 def test_exact_eligible_dataset_can_authorize_declaration_only(tmp_path: Path) -> None:
-    repository, eligibility, spec, policy, result = authorize(tmp_path)
+    repository, _, spec, policy, result = authorize(tmp_path)
     record = result.record
     assert record.status is ExperimentAuthorizationDecision.AUTHORIZED
     assert record.lifecycle is ExperimentLifecycleBoundary.AUTHORIZED_NOT_EXECUTED
@@ -216,7 +216,7 @@ def test_authorization_is_deterministic_and_idempotent(tmp_path: Path) -> None:
 
 
 def test_seed_and_configuration_change_identity(tmp_path: Path) -> None:
-    _, eligibility, first, _, _ = authorize(tmp_path)
+    _, _, first, _, _ = authorize(tmp_path)
     second = replace(first, random_seed=43)
     third = replace(first, configuration=(("lookback_bars", "48"), ("mode", "descriptive")))
     assert fingerprint_record(first) != fingerprint_record(second)
@@ -344,7 +344,7 @@ def test_explicit_zero_cost_is_distinct_from_unknown(tmp_path: Path) -> None:
 
 
 def test_invalid_temporal_and_configuration_contracts_fail_at_construction(tmp_path: Path) -> None:
-    _, eligibility, spec, _, _ = authorize(tmp_path)
+    _, _, spec, _, _ = authorize(tmp_path)
     with pytest.raises(ExperimentContractError):
         replace(spec, observation_start=spec.observation_end)
     with pytest.raises(ExperimentContractError):
