@@ -30,6 +30,17 @@ from ai_quant_lab.core.data import (
     VenueIdentity,
     VenueType,
 )
+from ai_quant_lab.core.experiment_contracts import (
+    CostSemantics,
+    ExperimentAuthorizationDecision,
+    ExperimentAuthorizationPolicy,
+    ExperimentAuthorizationRecord,
+    ExperimentFamily,
+    ExperimentLifecycleBoundary,
+    ExperimentSpecification,
+    NoLookaheadSemantics,
+    PositionSizingSemantics,
+)
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     BarFinality,
@@ -100,17 +111,6 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityRecord,
     ResearchDatasetEligibilityStatus,
     ValidationStatus,
-)
-from ai_quant_lab.core.experiment_contracts import (
-    CostSemantics,
-    ExperimentAuthorizationDecision,
-    ExperimentAuthorizationPolicy,
-    ExperimentAuthorizationRecord,
-    ExperimentFamily,
-    ExperimentLifecycleBoundary,
-    ExperimentSpecification,
-    NoLookaheadSemantics,
-    PositionSizingSemantics,
 )
 
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
