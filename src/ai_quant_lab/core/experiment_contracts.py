@@ -186,8 +186,12 @@ class ExperimentSpecification:
         ):
             if not isinstance(semantic, CostSemantics):
                 raise ExperimentContractError("cost semantics must be explicit")
-        for value in (self.commission_bps, self.slippage_bps, self.funding_bps):
-            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100_000:
+        for cost_value in (self.commission_bps, self.slippage_bps, self.funding_bps):
+            if (
+                isinstance(cost_value, bool)
+                or not isinstance(cost_value, int)
+                or not 0 <= cost_value <= 100_000
+            ):
                 raise ExperimentContractError(
                     "cost basis points must be bounded non-negative integers"
                 )
