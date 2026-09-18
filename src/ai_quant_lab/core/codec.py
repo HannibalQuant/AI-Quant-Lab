@@ -1554,14 +1554,36 @@ def _decode_research_eligibility_record(payload: Any) -> ResearchDatasetEligibil
 
 def _decode_experiment_specification(payload: Any) -> ExperimentSpecification:
     fields = {
-        "experiment_id", "version", "eligibility_ref", "normalized_manifest_ref",
-        "normalized_lock_ref", "family", "research_objective", "hypothesis_id",
-        "configuration", "random_seed", "observation_start", "observation_end",
-        "knowledge_cutoff", "no_lookahead", "warmup_bars", "commission_semantics",
-        "commission_bps", "slippage_semantics", "slippage_bps", "funding_semantics",
-        "funding_bps", "calendar_semantics", "sizing_semantics",
-        "capital_notional_minor", "engine_contract_ref", "requested_metrics",
-        "requested_outputs", "proposer_id", "provenance_ref", "contract_version",
+        "experiment_id",
+        "version",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "family",
+        "research_objective",
+        "hypothesis_id",
+        "configuration",
+        "random_seed",
+        "observation_start",
+        "observation_end",
+        "knowledge_cutoff",
+        "no_lookahead",
+        "warmup_bars",
+        "commission_semantics",
+        "commission_bps",
+        "slippage_semantics",
+        "slippage_bps",
+        "funding_semantics",
+        "funding_bps",
+        "calendar_semantics",
+        "sizing_semantics",
+        "capital_notional_minor",
+        "engine_contract_ref",
+        "requested_metrics",
+        "requested_outputs",
+        "proposer_id",
+        "provenance_ref",
+        "contract_version",
     }
     item = _strict_object(payload, fields, "ExperimentSpecification.payload")
     return ExperimentSpecification(
@@ -1600,18 +1622,31 @@ def _decode_experiment_specification(payload: Any) -> ExperimentSpecification:
 
 def _decode_experiment_authorization_policy(payload: Any) -> ExperimentAuthorizationPolicy:
     fields = {
-        "policy_id", "version", "allowed_families", "required_no_lookahead",
-        "accepted_calendars", "require_explicit_commission",
-        "require_explicit_slippage", "require_explicit_funding",
-        "require_position_sizing", "maximum_window_days", "minimum_seed",
-        "maximum_seed", "supported_engine_refs", "require_verified_actor_authority",
-        "policy_owner_id", "contract_version",
+        "policy_id",
+        "version",
+        "allowed_families",
+        "required_no_lookahead",
+        "accepted_calendars",
+        "require_explicit_commission",
+        "require_explicit_slippage",
+        "require_explicit_funding",
+        "require_position_sizing",
+        "maximum_window_days",
+        "minimum_seed",
+        "maximum_seed",
+        "supported_engine_refs",
+        "require_verified_actor_authority",
+        "policy_owner_id",
+        "contract_version",
     }
     item = _strict_object(payload, fields, "ExperimentAuthorizationPolicy.payload")
     return ExperimentAuthorizationPolicy(
         cast(ArtifactId, _typed_id(item["policy_id"], ArtifactId, "policy_id")),
         _version(item["version"], "version"),
-        tuple(ExperimentFamily(value) for value in _strings(item["allowed_families"], "allowed_families")),
+        tuple(
+            ExperimentFamily(value)
+            for value in _strings(item["allowed_families"], "allowed_families")
+        ),
         NoLookaheadSemantics(_text(item["required_no_lookahead"], "required_no_lookahead")),
         tuple(
             EligibilityCalendarSemantics(value)
@@ -1633,11 +1668,23 @@ def _decode_experiment_authorization_policy(payload: Any) -> ExperimentAuthoriza
 
 def _decode_experiment_authorization_record(payload: Any) -> ExperimentAuthorizationRecord:
     fields = {
-        "authorization_id", "version", "specification_ref", "eligibility_ref",
-        "policy_ref", "normalized_manifest_ref", "normalized_lock_ref",
-        "configuration_fingerprint", "status", "findings", "decision_time",
-        "decision_actor_id", "lifecycle", "validation_status",
-        "deployment_authorization", "execution_state", "contract_version",
+        "authorization_id",
+        "version",
+        "specification_ref",
+        "eligibility_ref",
+        "policy_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "configuration_fingerprint",
+        "status",
+        "findings",
+        "decision_time",
+        "decision_actor_id",
+        "lifecycle",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
     }
     item = _strict_object(payload, fields, "ExperimentAuthorizationRecord.payload")
     return ExperimentAuthorizationRecord(
