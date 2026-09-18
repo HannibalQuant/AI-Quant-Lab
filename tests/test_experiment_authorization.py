@@ -51,14 +51,21 @@ from ai_quant_lab.core.research_eligibility_contracts import (
 V1 = ObjectVersion(1)
 DECISION_TIME = datetime(2025, 2, 3, tzinfo=UTC)
 ENGINE_REF = TraceabilityRef(ArtifactId("experiment-engine-contract-v1"), V1, "sha256:" + "1" * 64)
-PROVENANCE_REF = TraceabilityRef(ProvenanceId("experiment-spec-provenance"), V1, "sha256:" + "2" * 64)
+PROVENANCE_REF = TraceabilityRef(
+    ProvenanceId("experiment-spec-provenance"), V1, "sha256:" + "2" * 64
+)
 
 
-def specification(eligibility, *, seed: int = 42, commission=CostSemantics.DECLARED_BPS,
-                  slippage=CostSemantics.DECLARED_BPS,
-                  funding=CostSemantics.NOT_APPLICABLE,
-                  no_lookahead=NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
-                  sizing=PositionSizingSemantics.FIXED_NOTIONAL) -> ExperimentSpecification:
+def specification(
+    eligibility,
+    *,
+    seed: int = 42,
+    commission=CostSemantics.DECLARED_BPS,
+    slippage=CostSemantics.DECLARED_BPS,
+    funding=CostSemantics.NOT_APPLICABLE,
+    no_lookahead=NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
+    sizing=PositionSizingSemantics.FIXED_NOTIONAL,
+) -> ExperimentSpecification:
     assert eligibility.normalized_manifest_ref is not None
     assert eligibility.normalized_lock_ref is not None
     return ExperimentSpecification(
@@ -214,7 +221,9 @@ def test_seed_and_configuration_change_identity(tmp_path: Path) -> None:
     third = replace(first, configuration=(("lookback_bars", "48"), ("mode", "descriptive")))
     assert fingerprint_record(first) != fingerprint_record(second)
     assert fingerprint_record(first) != fingerprint_record(third)
-    assert experiment_configuration_fingerprint(first) != experiment_configuration_fingerprint(second)
+    assert experiment_configuration_fingerprint(first) != experiment_configuration_fingerprint(
+        second
+    )
 
 
 def test_noneligible_or_wrong_dataset_cannot_authorize(tmp_path: Path) -> None:
@@ -248,9 +257,15 @@ def test_noneligible_or_wrong_dataset_cannot_authorize(tmp_path: Path) -> None:
         )
     with pytest.raises(ValueError):
         authorize_experiment(
-            replace(request, specification=replace(spec, normalized_lock_ref=TraceabilityRef(
-                spec.normalized_lock_ref.object_id, V1, "sha256:" + "9" * 64
-            ))),
+            replace(
+                request,
+                specification=replace(
+                    spec,
+                    normalized_lock_ref=TraceabilityRef(
+                        spec.normalized_lock_ref.object_id, V1, "sha256:" + "9" * 64
+                    ),
+                ),
+            ),
             eligibility=decision.record,
             eligibility_policy=eligibility_policy,
             admission=admitted.admission,
@@ -263,11 +278,31 @@ def test_noneligible_or_wrong_dataset_cannot_authorize(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("mutator", "expected"),
     [
-        (lambda s: replace(s, no_lookahead=NoLookaheadSemantics.UNKNOWN), ExperimentAuthorizationDecision.INCOMPLETE),
-        (lambda s: replace(s, commission_semantics=CostSemantics.UNKNOWN, commission_bps=0), ExperimentAuthorizationDecision.INCOMPLETE),
-        (lambda s: replace(s, slippage_semantics=CostSemantics.UNKNOWN, slippage_bps=0), ExperimentAuthorizationDecision.INCOMPLETE),
-        (lambda s: replace(s, sizing_semantics=PositionSizingSemantics.UNKNOWN), ExperimentAuthorizationDecision.INCOMPLETE),
-        (lambda s: replace(s, engine_contract_ref=TraceabilityRef(ArtifactId("unsupported-engine"), V1, "sha256:" + "3" * 64)), ExperimentAuthorizationDecision.UNSUPPORTED),
+        (
+            lambda s: replace(s, no_lookahead=NoLookaheadSemantics.UNKNOWN),
+            ExperimentAuthorizationDecision.INCOMPLETE,
+        ),
+        (
+            lambda s: replace(s, commission_semantics=CostSemantics.UNKNOWN, commission_bps=0),
+            ExperimentAuthorizationDecision.INCOMPLETE,
+        ),
+        (
+            lambda s: replace(s, slippage_semantics=CostSemantics.UNKNOWN, slippage_bps=0),
+            ExperimentAuthorizationDecision.INCOMPLETE,
+        ),
+        (
+            lambda s: replace(s, sizing_semantics=PositionSizingSemantics.UNKNOWN),
+            ExperimentAuthorizationDecision.INCOMPLETE,
+        ),
+        (
+            lambda s: replace(
+                s,
+                engine_contract_ref=TraceabilityRef(
+                    ArtifactId("unsupported-engine"), V1, "sha256:" + "3" * 64
+                ),
+            ),
+            ExperimentAuthorizationDecision.UNSUPPORTED,
+        ),
         (lambda s: replace(s, random_seed=2**31 + 1), ExperimentAuthorizationDecision.REJECTED),
     ],
 )
