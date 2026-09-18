@@ -59,6 +59,7 @@ from ai_quant_lab.core.model import (
     EvidenceEnvelope,
     EvidenceId,
     EvidenceState,
+    ExecutionState,
     ExperimentId,
     FreshnessState,
     GovernedId,
@@ -90,6 +91,16 @@ from ai_quant_lab.core.real_csv_contracts import (
     SourcePermissionState,
     TimestampSemantics,
 )
+from ai_quant_lab.core.research_eligibility_contracts import (
+    DeploymentAuthorizationStatus,
+    EligibilityCalendarSemantics,
+    ExperimentAuthorizationStatus,
+    ResearchBoundaryStatus,
+    ResearchDatasetEligibilityPolicy,
+    ResearchDatasetEligibilityRecord,
+    ResearchDatasetEligibilityStatus,
+    ValidationStatus,
+)
 
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
 REPRESENTATION_VERSION: Final = 1
@@ -113,6 +124,8 @@ type GovernedRecord = (
     | NormalizedBarManifest
     | RealCsvSourceDeclaration
     | RealCsvAdmissionRecord
+    | ResearchDatasetEligibilityPolicy
+    | ResearchDatasetEligibilityRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -156,6 +169,8 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     NormalizedBarManifest: "NormalizedBarManifest",
     RealCsvSourceDeclaration: "RealCsvSourceDeclaration",
     RealCsvAdmissionRecord: "RealCsvAdmissionRecord",
+    ResearchDatasetEligibilityPolicy: "ResearchDatasetEligibilityPolicy",
+    ResearchDatasetEligibilityRecord: "ResearchDatasetEligibilityRecord",
 }
 
 
@@ -262,6 +277,18 @@ def _strings(value: Any, field: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise InvalidSerialization(f"{field} must be an array of text")
     return tuple(value)
+
+
+def _integer(value: Any, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise InvalidSerialization(f"{field} must be an integer")
+    return value
+
+
+def _boolean(value: Any, field: str) -> bool:
+    if not isinstance(value, bool):
+        raise InvalidSerialization(f"{field} must be boolean")
+    return value
 
 
 def _trace_ref_payload(reference: TraceabilityRef) -> dict[str, Any]:
@@ -612,6 +639,77 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             else _trace_ref_payload(record.normalized_lock_ref),
             "trust_state": record.trust_state.value,
             "research_eligibility": record.research_eligibility.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ResearchDatasetEligibilityPolicy):
+        return {
+            "policy_id": str(record.policy_id),
+            "version": record.version.number,
+            "accepted_permission_states": [
+                item.value for item in record.accepted_permission_states
+            ],
+            "accepted_retention_classifications": [
+                item.value for item in record.accepted_retention_classifications
+            ],
+            "required_timestamp_semantics": record.required_timestamp_semantics.value,
+            "required_availability_semantics": record.required_availability_semantics.value,
+            "accepted_missing_data_policies": [
+                item.value for item in record.accepted_missing_data_policies
+            ],
+            "accepted_duplicate_policies": [
+                item.value for item in record.accepted_duplicate_policies
+            ],
+            "accepted_ordering_policies": [
+                item.value for item in record.accepted_ordering_policies
+            ],
+            "calendar_semantics": record.calendar_semantics.value,
+            "knowledge_cutoff": _timestamp_payload(record.knowledge_cutoff),
+            "minimum_row_count": record.minimum_row_count,
+            "maximum_rejected_rows": record.maximum_rejected_rows,
+            "maximum_quarantined_observations": record.maximum_quarantined_observations,
+            "maximum_gap_findings": record.maximum_gap_findings,
+            "maximum_missing_intervals": record.maximum_missing_intervals,
+            "require_complete_bars": record.require_complete_bars,
+            "allow_restricted_redistribution_for_local_research": (
+                record.allow_restricted_redistribution_for_local_research
+            ),
+            "policy_owner_id": str(record.policy_owner_id),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ResearchDatasetEligibilityRecord):
+        return {
+            "eligibility_id": str(record.eligibility_id),
+            "version": record.version.number,
+            "admission_ref": _trace_ref_payload(record.admission_ref),
+            "source_declaration_ref": _trace_ref_payload(record.source_declaration_ref),
+            "source_ref": _trace_ref_payload(record.source_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "timeframe_ref": _trace_ref_payload(record.timeframe_ref),
+            "schema_ref": _trace_ref_payload(record.schema_ref),
+            "raw_manifest_ref": None
+            if record.raw_manifest_ref is None
+            else _trace_ref_payload(record.raw_manifest_ref),
+            "raw_lock_ref": None
+            if record.raw_lock_ref is None
+            else _trace_ref_payload(record.raw_lock_ref),
+            "normalized_manifest_ref": None
+            if record.normalized_manifest_ref is None
+            else _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": None
+            if record.normalized_lock_ref is None
+            else _trace_ref_payload(record.normalized_lock_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "quality_context_fingerprint": record.quality_context_fingerprint,
+            "status": record.status.value,
+            "findings": list(record.findings),
+            "decision_time": _timestamp_payload(record.decision_time),
+            "decision_actor_id": str(record.decision_actor_id),
+            "trust_state": record.trust_state.value,
+            "research_boundary": record.research_boundary.value,
+            "experiment_authorization": record.experiment_authorization.value,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
             "contract_version": record.contract_version.number,
         }
     raise InvalidSerialization(f"unsupported governed type: {type(record).__name__}")
@@ -1221,6 +1319,148 @@ def _decode_real_csv_admission(payload: Any) -> RealCsvAdmissionRecord:
     )
 
 
+def _decode_research_eligibility_policy(payload: Any) -> ResearchDatasetEligibilityPolicy:
+    fields = {
+        "policy_id",
+        "version",
+        "accepted_permission_states",
+        "accepted_retention_classifications",
+        "required_timestamp_semantics",
+        "required_availability_semantics",
+        "accepted_missing_data_policies",
+        "accepted_duplicate_policies",
+        "accepted_ordering_policies",
+        "calendar_semantics",
+        "knowledge_cutoff",
+        "minimum_row_count",
+        "maximum_rejected_rows",
+        "maximum_quarantined_observations",
+        "maximum_gap_findings",
+        "maximum_missing_intervals",
+        "require_complete_bars",
+        "allow_restricted_redistribution_for_local_research",
+        "policy_owner_id",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ResearchDatasetEligibilityPolicy.payload")
+    return ResearchDatasetEligibilityPolicy(
+        cast(ArtifactId, _typed_id(item["policy_id"], ArtifactId, "policy_id")),
+        _version(item["version"], "version"),
+        tuple(
+            SourcePermissionState(value)
+            for value in _strings(item["accepted_permission_states"], "accepted_permission_states")
+        ),
+        tuple(
+            RetentionClassification(value)
+            for value in _strings(
+                item["accepted_retention_classifications"],
+                "accepted_retention_classifications",
+            )
+        ),
+        TimestampSemantics(
+            _text(item["required_timestamp_semantics"], "required_timestamp_semantics")
+        ),
+        AvailabilitySemantics(
+            _text(item["required_availability_semantics"], "required_availability_semantics")
+        ),
+        tuple(
+            MissingDataPolicy(value)
+            for value in _strings(
+                item["accepted_missing_data_policies"], "accepted_missing_data_policies"
+            )
+        ),
+        tuple(
+            DuplicatePolicy(value)
+            for value in _strings(
+                item["accepted_duplicate_policies"], "accepted_duplicate_policies"
+            )
+        ),
+        tuple(
+            OrderingPolicy(value)
+            for value in _strings(item["accepted_ordering_policies"], "accepted_ordering_policies")
+        ),
+        EligibilityCalendarSemantics(_text(item["calendar_semantics"], "calendar_semantics")),
+        _timestamp(item["knowledge_cutoff"], "knowledge_cutoff"),
+        _integer(item["minimum_row_count"], "minimum_row_count"),
+        _integer(item["maximum_rejected_rows"], "maximum_rejected_rows"),
+        _integer(
+            item["maximum_quarantined_observations"],
+            "maximum_quarantined_observations",
+        ),
+        _integer(item["maximum_gap_findings"], "maximum_gap_findings"),
+        _integer(item["maximum_missing_intervals"], "maximum_missing_intervals"),
+        _boolean(item["require_complete_bars"], "require_complete_bars"),
+        _boolean(
+            item["allow_restricted_redistribution_for_local_research"],
+            "allow_restricted_redistribution_for_local_research",
+        ),
+        cast(AgentId, _typed_id(item["policy_owner_id"], AgentId, "policy_owner_id")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_research_eligibility_record(payload: Any) -> ResearchDatasetEligibilityRecord:
+    fields = {
+        "eligibility_id",
+        "version",
+        "admission_ref",
+        "source_declaration_ref",
+        "source_ref",
+        "instrument_ref",
+        "timeframe_ref",
+        "schema_ref",
+        "raw_manifest_ref",
+        "raw_lock_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "policy_ref",
+        "quality_context_fingerprint",
+        "status",
+        "findings",
+        "decision_time",
+        "decision_actor_id",
+        "trust_state",
+        "research_boundary",
+        "experiment_authorization",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ResearchDatasetEligibilityRecord.payload")
+    return ResearchDatasetEligibilityRecord(
+        cast(ArtifactId, _typed_id(item["eligibility_id"], ArtifactId, "eligibility_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["admission_ref"], "admission_ref"),
+        _trace_ref(item["source_declaration_ref"], "source_declaration_ref"),
+        _trace_ref(item["source_ref"], "source_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["timeframe_ref"], "timeframe_ref"),
+        _trace_ref(item["schema_ref"], "schema_ref"),
+        _optional_trace_ref(item["raw_manifest_ref"], "raw_manifest_ref"),
+        _optional_trace_ref(item["raw_lock_ref"], "raw_lock_ref"),
+        _optional_trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _optional_trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _text(item["quality_context_fingerprint"], "quality_context_fingerprint"),
+        ResearchDatasetEligibilityStatus(_text(item["status"], "status")),
+        _strings(item["findings"], "findings"),
+        _timestamp(item["decision_time"], "decision_time"),
+        cast(AgentId, _typed_id(item["decision_actor_id"], AgentId, "decision_actor_id")),
+        CsvTrustState(_text(item["trust_state"], "trust_state")),
+        ResearchBoundaryStatus(_text(item["research_boundary"], "research_boundary")),
+        ExperimentAuthorizationStatus(
+            _text(item["experiment_authorization"], "experiment_authorization")
+        ),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -1238,6 +1478,8 @@ _DECODERS = {
     "NormalizedBarManifest": _decode_normalized_manifest,
     "RealCsvSourceDeclaration": _decode_real_csv_source_declaration,
     "RealCsvAdmissionRecord": _decode_real_csv_admission,
+    "ResearchDatasetEligibilityPolicy": _decode_research_eligibility_policy,
+    "ResearchDatasetEligibilityRecord": _decode_research_eligibility_record,
 }
 
 
@@ -1259,6 +1501,8 @@ def decode[
         NormalizedBarManifest,
         RealCsvSourceDeclaration,
         RealCsvAdmissionRecord,
+        ResearchDatasetEligibilityPolicy,
+        ResearchDatasetEligibilityRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

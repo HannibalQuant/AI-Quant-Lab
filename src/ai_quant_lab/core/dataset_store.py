@@ -28,6 +28,10 @@ from ai_quant_lab.core.real_csv_contracts import (
     RealCsvAdmissionRecord,
     RealCsvSourceDeclaration,
 )
+from ai_quant_lab.core.research_eligibility_contracts import (
+    ResearchDatasetEligibilityPolicy,
+    ResearchDatasetEligibilityRecord,
+)
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
@@ -41,6 +45,8 @@ type StoredDatasetObject = (
     | MarketBar
     | RealCsvSourceDeclaration
     | RealCsvAdmissionRecord
+    | ResearchDatasetEligibilityPolicy
+    | ResearchDatasetEligibilityRecord
 )
 
 
@@ -90,6 +96,8 @@ class StoredObjectType(StrEnum):
     NORMALIZED_BAR_MANIFEST = "normalized-bar-manifest"
     REAL_CSV_SOURCE_DECLARATION = "real-csv-source-declaration"
     REAL_CSV_ADMISSION_RECORD = "real-csv-admission-record"
+    RESEARCH_DATASET_ELIGIBILITY_POLICY = "research-dataset-eligibility-policy"
+    RESEARCH_DATASET_ELIGIBILITY_RECORD = "research-dataset-eligibility-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -169,6 +177,8 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     NormalizedBarManifest: StoredObjectType.NORMALIZED_BAR_MANIFEST,
     RealCsvSourceDeclaration: StoredObjectType.REAL_CSV_SOURCE_DECLARATION,
     RealCsvAdmissionRecord: StoredObjectType.REAL_CSV_ADMISSION_RECORD,
+    ResearchDatasetEligibilityPolicy: StoredObjectType.RESEARCH_DATASET_ELIGIBILITY_POLICY,
+    ResearchDatasetEligibilityRecord: StoredObjectType.RESEARCH_DATASET_ELIGIBILITY_RECORD,
 }
 
 
@@ -192,6 +202,10 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.provenance_id)
     if isinstance(record, RealCsvAdmissionRecord):
         return str(record.admission_id)
+    if isinstance(record, ResearchDatasetEligibilityPolicy):
+        return str(record.policy_id)
+    if isinstance(record, ResearchDatasetEligibilityRecord):
+        return str(record.eligibility_id)
     return str(record.dataset_id)
 
 
