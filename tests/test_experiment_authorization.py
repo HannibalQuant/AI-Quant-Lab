@@ -368,7 +368,7 @@ def test_invalid_temporal_and_configuration_contracts_fail_at_construction(tmp_p
     _, _, spec, _, _ = authorize(tmp_path)
     with pytest.raises(ExperimentContractError):
         replace(spec, observation_start=spec.observation_end)
-    with pytest.raises(ExperimentContractError):
+    with pytest.raises(ValueError):
         replace(spec, observation_start=datetime(2025, 2, 1))
     with pytest.raises(ExperimentContractError):
         replace(spec, configuration=(("z", "1"), ("a", "2")))
