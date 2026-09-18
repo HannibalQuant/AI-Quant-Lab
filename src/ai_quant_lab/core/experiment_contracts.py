@@ -173,7 +173,11 @@ class ExperimentSpecification:
             raise ExperimentContractError("knowledge_cutoff cannot precede observation_end")
         if not isinstance(self.no_lookahead, NoLookaheadSemantics):
             raise ExperimentContractError("no-lookahead semantics must be explicit")
-        if isinstance(self.warmup_bars, bool) or not isinstance(self.warmup_bars, int) or self.warmup_bars < 0:
+        if (
+            isinstance(self.warmup_bars, bool)
+            or not isinstance(self.warmup_bars, int)
+            or self.warmup_bars < 0
+        ):
             raise ExperimentContractError("warmup_bars must be a non-negative integer")
         for semantic in (
             self.commission_semantics,
@@ -184,12 +188,17 @@ class ExperimentSpecification:
                 raise ExperimentContractError("cost semantics must be explicit")
         for value in (self.commission_bps, self.slippage_bps, self.funding_bps):
             if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100_000:
-                raise ExperimentContractError("cost basis points must be bounded non-negative integers")
+                raise ExperimentContractError(
+                    "cost basis points must be bounded non-negative integers"
+                )
         if self.commission_semantics is CostSemantics.DECLARED_ZERO and self.commission_bps != 0:
             raise ExperimentContractError("declared-zero commission must have zero bps")
         if self.slippage_semantics is CostSemantics.DECLARED_ZERO and self.slippage_bps != 0:
             raise ExperimentContractError("declared-zero slippage must have zero bps")
-        if self.funding_semantics in {CostSemantics.DECLARED_ZERO, CostSemantics.NOT_APPLICABLE} and self.funding_bps != 0:
+        if (
+            self.funding_semantics in {CostSemantics.DECLARED_ZERO, CostSemantics.NOT_APPLICABLE}
+            and self.funding_bps != 0
+        ):
             raise ExperimentContractError("zero/not-applicable funding must have zero bps")
         if not isinstance(self.calendar_semantics, EligibilityCalendarSemantics):
             raise ExperimentContractError("calendar semantics must be explicit")
@@ -240,7 +249,8 @@ class ExperimentAuthorizationPolicy:
             raise ExperimentContractError("allowed_families must be non-empty sorted unique")
         if (
             not self.accepted_calendars
-            or tuple(sorted(self.accepted_calendars, key=lambda x: x.value)) != self.accepted_calendars
+            or tuple(sorted(self.accepted_calendars, key=lambda x: x.value))
+            != self.accepted_calendars
             or len(set(self.accepted_calendars)) != len(self.accepted_calendars)
         ):
             raise ExperimentContractError("accepted_calendars must be non-empty sorted unique")
@@ -268,7 +278,10 @@ class ExperimentAuthorizationPolicy:
             raise ExperimentContractError("at least one supported engine contract is required")
         for ref in self.supported_engine_refs:
             _exact(ref, ArtifactId, "supported_engine_ref")
-        if tuple(sorted(self.supported_engine_refs, key=lambda r: str(r.object_id))) != self.supported_engine_refs:
+        if (
+            tuple(sorted(self.supported_engine_refs, key=lambda r: str(r.object_id)))
+            != self.supported_engine_refs
+        ):
             raise ExperimentContractError("supported_engine_refs must be sorted")
 
 
@@ -307,12 +320,13 @@ class ExperimentAuthorizationRecord:
         _exact(self.normalized_lock_ref, DatasetLockId, "normalized_lock_ref")
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", self.configuration_fingerprint):
             raise ExperimentContractError("configuration_fingerprint must be canonical SHA-256")
-        if (
-            not isinstance(self.status, ExperimentAuthorizationDecision)
-            or not isinstance(self.lifecycle, ExperimentLifecycleBoundary)
+        if not isinstance(self.status, ExperimentAuthorizationDecision) or not isinstance(
+            self.lifecycle, ExperimentLifecycleBoundary
         ):
             raise ExperimentContractError("authorization state must be explicit")
-        if tuple(sorted(self.findings)) != self.findings or len(set(self.findings)) != len(self.findings):
+        if tuple(sorted(self.findings)) != self.findings or len(set(self.findings)) != len(
+            self.findings
+        ):
             raise ExperimentContractError("findings must be sorted and unique")
         require_utc(self.decision_time, "decision_time")
         if self.validation_status is not ValidationStatus.NOT_VALIDATED:
@@ -322,7 +336,14 @@ class ExperimentAuthorizationRecord:
         if self.execution_state is not ExecutionState.PLANNED_CLOSED:
             raise ExperimentContractError("authorization cannot open execution")
         if self.status is ExperimentAuthorizationDecision.AUTHORIZED:
-            if self.findings or self.lifecycle is not ExperimentLifecycleBoundary.AUTHORIZED_NOT_EXECUTED:
-                raise ExperimentContractError("authorized record requires no findings and closed execution")
+            if (
+                self.findings
+                or self.lifecycle is not ExperimentLifecycleBoundary.AUTHORIZED_NOT_EXECUTED
+            ):
+                raise ExperimentContractError(
+                    "authorized record requires no findings and closed execution"
+                )
         elif not self.findings or self.lifecycle is not ExperimentLifecycleBoundary.NOT_AUTHORIZED:
-            raise ExperimentContractError("non-authorized record requires findings and closed lifecycle")
+            raise ExperimentContractError(
+                "non-authorized record requires findings and closed lifecycle"
+            )
