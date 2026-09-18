@@ -67,7 +67,9 @@ def specification(
     commission: CostSemantics = CostSemantics.DECLARED_BPS,
     slippage: CostSemantics = CostSemantics.DECLARED_BPS,
     funding: CostSemantics = CostSemantics.NOT_APPLICABLE,
-    no_lookahead: NoLookaheadSemantics = NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
+    no_lookahead: NoLookaheadSemantics = (
+        NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT
+    ),
     sizing: PositionSizingSemantics = PositionSizingSemantics.FIXED_NOTIONAL,
 ) -> ExperimentSpecification:
     assert eligibility.normalized_manifest_ref is not None
