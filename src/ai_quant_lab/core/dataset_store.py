@@ -16,6 +16,11 @@ from typing import Any, Final, cast
 
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
 from ai_quant_lab.core.data import DatasetLock, DatasetLockId, DatasetManifest, RawObservation
+from ai_quant_lab.core.experiment_contracts import (
+    ExperimentAuthorizationPolicy,
+    ExperimentAuthorizationRecord,
+    ExperimentSpecification,
+)
 from ai_quant_lab.core.integrity import IntegrityError, fingerprint_record, verify_integrity
 from ai_quant_lab.core.market_data import MarketBar, NormalizedBarManifest
 from ai_quant_lab.core.model import (
@@ -31,11 +36,6 @@ from ai_quant_lab.core.real_csv_contracts import (
 from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityPolicy,
     ResearchDatasetEligibilityRecord,
-)
-from ai_quant_lab.core.experiment_contracts import (
-    ExperimentAuthorizationPolicy,
-    ExperimentAuthorizationRecord,
-    ExperimentSpecification,
 )
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
