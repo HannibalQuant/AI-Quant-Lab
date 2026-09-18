@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,11 +13,13 @@ from test_research_dataset_eligibility import evaluate
 from ai_quant_lab import EXE_01
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.dataset_store import (
+    LocalDatasetRepository,
     RepositoryIntegrityFailure,
     repository_key,
 )
 from ai_quant_lab.core.experiment_authorization import (
     ExperimentAuthorizationRequest,
+    ExperimentAuthorizationResult,
     authorize_experiment,
     experiment_configuration_fingerprint,
 )
@@ -45,6 +48,7 @@ from ai_quant_lab.core.model import (
 from ai_quant_lab.core.research_eligibility_contracts import (
     DeploymentAuthorizationStatus,
     EligibilityCalendarSemantics,
+    ResearchDatasetEligibilityRecord,
     ValidationStatus,
 )
 
@@ -57,14 +61,14 @@ PROVENANCE_REF = TraceabilityRef(
 
 
 def specification(
-    eligibility,
+    eligibility: ResearchDatasetEligibilityRecord,
     *,
     seed: int = 42,
-    commission=CostSemantics.DECLARED_BPS,
-    slippage=CostSemantics.DECLARED_BPS,
-    funding=CostSemantics.NOT_APPLICABLE,
-    no_lookahead=NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
-    sizing=PositionSizingSemantics.FIXED_NOTIONAL,
+    commission: CostSemantics = CostSemantics.DECLARED_BPS,
+    slippage: CostSemantics = CostSemantics.DECLARED_BPS,
+    funding: CostSemantics = CostSemantics.NOT_APPLICABLE,
+    no_lookahead: NoLookaheadSemantics = NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
+    sizing: PositionSizingSemantics = PositionSizingSemantics.FIXED_NOTIONAL,
 ) -> ExperimentSpecification:
     assert eligibility.normalized_manifest_ref is not None
     assert eligibility.normalized_lock_ref is not None
@@ -127,7 +131,20 @@ def authorization_policy(*, require_actor: bool = False) -> ExperimentAuthorizat
     )
 
 
-def authorize(tmp_path: Path, *, spec_mutator=None, policy_mutator=None, actor_verified=False):
+def authorize(
+    tmp_path: Path,
+    *,
+    spec_mutator: Callable[[ExperimentSpecification], ExperimentSpecification] | None = None,
+    policy_mutator: Callable[[ExperimentAuthorizationPolicy], ExperimentAuthorizationPolicy]
+    | None = None,
+    actor_verified: bool = False,
+) -> tuple[
+    LocalDatasetRepository,
+    ResearchDatasetEligibilityRecord,
+    ExperimentSpecification,
+    ExperimentAuthorizationPolicy,
+    ExperimentAuthorizationResult,
+]:
     onboarding, repository, admitted, eligibility_policy, decision = evaluate(
         tmp_path, suffix="experiment"
     )
@@ -307,7 +324,9 @@ def test_noneligible_or_wrong_dataset_cannot_authorize(tmp_path: Path) -> None:
     ],
 )
 def test_policy_fail_closed_for_unknown_or_unsupported_semantics(
-    tmp_path: Path, mutator, expected
+    tmp_path: Path,
+    mutator: Callable[[ExperimentSpecification], ExperimentSpecification],
+    expected: ExperimentAuthorizationDecision,
 ) -> None:
     _, _, _, _, result = authorize(tmp_path, spec_mutator=mutator)
     assert result.record.status is expected
