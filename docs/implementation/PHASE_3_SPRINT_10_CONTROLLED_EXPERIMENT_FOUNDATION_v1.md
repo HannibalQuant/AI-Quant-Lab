@@ -61,7 +61,10 @@ There is no implicit random seed, mutable current configuration, plugin path, ca
 
 ## Cost, slippage, funding, and sizing
 
-These are declarations only. `UNKNOWN` remains distinguishable from `DECLARED_ZERO` and fails closed when policy requires explicit semantics.
+These are declarations only. `UNKNOWN` remains distinguishable from `DECLARED_ZERO`
+and always fails closed; policy configuration cannot promote semantic uncertainty.
+`DECLARED_BPS` requires a positive value, while `DECLARED_ZERO`,
+`NOT_APPLICABLE` and `UNKNOWN` require zero BPS.
 
 No fee lookup, broker integration, cost engine, sizing calculation, or order fill implementation is added.
 
@@ -79,7 +82,9 @@ The authorization policy can require:
 - supported exact engine contract ref
 - verified actor authority
 
-Actor identity is not equivalent to authenticated authority. If verified authority is required and unavailable, authorization remains incomplete.
+Actor identity and a caller-supplied assertion are not equivalent to authenticated
+authority. Until an exact authority-evidence contract exists, a policy requiring
+verified authority remains incomplete.
 
 ## Authorization states
 
@@ -105,6 +110,8 @@ Governed lineage is:
 `RealCsvSourceDeclaration -> RealCsvAdmissionRecord -> ResearchDatasetEligibilityRecord -> exact normalized dataset manifest/lock -> ExperimentSpecification -> ExperimentAuthorizationPolicy -> ExperimentAuthorizationRecord`
 
 The authorization boundary verifies the existing eligibility lineage and exact dataset binding before making a decision.
+The requested observation interval must also remain within the exact normalized bars
+and align to their open/close boundaries.
 
 ## Persistence
 

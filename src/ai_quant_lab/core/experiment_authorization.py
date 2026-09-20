@@ -99,6 +99,7 @@ def experiment_configuration_fingerprint(specification: ExperimentSpecification)
 def _policy_outcome(
     request: ExperimentAuthorizationRequest,
     eligibility: ResearchDatasetEligibilityRecord,
+    report: CsvImportReport,
 ) -> tuple[ExperimentAuthorizationDecision, tuple[str, ...]]:
     spec = request.specification
     policy = request.policy
@@ -130,26 +131,56 @@ def _policy_outcome(
     if window_days > policy.maximum_window_days:
         findings.add("observation_window_exceeds_policy")
         priorities.add(ExperimentAuthorizationDecision.REJECTED)
+    dataset_start = min(bar.bar_open for bar in report.normalized_bars)
+    dataset_end = max(bar.bar_close for bar in report.normalized_bars)
+    if spec.observation_start < dataset_start or spec.observation_end > dataset_end:
+        findings.add("observation_window_outside_dataset")
+        priorities.add(ExperimentAuthorizationDecision.REJECTED)
+    elif spec.observation_start not in {
+        bar.bar_open for bar in report.normalized_bars
+    } or spec.observation_end not in {bar.bar_close for bar in report.normalized_bars}:
+        findings.add("observation_window_not_aligned_to_bars")
+        priorities.add(ExperimentAuthorizationDecision.REJECTED)
     if request.decision_time < spec.knowledge_cutoff:
         findings.add("decision_precedes_knowledge_cutoff")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
     if spec.engine_contract_ref not in policy.supported_engine_refs:
         findings.add("unsupported_engine_contract")
         priorities.add(ExperimentAuthorizationDecision.UNSUPPORTED)
-    if policy.require_verified_actor_authority and not request.actor_authority_verified:
+    if policy.require_verified_actor_authority:
         findings.add("authorization_actor_unverified")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
-    if policy.require_explicit_commission and spec.commission_semantics is CostSemantics.UNKNOWN:
+    if spec.commission_semantics is CostSemantics.UNKNOWN:
         findings.add("cost_semantics_unknown")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
-    if policy.require_explicit_slippage and spec.slippage_semantics is CostSemantics.UNKNOWN:
+    elif (
+        policy.require_explicit_commission
+        and spec.commission_semantics is CostSemantics.NOT_APPLICABLE
+    ):
+        findings.add("commission_not_applicable")
+        priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
+    if spec.slippage_semantics is CostSemantics.UNKNOWN:
         findings.add("slippage_semantics_unknown")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
-    if policy.require_explicit_funding and spec.funding_semantics is CostSemantics.UNKNOWN:
+    elif (
+        policy.require_explicit_slippage and spec.slippage_semantics is CostSemantics.NOT_APPLICABLE
+    ):
+        findings.add("slippage_not_applicable")
+        priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
+    if spec.funding_semantics is CostSemantics.UNKNOWN:
         findings.add("funding_semantics_unknown")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
-    if policy.require_position_sizing and spec.sizing_semantics is PositionSizingSemantics.UNKNOWN:
+    elif policy.require_explicit_funding and spec.funding_semantics is CostSemantics.NOT_APPLICABLE:
+        findings.add("funding_not_applicable")
+        priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
+    if spec.sizing_semantics is PositionSizingSemantics.UNKNOWN:
         findings.add("position_sizing_ambiguous")
+        priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
+    elif (
+        policy.require_position_sizing
+        and spec.sizing_semantics is PositionSizingSemantics.NOT_APPLICABLE
+    ):
+        findings.add("position_sizing_not_applicable")
         priorities.add(ExperimentAuthorizationDecision.INCOMPLETE)
 
     for status in (
@@ -193,7 +224,7 @@ def authorize_experiment(
         report=report,
     )
 
-    status, findings = _policy_outcome(request, eligibility)
+    status, findings = _policy_outcome(request, eligibility, report)
     record = ExperimentAuthorizationRecord(
         request.authorization_id,
         ObjectVersion(1),

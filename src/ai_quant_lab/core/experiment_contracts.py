@@ -100,6 +100,14 @@ def _configuration(values: tuple[tuple[str, str], ...]) -> None:
         raise ExperimentContractError("configuration must use sorted unique bounded primitive text")
 
 
+def _cost_declaration(semantics: CostSemantics, basis_points: int, field: str) -> None:
+    if semantics is CostSemantics.DECLARED_BPS:
+        if basis_points == 0:
+            raise ExperimentContractError(f"{field} declared-bps semantics require positive bps")
+    elif basis_points != 0:
+        raise ExperimentContractError(f"{field} non-bps semantics require zero bps")
+
+
 @dataclass(frozen=True, slots=True)
 class ExperimentSpecification:
     """Immutable declaration of a future experiment; contains no executable logic."""
@@ -195,15 +203,9 @@ class ExperimentSpecification:
                 raise ExperimentContractError(
                     "cost basis points must be bounded non-negative integers"
                 )
-        if self.commission_semantics is CostSemantics.DECLARED_ZERO and self.commission_bps != 0:
-            raise ExperimentContractError("declared-zero commission must have zero bps")
-        if self.slippage_semantics is CostSemantics.DECLARED_ZERO and self.slippage_bps != 0:
-            raise ExperimentContractError("declared-zero slippage must have zero bps")
-        if (
-            self.funding_semantics in {CostSemantics.DECLARED_ZERO, CostSemantics.NOT_APPLICABLE}
-            and self.funding_bps != 0
-        ):
-            raise ExperimentContractError("zero/not-applicable funding must have zero bps")
+        _cost_declaration(self.commission_semantics, self.commission_bps, "commission")
+        _cost_declaration(self.slippage_semantics, self.slippage_bps, "slippage")
+        _cost_declaration(self.funding_semantics, self.funding_bps, "funding")
         if not isinstance(self.calendar_semantics, EligibilityCalendarSemantics):
             raise ExperimentContractError("calendar semantics must be explicit")
         if not isinstance(self.sizing_semantics, PositionSizingSemantics):
@@ -282,11 +284,16 @@ class ExperimentAuthorizationPolicy:
             raise ExperimentContractError("at least one supported engine contract is required")
         for ref in self.supported_engine_refs:
             _exact(ref, ArtifactId, "supported_engine_ref")
-        if (
-            tuple(sorted(self.supported_engine_refs, key=lambda r: str(r.object_id)))
-            != self.supported_engine_refs
-        ):
-            raise ExperimentContractError("supported_engine_refs must be sorted")
+        engine_keys = tuple(
+            (
+                str(reference.object_id),
+                reference.version.number,
+                reference.expected_fingerprint or "",
+            )
+            for reference in self.supported_engine_refs
+        )
+        if engine_keys != tuple(sorted(engine_keys)) or len(engine_keys) != len(set(engine_keys)):
+            raise ExperimentContractError("supported_engine_refs must be exact, sorted and unique")
 
 
 @dataclass(frozen=True, slots=True)

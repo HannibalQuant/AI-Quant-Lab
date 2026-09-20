@@ -336,11 +336,54 @@ def test_policy_fail_closed_for_unknown_or_unsupported_semantics(
     assert result.record.findings
 
 
-def test_actor_identity_alone_does_not_satisfy_verified_authority(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("spec_mutator", "policy_mutator", "finding"),
+    [
+        (
+            lambda s: replace(s, commission_semantics=CostSemantics.UNKNOWN, commission_bps=0),
+            lambda p: replace(p, require_explicit_commission=False),
+            "cost_semantics_unknown",
+        ),
+        (
+            lambda s: replace(s, slippage_semantics=CostSemantics.UNKNOWN, slippage_bps=0),
+            lambda p: replace(p, require_explicit_slippage=False),
+            "slippage_semantics_unknown",
+        ),
+        (
+            lambda s: replace(s, funding_semantics=CostSemantics.UNKNOWN, funding_bps=0),
+            lambda p: replace(p, require_explicit_funding=False),
+            "funding_semantics_unknown",
+        ),
+        (
+            lambda s: replace(s, sizing_semantics=PositionSizingSemantics.UNKNOWN),
+            lambda p: replace(p, require_position_sizing=False),
+            "position_sizing_ambiguous",
+        ),
+    ],
+)
+def test_unknown_semantics_cannot_be_enabled_by_policy(
+    tmp_path: Path,
+    spec_mutator: Callable[[ExperimentSpecification], ExperimentSpecification],
+    policy_mutator: Callable[[ExperimentAuthorizationPolicy], ExperimentAuthorizationPolicy],
+    finding: str,
+) -> None:
+    _, _, _, _, result = authorize(
+        tmp_path,
+        spec_mutator=spec_mutator,
+        policy_mutator=policy_mutator,
+    )
+    assert result.record.status is ExperimentAuthorizationDecision.INCOMPLETE
+    assert finding in result.record.findings
+
+
+@pytest.mark.parametrize("actor_verified", [False, True])
+def test_actor_assertion_does_not_satisfy_verified_authority(
+    tmp_path: Path, actor_verified: bool
+) -> None:
     _, _, _, _, result = authorize(
         tmp_path,
         policy_mutator=lambda p: replace(p, require_verified_actor_authority=True),
-        actor_verified=False,
+        actor_verified=actor_verified,
     )
     assert result.record.status is ExperimentAuthorizationDecision.INCOMPLETE
     assert "authorization_actor_unverified" in result.record.findings
@@ -374,6 +417,91 @@ def test_invalid_temporal_and_configuration_contracts_fail_at_construction(tmp_p
         replace(spec, configuration=(("z", "1"), ("a", "2")))
     with pytest.raises(ExperimentContractError):
         replace(spec, random_seed=-1)
+
+
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        lambda spec: replace(
+            spec, commission_semantics=CostSemantics.DECLARED_BPS, commission_bps=0
+        ),
+        lambda spec: replace(
+            spec, commission_semantics=CostSemantics.NOT_APPLICABLE, commission_bps=1
+        ),
+        lambda spec: replace(spec, slippage_semantics=CostSemantics.DECLARED_ZERO, slippage_bps=1),
+        lambda spec: replace(spec, slippage_semantics=CostSemantics.UNKNOWN, slippage_bps=1),
+        lambda spec: replace(spec, funding_semantics=CostSemantics.DECLARED_BPS, funding_bps=0),
+        lambda spec: replace(spec, funding_semantics=CostSemantics.NOT_APPLICABLE, funding_bps=1),
+    ],
+)
+def test_cost_semantics_and_values_must_be_consistent(
+    tmp_path: Path,
+    mutator: Callable[[ExperimentSpecification], ExperimentSpecification],
+) -> None:
+    _, _, spec, _, _ = authorize(tmp_path)
+    with pytest.raises(ExperimentContractError):
+        mutator(spec)
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "finding"),
+    [
+        (
+            datetime(2024, 1, 1, tzinfo=UTC),
+            datetime(2024, 1, 2, tzinfo=UTC),
+            "observation_window_outside_dataset",
+        ),
+        (
+            datetime(2025, 2, 1, 0, 30, tzinfo=UTC),
+            datetime(2025, 2, 1, 2, 30, tzinfo=UTC),
+            "observation_window_not_aligned_to_bars",
+        ),
+    ],
+)
+def test_observation_window_must_bind_available_bar_boundaries(
+    tmp_path: Path, start: datetime, end: datetime, finding: str
+) -> None:
+    _, _, _, _, result = authorize(
+        tmp_path,
+        spec_mutator=lambda spec: replace(
+            spec,
+            observation_start=start,
+            observation_end=end,
+            knowledge_cutoff=max(spec.knowledge_cutoff, end),
+        ),
+    )
+    assert result.record.status is ExperimentAuthorizationDecision.REJECTED
+    assert finding in result.record.findings
+
+
+def test_engine_policy_uses_exact_fingerprint_and_canonical_order(tmp_path: Path) -> None:
+    wrong_fingerprint = TraceabilityRef(
+        ENGINE_REF.object_id,
+        ENGINE_REF.version,
+        "sha256:" + "3" * 64,
+    )
+    _, _, _, _, result = authorize(
+        tmp_path,
+        spec_mutator=lambda spec: replace(spec, engine_contract_ref=wrong_fingerprint),
+    )
+    assert result.record.status is ExperimentAuthorizationDecision.UNSUPPORTED
+    assert "unsupported_engine_contract" in result.record.findings
+
+    first, second = sorted(
+        (ENGINE_REF, wrong_fingerprint),
+        key=lambda reference: (
+            str(reference.object_id),
+            reference.version.number,
+            reference.expected_fingerprint or "",
+        ),
+    )
+    canonical = replace(
+        authorization_policy(),
+        supported_engine_refs=(first, second),
+    )
+    assert canonical.supported_engine_refs == (first, second)
+    with pytest.raises(ExperimentContractError):
+        replace(canonical, supported_engine_refs=(second, first))
 
 
 def test_corrupted_persisted_authorization_fails_integrity(tmp_path: Path) -> None:
