@@ -117,7 +117,8 @@ class ExperimentReplayContract:
         if (
             not isinstance(self.engine_id, ArtifactId)
             or self.version != ObjectVersion(1)
-            or self.family is not ExperimentFamily.MARKET_STATISTICS
+            or self.family
+            not in (ExperimentFamily.MARKET_STATISTICS, ExperimentFamily.STRATEGY_BACKTEST)
             or self.no_lookahead is not NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT
             or self.ordering is not ReplayOrdering.BAR_OPEN_CLOSE_SOURCE_OBSERVATION_ID
             or self.numeric_semantics is not NumericSemantics.DECIMAL128_HALF_EVEN
