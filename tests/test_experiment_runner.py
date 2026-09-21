@@ -10,7 +10,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from test_research_dataset_eligibility import evaluate
+from test_real_csv_onboarding import CLOCK, HEADER
+from test_real_csv_onboarding import context as real_csv_context
+from test_research_dataset_eligibility import (
+    eligibility_request,
+    evaluate,
+)
+from test_research_dataset_eligibility import (
+    policy as eligibility_policy_contract,
+)
 
 from ai_quant_lab import EXE_01
 from ai_quant_lab.core import experiment_runner as runner_module
@@ -49,6 +57,7 @@ from ai_quant_lab.core.experiment_runner import (
     MissingRequiredBars,
     ReplayOrderingFailure,
     UnsupportedExperimentRunner,
+    UnsupportedReturnDomain,
     _require_market_statistics_scope,
     _select_replay_bars,
     available_bars_at,
@@ -75,7 +84,13 @@ from ai_quant_lab.core.model import (
     RunId,
     TraceabilityRef,
 )
-from ai_quant_lab.core.real_csv_contracts import RealCsvAdmissionRecord, RealCsvSourceDeclaration
+from ai_quant_lab.core.real_csv_contracts import (
+    PriceDomain,
+    RealCsvAdmissionRecord,
+    RealCsvSourceDeclaration,
+)
+from ai_quant_lab.core.real_csv_onboarding import onboard_real_csv
+from ai_quant_lab.core.research_eligibility import evaluate_research_dataset_eligibility
 from ai_quant_lab.core.research_eligibility_contracts import (
     DeploymentAuthorizationStatus,
     EligibilityCalendarSemantics,
@@ -223,6 +238,96 @@ def authorized_context(
     )
 
 
+def signed_authorized_context(
+    tmp_path: Path, closes: tuple[str, str, str], *, suffix: str
+) -> AuthorizedContext:
+    rows: list[str] = []
+    for index, close_text in enumerate(closes):
+        close = int(close_text)
+        rows.append(
+            f"2025-02-01T{index:02d}:00:00.000000Z,"
+            f"2025-02-01T{index + 1:02d}:00:00.000000Z,"
+            f"{close},{close + 1},{close - 1},{close},{10 + index},final,"
+            f"2025-02-01T{index + 1:02d}:00:05.000000Z\n"
+        )
+    csv_path = tmp_path / f"signed-{suffix}.csv"
+    csv_path.write_text(HEADER + "".join(rows), encoding="utf-8")
+    onboarding, source, instrument, schema, timeframe, repository = real_csv_context(
+        tmp_path,
+        path=csv_path,
+        allowed_root=tmp_path,
+        suffix=suffix,
+    )
+    declaration = replace(onboarding.declaration, price_domain=PriceDomain.SIGNED)
+    declaration_ref = exact(declaration, declaration.provenance_id, declaration.version)
+    ingestion = replace(
+        onboarding.csv_request.ingestion,
+        observation_provenance_ref=declaration_ref,
+        manifest_provenance_ref=declaration_ref,
+        lock_provenance_ref=declaration_ref,
+    )
+    csv_request = replace(
+        onboarding.csv_request,
+        ingestion=ingestion,
+        normalization_provenance_ref=declaration_ref,
+        normalized_provenance_ref=declaration_ref,
+    )
+    onboarding = replace(onboarding, declaration=declaration, csv_request=csv_request)
+    admitted = onboard_real_csv(
+        onboarding,
+        source=source,
+        instrument=instrument,
+        schema=schema,
+        timeframe=timeframe,
+        clock=CLOCK,
+        repository=repository,
+    )
+    assert admitted.report is not None
+    eligibility_policy = eligibility_policy_contract()
+    eligibility = evaluate_research_dataset_eligibility(
+        eligibility_request(
+            declaration,
+            admitted.admission,
+            eligibility_policy,
+            admitted.report,
+            eligibility_id=f"research-dataset-eligibility-{suffix}",
+        ),
+        admission=admitted.admission,
+        declaration=declaration,
+        report=admitted.report,
+        repository=repository,
+    ).record
+    spec = specification(eligibility)
+    policy = authorization_policy()
+    authorization = authorize_experiment(
+        ExperimentAuthorizationRequest(
+            ArtifactId("market-statistics-authorization"),
+            spec,
+            policy,
+            DECISION_TIME,
+            AgentId("experiment-authorizer"),
+        ),
+        eligibility=eligibility,
+        eligibility_policy=eligibility_policy,
+        admission=admitted.admission,
+        declaration=declaration,
+        report=admitted.report,
+        repository=repository,
+    )
+    assert authorization.record.status is ExperimentAuthorizationDecision.AUTHORIZED
+    return (
+        declaration,
+        repository,
+        admitted.admission,
+        admitted.report,
+        eligibility_policy,
+        eligibility,
+        spec,
+        policy,
+        authorization,
+    )
+
+
 def run_request(
     authorization: ExperimentAuthorizationRecord,
     specification: ExperimentSpecification,
@@ -245,14 +350,9 @@ def run_request(
     )
 
 
-def execute(
-    tmp_path: Path,
-    *,
-    suffix: str = "runner",
-    seed: int = 42,
-    mode: str = "descriptive",
-) -> tuple[AuthorizedContext, ExperimentRunRequest, ExperimentRunResult]:
-    context = authorized_context(tmp_path, suffix=suffix, seed=seed, mode=mode)
+def execute_context(
+    context: AuthorizedContext,
+) -> tuple[ExperimentRunRequest, ExperimentRunResult]:
     (
         declaration,
         repository,
@@ -278,6 +378,18 @@ def execute(
         engine_contract=market_statistics_replay_contract(),
         repository=repository,
     )
+    return request, result
+
+
+def execute(
+    tmp_path: Path,
+    *,
+    suffix: str = "runner",
+    seed: int = 42,
+    mode: str = "descriptive",
+) -> tuple[AuthorizedContext, ExperimentRunRequest, ExperimentRunResult]:
+    context = authorized_context(tmp_path, suffix=suffix, seed=seed, mode=mode)
+    request, result = execute_context(context)
     return context, request, result
 
 
@@ -829,6 +941,37 @@ def test_replay_contract_and_result_numeric_values_are_strict(tmp_path: Path) ->
         replace(result.artifact, simple_returns=("NaN", "0"))
     with pytest.raises(ValueError):
         replace(result.artifact, close_max="")
+
+
+def test_zero_first_close_fails_with_typed_return_domain_error(tmp_path: Path) -> None:
+    context = signed_authorized_context(tmp_path, ("0", "100", "101"), suffix="zero-first")
+    repository = context[1]
+    with pytest.raises(
+        UnsupportedReturnDomain,
+        match="simple return is undefined when previous close is zero",
+    ):
+        execute_context(context)
+    assert not (repository.root / "objects" / "experiment-result-artifact").exists()
+    assert not (repository.root / "objects" / "experiment-run-record").exists()
+
+
+def test_zero_later_in_series_fails_when_it_becomes_denominator(tmp_path: Path) -> None:
+    context = signed_authorized_context(tmp_path, ("100", "0", "101"), suffix="zero-later")
+    repository = context[1]
+    with pytest.raises(
+        UnsupportedReturnDomain,
+        match="simple return is undefined when previous close is zero",
+    ):
+        execute_context(context)
+    assert not (repository.root / "objects" / "experiment-result-artifact").exists()
+    assert not (repository.root / "objects" / "experiment-run-record").exists()
+
+
+def test_negative_previous_close_remains_supported_for_signed_domain(tmp_path: Path) -> None:
+    context = signed_authorized_context(tmp_path, ("-100", "-50", "-25"), suffix="negative")
+    _, result = execute_context(context)
+    assert result.artifact.simple_returns == ("-0.5", "-0.5")
+    assert result.record.status is ExperimentRunStatus.COMPLETED
 
 
 def test_no_random_uuid_or_current_time_affects_identity(tmp_path: Path) -> None:

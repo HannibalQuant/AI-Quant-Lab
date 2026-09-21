@@ -89,6 +89,10 @@ class ExperimentResultLineageMismatch(ExperimentRunnerError):
     pass
 
 
+class UnsupportedReturnDomain(ExperimentRunnerError):
+    pass
+
+
 _V1 = ObjectVersion(1)
 _DECIMAL_CONTEXT = Context(prec=34, rounding=ROUND_HALF_EVEN)
 _METRICS = (
@@ -396,9 +400,15 @@ def _result_artifact(
     mean: Decimal | None
     variance: Decimal | None
     with localcontext(_DECIMAL_CONTEXT):
-        returns = tuple(
-            closes[index] / closes[index - 1] - Decimal(1) for index in range(1, len(closes))
-        )
+        calculated_returns: list[Decimal] = []
+        for index in range(1, len(closes)):
+            previous_close = closes[index - 1]
+            if previous_close == 0:
+                raise UnsupportedReturnDomain(
+                    "simple return is undefined when previous close is zero"
+                )
+            calculated_returns.append(closes[index] / previous_close - Decimal(1))
+        returns = tuple(calculated_returns)
         if returns:
             mean = sum(returns, Decimal(0)) / Decimal(len(returns))
             variance = sum((value - mean) ** 2 for value in returns) / Decimal(len(returns))

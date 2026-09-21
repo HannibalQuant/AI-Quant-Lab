@@ -114,6 +114,11 @@ precision 34 and `ROUND_HALF_EVEN`.
 
 `simple_return_t = close_t / close_(t-1) - 1`
 
+An exact zero previous close is outside this formula's supported mathematical domain and fails
+closed with the typed `UnsupportedReturnDomain` runner error before any run/result artifact is
+persisted. Negative values permitted by a declared `SIGNED` source domain remain mathematically
+supported; the runner does not silently impose `POSITIVE_ONLY` admission semantics.
+
 Mean is the arithmetic mean of those simple returns. Dispersion is population variance (division
 by `N`), not annualized volatility. All persisted numeric outputs are canonical finite decimal
 strings; exponent notation, NaN, infinity, negative zero, and fractional trailing zeros are
