@@ -121,6 +121,23 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityStatus,
     ValidationStatus,
 )
+from ai_quant_lab.core.strategy_backtest_contracts import (
+    BacktestResultArtifact,
+    BacktestRunRecord,
+    BacktestRunStatus,
+    EquityPoint,
+    SidePermission,
+    SignalTiming,
+    SimulatedExecutionTiming,
+    SimulatedFill,
+    SimulatedOrder,
+    SimulatedOrderSide,
+    SimulatedOrderStatus,
+    SimulatedPositionState,
+    SimulatedTrade,
+    StrategyDefinition,
+    StrategyModel,
+)
 
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
 REPRESENTATION_VERSION: Final = 1
@@ -152,6 +169,9 @@ type GovernedRecord = (
     | ExperimentReplayContract
     | ExperimentResultArtifact
     | ExperimentRunRecord
+    | StrategyDefinition
+    | BacktestResultArtifact
+    | BacktestRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -203,6 +223,9 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ExperimentReplayContract: "ExperimentReplayContract",
     ExperimentResultArtifact: "ExperimentResultArtifact",
     ExperimentRunRecord: "ExperimentRunRecord",
+    StrategyDefinition: "StrategyDefinition",
+    BacktestResultArtifact: "BacktestResultArtifact",
+    BacktestRunRecord: "BacktestRunRecord",
 }
 
 
@@ -388,6 +411,71 @@ def _raw_value(value: Any, field: str) -> str | int | bool | DecimalValue | None
     if kind == "decimal" and isinstance(scalar, str):
         return DecimalValue(scalar)
     raise InvalidSerialization(f"{field} has invalid typed raw value")
+
+
+def _simulated_order_payload(record: SimulatedOrder) -> dict[str, Any]:
+    return {
+        "order_id": str(record.order_id),
+        "side": record.side.value,
+        "notional": record.notional,
+        "signal_time": _timestamp_payload(record.signal_time),
+        "submitted_time": _timestamp_payload(record.submitted_time),
+        "eligible_fill_time": _timestamp_payload(record.eligible_fill_time),
+        "source_bar_ref": _trace_ref_payload(record.source_bar_ref),
+        "fill_bar_ref": _trace_ref_payload(record.fill_bar_ref),
+        "strategy_ref": _trace_ref_payload(record.strategy_ref),
+        "run_id": str(record.run_id),
+        "run_version": record.run_version.number,
+        "status": record.status.value,
+    }
+
+
+def _simulated_fill_payload(record: SimulatedFill) -> dict[str, Any]:
+    return {
+        "fill_id": str(record.fill_id),
+        "order_id": str(record.order_id),
+        "side": record.side.value,
+        "bar_ref": _trace_ref_payload(record.bar_ref),
+        "fill_time": _timestamp_payload(record.fill_time),
+        "reference_price": record.reference_price,
+        "execution_price": record.execution_price,
+        "quantity": record.quantity,
+        "fill_notional": record.fill_notional,
+        "commission": record.commission,
+        "slippage_cost": record.slippage_cost,
+    }
+
+
+def _simulated_trade_payload(record: SimulatedTrade) -> dict[str, Any]:
+    return {
+        "trade_id": str(record.trade_id),
+        "entry_fill_id": str(record.entry_fill_id),
+        "exit_fill_id": str(record.exit_fill_id),
+        "quantity": record.quantity,
+        "entry_price": record.entry_price,
+        "exit_price": record.exit_price,
+        "gross_pnl": record.gross_pnl,
+        "commission": record.commission,
+        "slippage_cost": record.slippage_cost,
+        "net_pnl": record.net_pnl,
+        "entry_time": _timestamp_payload(record.entry_time),
+        "exit_time": _timestamp_payload(record.exit_time),
+        "strategy_ref": _trace_ref_payload(record.strategy_ref),
+        "run_id": str(record.run_id),
+        "run_version": record.run_version.number,
+    }
+
+
+def _equity_point_payload(record: EquityPoint) -> dict[str, Any]:
+    return {
+        "event_time": _timestamp_payload(record.event_time),
+        "cash": record.cash,
+        "position_quantity": record.position_quantity,
+        "position_value": record.position_value,
+        "unrealized_pnl": record.unrealized_pnl,
+        "realized_pnl": record.realized_pnl,
+        "equity": record.equity,
+    }
 
 
 def _payload(record: GovernedRecord) -> dict[str, Any]:
@@ -884,6 +972,83 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "completed_at": _timestamp_payload(record.completed_at),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "research_execution": record.research_execution.value,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, StrategyDefinition):
+        return {
+            "strategy_id": str(record.strategy_id),
+            "version": record.version.number,
+            "model": record.model.value,
+            "signal_timing": record.signal_timing.value,
+            "execution_timing": record.execution_timing.value,
+            "side_permission": record.side_permission.value,
+            "threshold_bps": record.threshold_bps,
+            "fixed_notional_minor": record.fixed_notional_minor,
+            "capital_currency": record.capital_currency,
+            "capital_minor_unit_scale": record.capital_minor_unit_scale,
+            "allow_pyramiding": record.allow_pyramiding,
+            "force_close_at_window_end": record.force_close_at_window_end,
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, BacktestResultArtifact):
+        return {
+            "artifact_id": str(record.artifact_id),
+            "version": record.version.number,
+            "run_id": str(record.run_id),
+            "run_version": record.run_version.number,
+            "run_input_fingerprint": record.run_input_fingerprint,
+            "authorization_ref": _trace_ref_payload(record.authorization_ref),
+            "specification_ref": _trace_ref_payload(record.specification_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "configuration_fingerprint": record.configuration_fingerprint,
+            "capital_currency": record.capital_currency,
+            "capital_minor_unit_scale": record.capital_minor_unit_scale,
+            "initial_capital": record.initial_capital,
+            "orders": [_simulated_order_payload(item) for item in record.orders],
+            "fills": [_simulated_fill_payload(item) for item in record.fills],
+            "trades": [_simulated_trade_payload(item) for item in record.trades],
+            "equity_curve": [_equity_point_payload(item) for item in record.equity_curve],
+            "final_cash": record.final_cash,
+            "final_equity": record.final_equity,
+            "open_position": record.open_position.value,
+            "trade_count": record.trade_count,
+            "gross_pnl": record.gross_pnl,
+            "net_pnl": record.net_pnl,
+            "total_return": record.total_return,
+            "max_drawdown": record.max_drawdown,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, BacktestRunRecord):
+        return {
+            "run_id": str(record.run_id),
+            "version": record.version.number,
+            "authorization_ref": _trace_ref_payload(record.authorization_ref),
+            "specification_ref": _trace_ref_payload(record.specification_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "configuration_fingerprint": record.configuration_fingerprint,
+            "run_input_fingerprint": record.run_input_fingerprint,
+            "result_ref": _trace_ref_payload(record.result_ref),
+            "status": record.status.value,
+            "completed_at": _timestamp_payload(record.completed_at),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "validation_status": record.validation_status.value,
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
@@ -1951,6 +2116,322 @@ def _decode_experiment_run_record(payload: Any) -> ExperimentRunRecord:
     )
 
 
+def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
+    fields = {
+        "strategy_id",
+        "version",
+        "model",
+        "signal_timing",
+        "execution_timing",
+        "side_permission",
+        "threshold_bps",
+        "fixed_notional_minor",
+        "capital_currency",
+        "capital_minor_unit_scale",
+        "allow_pyramiding",
+        "force_close_at_window_end",
+        "engine_contract_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "StrategyDefinition.payload")
+    return StrategyDefinition(
+        cast(ArtifactId, _typed_id(item["strategy_id"], ArtifactId, "strategy_id")),
+        _version(item["version"], "version"),
+        StrategyModel(_text(item["model"], "model")),
+        SignalTiming(_text(item["signal_timing"], "signal_timing")),
+        SimulatedExecutionTiming(_text(item["execution_timing"], "execution_timing")),
+        SidePermission(_text(item["side_permission"], "side_permission")),
+        _integer(item["threshold_bps"], "threshold_bps"),
+        _integer(item["fixed_notional_minor"], "fixed_notional_minor"),
+        _text(item["capital_currency"], "capital_currency"),
+        _integer(item["capital_minor_unit_scale"], "capital_minor_unit_scale"),
+        _boolean(item["allow_pyramiding"], "allow_pyramiding"),
+        _boolean(item["force_close_at_window_end"], "force_close_at_window_end"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_simulated_order(payload: Any, field: str) -> SimulatedOrder:
+    item = _strict_object(
+        payload,
+        {
+            "order_id",
+            "side",
+            "notional",
+            "signal_time",
+            "submitted_time",
+            "eligible_fill_time",
+            "source_bar_ref",
+            "fill_bar_ref",
+            "strategy_ref",
+            "run_id",
+            "run_version",
+            "status",
+        },
+        field,
+    )
+    return SimulatedOrder(
+        cast(ArtifactId, _typed_id(item["order_id"], ArtifactId, f"{field}.order_id")),
+        SimulatedOrderSide(_text(item["side"], f"{field}.side")),
+        _text(item["notional"], f"{field}.notional"),
+        _timestamp(item["signal_time"], f"{field}.signal_time"),
+        _timestamp(item["submitted_time"], f"{field}.submitted_time"),
+        _timestamp(item["eligible_fill_time"], f"{field}.eligible_fill_time"),
+        _trace_ref(item["source_bar_ref"], f"{field}.source_bar_ref"),
+        _trace_ref(item["fill_bar_ref"], f"{field}.fill_bar_ref"),
+        _trace_ref(item["strategy_ref"], f"{field}.strategy_ref"),
+        cast(RunId, _typed_id(item["run_id"], RunId, f"{field}.run_id")),
+        _version(item["run_version"], f"{field}.run_version"),
+        SimulatedOrderStatus(_text(item["status"], f"{field}.status")),
+    )
+
+
+def _decode_simulated_fill(payload: Any, field: str) -> SimulatedFill:
+    item = _strict_object(
+        payload,
+        {
+            "fill_id",
+            "order_id",
+            "side",
+            "bar_ref",
+            "fill_time",
+            "reference_price",
+            "execution_price",
+            "quantity",
+            "fill_notional",
+            "commission",
+            "slippage_cost",
+        },
+        field,
+    )
+    return SimulatedFill(
+        cast(ArtifactId, _typed_id(item["fill_id"], ArtifactId, f"{field}.fill_id")),
+        cast(ArtifactId, _typed_id(item["order_id"], ArtifactId, f"{field}.order_id")),
+        SimulatedOrderSide(_text(item["side"], f"{field}.side")),
+        _trace_ref(item["bar_ref"], f"{field}.bar_ref"),
+        _timestamp(item["fill_time"], f"{field}.fill_time"),
+        _text(item["reference_price"], f"{field}.reference_price"),
+        _text(item["execution_price"], f"{field}.execution_price"),
+        _text(item["quantity"], f"{field}.quantity"),
+        _text(item["fill_notional"], f"{field}.fill_notional"),
+        _text(item["commission"], f"{field}.commission"),
+        _text(item["slippage_cost"], f"{field}.slippage_cost"),
+    )
+
+
+def _decode_simulated_trade(payload: Any, field: str) -> SimulatedTrade:
+    item = _strict_object(
+        payload,
+        {
+            "trade_id",
+            "entry_fill_id",
+            "exit_fill_id",
+            "quantity",
+            "entry_price",
+            "exit_price",
+            "gross_pnl",
+            "commission",
+            "slippage_cost",
+            "net_pnl",
+            "entry_time",
+            "exit_time",
+            "strategy_ref",
+            "run_id",
+            "run_version",
+        },
+        field,
+    )
+    return SimulatedTrade(
+        cast(ArtifactId, _typed_id(item["trade_id"], ArtifactId, f"{field}.trade_id")),
+        cast(ArtifactId, _typed_id(item["entry_fill_id"], ArtifactId, f"{field}.entry_fill_id")),
+        cast(ArtifactId, _typed_id(item["exit_fill_id"], ArtifactId, f"{field}.exit_fill_id")),
+        _text(item["quantity"], f"{field}.quantity"),
+        _text(item["entry_price"], f"{field}.entry_price"),
+        _text(item["exit_price"], f"{field}.exit_price"),
+        _text(item["gross_pnl"], f"{field}.gross_pnl"),
+        _text(item["commission"], f"{field}.commission"),
+        _text(item["slippage_cost"], f"{field}.slippage_cost"),
+        _text(item["net_pnl"], f"{field}.net_pnl"),
+        _timestamp(item["entry_time"], f"{field}.entry_time"),
+        _timestamp(item["exit_time"], f"{field}.exit_time"),
+        _trace_ref(item["strategy_ref"], f"{field}.strategy_ref"),
+        cast(RunId, _typed_id(item["run_id"], RunId, f"{field}.run_id")),
+        _version(item["run_version"], f"{field}.run_version"),
+    )
+
+
+def _decode_equity_point(payload: Any, field: str) -> EquityPoint:
+    item = _strict_object(
+        payload,
+        {
+            "event_time",
+            "cash",
+            "position_quantity",
+            "position_value",
+            "unrealized_pnl",
+            "realized_pnl",
+            "equity",
+        },
+        field,
+    )
+    return EquityPoint(
+        _timestamp(item["event_time"], f"{field}.event_time"),
+        _text(item["cash"], f"{field}.cash"),
+        _text(item["position_quantity"], f"{field}.position_quantity"),
+        _text(item["position_value"], f"{field}.position_value"),
+        _text(item["unrealized_pnl"], f"{field}.unrealized_pnl"),
+        _text(item["realized_pnl"], f"{field}.realized_pnl"),
+        _text(item["equity"], f"{field}.equity"),
+    )
+
+
+def _decoded_tuple(value: Any, field: str, decoder: Any) -> tuple[Any, ...]:
+    if not isinstance(value, list):
+        raise InvalidSerialization(f"{field} must be an array")
+    return tuple(decoder(item, f"{field}[]") for item in value)
+
+
+def _decode_backtest_result(payload: Any) -> BacktestResultArtifact:
+    fields = {
+        "artifact_id",
+        "version",
+        "run_id",
+        "run_version",
+        "run_input_fingerprint",
+        "authorization_ref",
+        "specification_ref",
+        "policy_ref",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "engine_contract_ref",
+        "strategy_ref",
+        "configuration_fingerprint",
+        "capital_currency",
+        "capital_minor_unit_scale",
+        "initial_capital",
+        "orders",
+        "fills",
+        "trades",
+        "equity_curve",
+        "final_cash",
+        "final_equity",
+        "open_position",
+        "trade_count",
+        "gross_pnl",
+        "net_pnl",
+        "total_return",
+        "max_drawdown",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "BacktestResultArtifact.payload")
+    return BacktestResultArtifact(
+        cast(ArtifactId, _typed_id(item["artifact_id"], ArtifactId, "artifact_id")),
+        _version(item["version"], "version"),
+        cast(RunId, _typed_id(item["run_id"], RunId, "run_id")),
+        _version(item["run_version"], "run_version"),
+        _text(item["run_input_fingerprint"], "run_input_fingerprint"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _text(item["configuration_fingerprint"], "configuration_fingerprint"),
+        _text(item["capital_currency"], "capital_currency"),
+        _integer(item["capital_minor_unit_scale"], "capital_minor_unit_scale"),
+        _text(item["initial_capital"], "initial_capital"),
+        cast(
+            tuple[SimulatedOrder, ...],
+            _decoded_tuple(item["orders"], "orders", _decode_simulated_order),
+        ),
+        cast(
+            tuple[SimulatedFill, ...],
+            _decoded_tuple(item["fills"], "fills", _decode_simulated_fill),
+        ),
+        cast(
+            tuple[SimulatedTrade, ...],
+            _decoded_tuple(item["trades"], "trades", _decode_simulated_trade),
+        ),
+        cast(
+            tuple[EquityPoint, ...],
+            _decoded_tuple(item["equity_curve"], "equity_curve", _decode_equity_point),
+        ),
+        _text(item["final_cash"], "final_cash"),
+        _text(item["final_equity"], "final_equity"),
+        SimulatedPositionState(_text(item["open_position"], "open_position")),
+        _integer(item["trade_count"], "trade_count"),
+        _text(item["gross_pnl"], "gross_pnl"),
+        _text(item["net_pnl"], "net_pnl"),
+        _text(item["total_return"], "total_return"),
+        _text(item["max_drawdown"], "max_drawdown"),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_backtest_run(payload: Any) -> BacktestRunRecord:
+    fields = {
+        "run_id",
+        "version",
+        "authorization_ref",
+        "specification_ref",
+        "policy_ref",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "engine_contract_ref",
+        "strategy_ref",
+        "configuration_fingerprint",
+        "run_input_fingerprint",
+        "result_ref",
+        "status",
+        "completed_at",
+        "provenance_ref",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "BacktestRunRecord.payload")
+    return BacktestRunRecord(
+        cast(RunId, _typed_id(item["run_id"], RunId, "run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _text(item["configuration_fingerprint"], "configuration_fingerprint"),
+        _text(item["run_input_fingerprint"], "run_input_fingerprint"),
+        _trace_ref(item["result_ref"], "result_ref"),
+        BacktestRunStatus(_text(item["status"], "status")),
+        _timestamp(item["completed_at"], "completed_at"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -1976,6 +2457,9 @@ _DECODERS = {
     "ExperimentReplayContract": _decode_experiment_replay_contract,
     "ExperimentResultArtifact": _decode_experiment_result_artifact,
     "ExperimentRunRecord": _decode_experiment_run_record,
+    "StrategyDefinition": _decode_strategy_definition,
+    "BacktestResultArtifact": _decode_backtest_result,
+    "BacktestRunRecord": _decode_backtest_run,
 }
 
 
@@ -2005,6 +2489,9 @@ def decode[
         ExperimentReplayContract,
         ExperimentResultArtifact,
         ExperimentRunRecord,
+        StrategyDefinition,
+        BacktestResultArtifact,
+        BacktestRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

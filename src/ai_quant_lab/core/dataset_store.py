@@ -42,6 +42,11 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityPolicy,
     ResearchDatasetEligibilityRecord,
 )
+from ai_quant_lab.core.strategy_backtest_contracts import (
+    BacktestResultArtifact,
+    BacktestRunRecord,
+    StrategyDefinition,
+)
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
@@ -63,6 +68,9 @@ type StoredDatasetObject = (
     | ExperimentReplayContract
     | ExperimentResultArtifact
     | ExperimentRunRecord
+    | StrategyDefinition
+    | BacktestResultArtifact
+    | BacktestRunRecord
 )
 
 
@@ -120,6 +128,9 @@ class StoredObjectType(StrEnum):
     EXPERIMENT_REPLAY_CONTRACT = "experiment-replay-contract"
     EXPERIMENT_RESULT_ARTIFACT = "experiment-result-artifact"
     EXPERIMENT_RUN_RECORD = "experiment-run-record"
+    STRATEGY_DEFINITION = "strategy-definition"
+    BACKTEST_RESULT_ARTIFACT = "backtest-result-artifact"
+    BACKTEST_RUN_RECORD = "backtest-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -207,6 +218,9 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     ExperimentReplayContract: StoredObjectType.EXPERIMENT_REPLAY_CONTRACT,
     ExperimentResultArtifact: StoredObjectType.EXPERIMENT_RESULT_ARTIFACT,
     ExperimentRunRecord: StoredObjectType.EXPERIMENT_RUN_RECORD,
+    StrategyDefinition: StoredObjectType.STRATEGY_DEFINITION,
+    BacktestResultArtifact: StoredObjectType.BACKTEST_RESULT_ARTIFACT,
+    BacktestRunRecord: StoredObjectType.BACKTEST_RUN_RECORD,
 }
 
 
@@ -245,6 +259,12 @@ def _object_id(record: StoredDatasetObject) -> str:
     if isinstance(record, ExperimentResultArtifact):
         return str(record.artifact_id)
     if isinstance(record, ExperimentRunRecord):
+        return str(record.run_id)
+    if isinstance(record, StrategyDefinition):
+        return str(record.strategy_id)
+    if isinstance(record, BacktestResultArtifact):
+        return str(record.artifact_id)
+    if isinstance(record, BacktestRunRecord):
         return str(record.run_id)
     return str(record.dataset_id)
 
