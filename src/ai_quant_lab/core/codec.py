@@ -30,6 +30,17 @@ from ai_quant_lab.core.data import (
     VenueIdentity,
     VenueType,
 )
+from ai_quant_lab.core.experiment_contracts import (
+    CostSemantics,
+    ExperimentAuthorizationDecision,
+    ExperimentAuthorizationPolicy,
+    ExperimentAuthorizationRecord,
+    ExperimentFamily,
+    ExperimentLifecycleBoundary,
+    ExperimentSpecification,
+    NoLookaheadSemantics,
+    PositionSizingSemantics,
+)
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     BarFinality,
@@ -126,6 +137,9 @@ type GovernedRecord = (
     | RealCsvAdmissionRecord
     | ResearchDatasetEligibilityPolicy
     | ResearchDatasetEligibilityRecord
+    | ExperimentSpecification
+    | ExperimentAuthorizationPolicy
+    | ExperimentAuthorizationRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -171,6 +185,9 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     RealCsvAdmissionRecord: "RealCsvAdmissionRecord",
     ResearchDatasetEligibilityPolicy: "ResearchDatasetEligibilityPolicy",
     ResearchDatasetEligibilityRecord: "ResearchDatasetEligibilityRecord",
+    ExperimentSpecification: "ExperimentSpecification",
+    ExperimentAuthorizationPolicy: "ExperimentAuthorizationPolicy",
+    ExperimentAuthorizationRecord: "ExperimentAuthorizationRecord",
 }
 
 
@@ -707,6 +724,80 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "trust_state": record.trust_state.value,
             "research_boundary": record.research_boundary.value,
             "experiment_authorization": record.experiment_authorization.value,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentSpecification):
+        return {
+            "experiment_id": str(record.experiment_id),
+            "version": record.version.number,
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "family": record.family.value,
+            "research_objective": record.research_objective,
+            "hypothesis_id": str(record.hypothesis_id),
+            "configuration": [list(item) for item in record.configuration],
+            "random_seed": record.random_seed,
+            "observation_start": _timestamp_payload(record.observation_start),
+            "observation_end": _timestamp_payload(record.observation_end),
+            "knowledge_cutoff": _timestamp_payload(record.knowledge_cutoff),
+            "no_lookahead": record.no_lookahead.value,
+            "warmup_bars": record.warmup_bars,
+            "commission_semantics": record.commission_semantics.value,
+            "commission_bps": record.commission_bps,
+            "slippage_semantics": record.slippage_semantics.value,
+            "slippage_bps": record.slippage_bps,
+            "funding_semantics": record.funding_semantics.value,
+            "funding_bps": record.funding_bps,
+            "calendar_semantics": record.calendar_semantics.value,
+            "sizing_semantics": record.sizing_semantics.value,
+            "capital_notional_minor": record.capital_notional_minor,
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "requested_metrics": list(record.requested_metrics),
+            "requested_outputs": list(record.requested_outputs),
+            "proposer_id": str(record.proposer_id),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentAuthorizationPolicy):
+        return {
+            "policy_id": str(record.policy_id),
+            "version": record.version.number,
+            "allowed_families": [item.value for item in record.allowed_families],
+            "required_no_lookahead": record.required_no_lookahead.value,
+            "accepted_calendars": [item.value for item in record.accepted_calendars],
+            "require_explicit_commission": record.require_explicit_commission,
+            "require_explicit_slippage": record.require_explicit_slippage,
+            "require_explicit_funding": record.require_explicit_funding,
+            "require_position_sizing": record.require_position_sizing,
+            "maximum_window_days": record.maximum_window_days,
+            "minimum_seed": record.minimum_seed,
+            "maximum_seed": record.maximum_seed,
+            "supported_engine_refs": [
+                _trace_ref_payload(item) for item in record.supported_engine_refs
+            ],
+            "require_verified_actor_authority": record.require_verified_actor_authority,
+            "policy_owner_id": str(record.policy_owner_id),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentAuthorizationRecord):
+        return {
+            "authorization_id": str(record.authorization_id),
+            "version": record.version.number,
+            "specification_ref": _trace_ref_payload(record.specification_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "configuration_fingerprint": record.configuration_fingerprint,
+            "status": record.status.value,
+            "findings": list(record.findings),
+            "decision_time": _timestamp_payload(record.decision_time),
+            "decision_actor_id": str(record.decision_actor_id),
+            "lifecycle": record.lifecycle.value,
             "validation_status": record.validation_status.value,
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
@@ -1461,6 +1552,164 @@ def _decode_research_eligibility_record(payload: Any) -> ResearchDatasetEligibil
     )
 
 
+def _decode_experiment_specification(payload: Any) -> ExperimentSpecification:
+    fields = {
+        "experiment_id",
+        "version",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "family",
+        "research_objective",
+        "hypothesis_id",
+        "configuration",
+        "random_seed",
+        "observation_start",
+        "observation_end",
+        "knowledge_cutoff",
+        "no_lookahead",
+        "warmup_bars",
+        "commission_semantics",
+        "commission_bps",
+        "slippage_semantics",
+        "slippage_bps",
+        "funding_semantics",
+        "funding_bps",
+        "calendar_semantics",
+        "sizing_semantics",
+        "capital_notional_minor",
+        "engine_contract_ref",
+        "requested_metrics",
+        "requested_outputs",
+        "proposer_id",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentSpecification.payload")
+    return ExperimentSpecification(
+        cast(ExperimentId, _typed_id(item["experiment_id"], ExperimentId, "experiment_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        ExperimentFamily(_text(item["family"], "family")),
+        _text(item["research_objective"], "research_objective"),
+        cast(ArtifactId, _typed_id(item["hypothesis_id"], ArtifactId, "hypothesis_id")),
+        _metadata(item["configuration"], "configuration"),
+        _integer(item["random_seed"], "random_seed"),
+        _timestamp(item["observation_start"], "observation_start"),
+        _timestamp(item["observation_end"], "observation_end"),
+        _timestamp(item["knowledge_cutoff"], "knowledge_cutoff"),
+        NoLookaheadSemantics(_text(item["no_lookahead"], "no_lookahead")),
+        _integer(item["warmup_bars"], "warmup_bars"),
+        CostSemantics(_text(item["commission_semantics"], "commission_semantics")),
+        _integer(item["commission_bps"], "commission_bps"),
+        CostSemantics(_text(item["slippage_semantics"], "slippage_semantics")),
+        _integer(item["slippage_bps"], "slippage_bps"),
+        CostSemantics(_text(item["funding_semantics"], "funding_semantics")),
+        _integer(item["funding_bps"], "funding_bps"),
+        EligibilityCalendarSemantics(_text(item["calendar_semantics"], "calendar_semantics")),
+        PositionSizingSemantics(_text(item["sizing_semantics"], "sizing_semantics")),
+        _integer(item["capital_notional_minor"], "capital_notional_minor"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _strings(item["requested_metrics"], "requested_metrics"),
+        _strings(item["requested_outputs"], "requested_outputs"),
+        cast(AgentId, _typed_id(item["proposer_id"], AgentId, "proposer_id")),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_experiment_authorization_policy(payload: Any) -> ExperimentAuthorizationPolicy:
+    fields = {
+        "policy_id",
+        "version",
+        "allowed_families",
+        "required_no_lookahead",
+        "accepted_calendars",
+        "require_explicit_commission",
+        "require_explicit_slippage",
+        "require_explicit_funding",
+        "require_position_sizing",
+        "maximum_window_days",
+        "minimum_seed",
+        "maximum_seed",
+        "supported_engine_refs",
+        "require_verified_actor_authority",
+        "policy_owner_id",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentAuthorizationPolicy.payload")
+    return ExperimentAuthorizationPolicy(
+        cast(ArtifactId, _typed_id(item["policy_id"], ArtifactId, "policy_id")),
+        _version(item["version"], "version"),
+        tuple(
+            ExperimentFamily(value)
+            for value in _strings(item["allowed_families"], "allowed_families")
+        ),
+        NoLookaheadSemantics(_text(item["required_no_lookahead"], "required_no_lookahead")),
+        tuple(
+            EligibilityCalendarSemantics(value)
+            for value in _strings(item["accepted_calendars"], "accepted_calendars")
+        ),
+        _boolean(item["require_explicit_commission"], "require_explicit_commission"),
+        _boolean(item["require_explicit_slippage"], "require_explicit_slippage"),
+        _boolean(item["require_explicit_funding"], "require_explicit_funding"),
+        _boolean(item["require_position_sizing"], "require_position_sizing"),
+        _integer(item["maximum_window_days"], "maximum_window_days"),
+        _integer(item["minimum_seed"], "minimum_seed"),
+        _integer(item["maximum_seed"], "maximum_seed"),
+        _trace_refs(item["supported_engine_refs"], "supported_engine_refs"),
+        _boolean(item["require_verified_actor_authority"], "require_verified_actor_authority"),
+        cast(AgentId, _typed_id(item["policy_owner_id"], AgentId, "policy_owner_id")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_experiment_authorization_record(payload: Any) -> ExperimentAuthorizationRecord:
+    fields = {
+        "authorization_id",
+        "version",
+        "specification_ref",
+        "eligibility_ref",
+        "policy_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "configuration_fingerprint",
+        "status",
+        "findings",
+        "decision_time",
+        "decision_actor_id",
+        "lifecycle",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentAuthorizationRecord.payload")
+    return ExperimentAuthorizationRecord(
+        cast(ArtifactId, _typed_id(item["authorization_id"], ArtifactId, "authorization_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _text(item["configuration_fingerprint"], "configuration_fingerprint"),
+        ExperimentAuthorizationDecision(_text(item["status"], "status")),
+        _strings(item["findings"], "findings"),
+        _timestamp(item["decision_time"], "decision_time"),
+        cast(AgentId, _typed_id(item["decision_actor_id"], AgentId, "decision_actor_id")),
+        ExperimentLifecycleBoundary(_text(item["lifecycle"], "lifecycle")),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -1480,6 +1729,9 @@ _DECODERS = {
     "RealCsvAdmissionRecord": _decode_real_csv_admission,
     "ResearchDatasetEligibilityPolicy": _decode_research_eligibility_policy,
     "ResearchDatasetEligibilityRecord": _decode_research_eligibility_record,
+    "ExperimentSpecification": _decode_experiment_specification,
+    "ExperimentAuthorizationPolicy": _decode_experiment_authorization_policy,
+    "ExperimentAuthorizationRecord": _decode_experiment_authorization_record,
 }
 
 
@@ -1503,6 +1755,9 @@ def decode[
         RealCsvAdmissionRecord,
         ResearchDatasetEligibilityPolicy,
         ResearchDatasetEligibilityRecord,
+        ExperimentSpecification,
+        ExperimentAuthorizationPolicy,
+        ExperimentAuthorizationRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

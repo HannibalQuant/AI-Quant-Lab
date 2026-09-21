@@ -16,6 +16,11 @@ from typing import Any, Final, cast
 
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
 from ai_quant_lab.core.data import DatasetLock, DatasetLockId, DatasetManifest, RawObservation
+from ai_quant_lab.core.experiment_contracts import (
+    ExperimentAuthorizationPolicy,
+    ExperimentAuthorizationRecord,
+    ExperimentSpecification,
+)
 from ai_quant_lab.core.integrity import IntegrityError, fingerprint_record, verify_integrity
 from ai_quant_lab.core.market_data import MarketBar, NormalizedBarManifest
 from ai_quant_lab.core.model import (
@@ -47,6 +52,9 @@ type StoredDatasetObject = (
     | RealCsvAdmissionRecord
     | ResearchDatasetEligibilityPolicy
     | ResearchDatasetEligibilityRecord
+    | ExperimentSpecification
+    | ExperimentAuthorizationPolicy
+    | ExperimentAuthorizationRecord
 )
 
 
@@ -98,6 +106,9 @@ class StoredObjectType(StrEnum):
     REAL_CSV_ADMISSION_RECORD = "real-csv-admission-record"
     RESEARCH_DATASET_ELIGIBILITY_POLICY = "research-dataset-eligibility-policy"
     RESEARCH_DATASET_ELIGIBILITY_RECORD = "research-dataset-eligibility-record"
+    EXPERIMENT_SPECIFICATION = "experiment-specification"
+    EXPERIMENT_AUTHORIZATION_POLICY = "experiment-authorization-policy"
+    EXPERIMENT_AUTHORIZATION_RECORD = "experiment-authorization-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -179,6 +190,9 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     RealCsvAdmissionRecord: StoredObjectType.REAL_CSV_ADMISSION_RECORD,
     ResearchDatasetEligibilityPolicy: StoredObjectType.RESEARCH_DATASET_ELIGIBILITY_POLICY,
     ResearchDatasetEligibilityRecord: StoredObjectType.RESEARCH_DATASET_ELIGIBILITY_RECORD,
+    ExperimentSpecification: StoredObjectType.EXPERIMENT_SPECIFICATION,
+    ExperimentAuthorizationPolicy: StoredObjectType.EXPERIMENT_AUTHORIZATION_POLICY,
+    ExperimentAuthorizationRecord: StoredObjectType.EXPERIMENT_AUTHORIZATION_RECORD,
 }
 
 
@@ -206,6 +220,12 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.policy_id)
     if isinstance(record, ResearchDatasetEligibilityRecord):
         return str(record.eligibility_id)
+    if isinstance(record, ExperimentSpecification):
+        return str(record.experiment_id)
+    if isinstance(record, ExperimentAuthorizationPolicy):
+        return str(record.policy_id)
+    if isinstance(record, ExperimentAuthorizationRecord):
+        return str(record.authorization_id)
     return str(record.dataset_id)
 
 
