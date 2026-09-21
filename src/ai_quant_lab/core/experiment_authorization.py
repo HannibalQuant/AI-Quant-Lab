@@ -252,3 +252,67 @@ def authorize_experiment(
         repository.store(record),
     )
     return ExperimentAuthorizationResult(record, writes)
+
+
+def verify_experiment_authorization_lineage(
+    *,
+    record: ExperimentAuthorizationRecord,
+    specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
+    report: CsvImportReport,
+) -> None:
+    """Reconstruct the exact authorization decision without granting new authority."""
+    expected_eligibility = _exact(eligibility, eligibility.eligibility_id, eligibility.version)
+    if specification.eligibility_ref != expected_eligibility:
+        raise ExperimentAuthorizationError("experiment does not bind exact eligibility record")
+    if eligibility.normalized_manifest_ref is None or eligibility.normalized_lock_ref is None:
+        raise ExperimentAuthorizationError("eligible record lacks exact normalized dataset refs")
+    if (
+        specification.normalized_manifest_ref != eligibility.normalized_manifest_ref
+        or specification.normalized_lock_ref != eligibility.normalized_lock_ref
+    ):
+        raise ExperimentAuthorizationError("experiment does not bind exact eligible dataset")
+    verify_research_eligibility_lineage(
+        record=eligibility,
+        policy=eligibility_policy,
+        admission=admission,
+        declaration=declaration,
+        report=report,
+    )
+    request = ExperimentAuthorizationRequest(
+        record.authorization_id,
+        specification,
+        policy,
+        record.decision_time,
+        record.decision_actor_id,
+    )
+    status, findings = _policy_outcome(request, eligibility, report)
+    expected = ExperimentAuthorizationRecord(
+        record.authorization_id,
+        ObjectVersion(1),
+        _exact(specification, specification.experiment_id, specification.version),
+        expected_eligibility,
+        _exact(policy, policy.policy_id, policy.version),
+        specification.normalized_manifest_ref,
+        specification.normalized_lock_ref,
+        experiment_configuration_fingerprint(specification),
+        status,
+        findings,
+        record.decision_time,
+        record.decision_actor_id,
+        ExperimentLifecycleBoundary.AUTHORIZED_NOT_EXECUTED
+        if status is ExperimentAuthorizationDecision.AUTHORIZED
+        else ExperimentLifecycleBoundary.NOT_AUTHORIZED,
+        ValidationStatus.NOT_VALIDATED,
+        DeploymentAuthorizationStatus.NOT_AUTHORIZED,
+        ExecutionState.PLANNED_CLOSED,
+        ObjectVersion(1),
+    )
+    if record != expected:
+        raise ExperimentAuthorizationError(
+            "authorization record does not match exact reconstructed decision"
+        )

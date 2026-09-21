@@ -21,6 +21,11 @@ from ai_quant_lab.core.experiment_contracts import (
     ExperimentAuthorizationRecord,
     ExperimentSpecification,
 )
+from ai_quant_lab.core.experiment_runner_contracts import (
+    ExperimentReplayContract,
+    ExperimentResultArtifact,
+    ExperimentRunRecord,
+)
 from ai_quant_lab.core.integrity import IntegrityError, fingerprint_record, verify_integrity
 from ai_quant_lab.core.market_data import MarketBar, NormalizedBarManifest
 from ai_quant_lab.core.model import (
@@ -55,6 +60,9 @@ type StoredDatasetObject = (
     | ExperimentSpecification
     | ExperimentAuthorizationPolicy
     | ExperimentAuthorizationRecord
+    | ExperimentReplayContract
+    | ExperimentResultArtifact
+    | ExperimentRunRecord
 )
 
 
@@ -109,6 +117,9 @@ class StoredObjectType(StrEnum):
     EXPERIMENT_SPECIFICATION = "experiment-specification"
     EXPERIMENT_AUTHORIZATION_POLICY = "experiment-authorization-policy"
     EXPERIMENT_AUTHORIZATION_RECORD = "experiment-authorization-record"
+    EXPERIMENT_REPLAY_CONTRACT = "experiment-replay-contract"
+    EXPERIMENT_RESULT_ARTIFACT = "experiment-result-artifact"
+    EXPERIMENT_RUN_RECORD = "experiment-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -193,6 +204,9 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     ExperimentSpecification: StoredObjectType.EXPERIMENT_SPECIFICATION,
     ExperimentAuthorizationPolicy: StoredObjectType.EXPERIMENT_AUTHORIZATION_POLICY,
     ExperimentAuthorizationRecord: StoredObjectType.EXPERIMENT_AUTHORIZATION_RECORD,
+    ExperimentReplayContract: StoredObjectType.EXPERIMENT_REPLAY_CONTRACT,
+    ExperimentResultArtifact: StoredObjectType.EXPERIMENT_RESULT_ARTIFACT,
+    ExperimentRunRecord: StoredObjectType.EXPERIMENT_RUN_RECORD,
 }
 
 
@@ -226,6 +240,12 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.policy_id)
     if isinstance(record, ExperimentAuthorizationRecord):
         return str(record.authorization_id)
+    if isinstance(record, ExperimentReplayContract):
+        return str(record.engine_id)
+    if isinstance(record, ExperimentResultArtifact):
+        return str(record.artifact_id)
+    if isinstance(record, ExperimentRunRecord):
+        return str(record.run_id)
     return str(record.dataset_id)
 
 
