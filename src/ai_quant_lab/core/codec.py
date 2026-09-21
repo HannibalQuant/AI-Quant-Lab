@@ -41,6 +41,15 @@ from ai_quant_lab.core.experiment_contracts import (
     NoLookaheadSemantics,
     PositionSizingSemantics,
 )
+from ai_quant_lab.core.experiment_runner_contracts import (
+    ExperimentReplayContract,
+    ExperimentResultArtifact,
+    ExperimentRunRecord,
+    ExperimentRunStatus,
+    NumericSemantics,
+    ReplayOrdering,
+    ResearchExperimentExecutionStatus,
+)
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     BarFinality,
@@ -140,6 +149,9 @@ type GovernedRecord = (
     | ExperimentSpecification
     | ExperimentAuthorizationPolicy
     | ExperimentAuthorizationRecord
+    | ExperimentReplayContract
+    | ExperimentResultArtifact
+    | ExperimentRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -188,6 +200,9 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ExperimentSpecification: "ExperimentSpecification",
     ExperimentAuthorizationPolicy: "ExperimentAuthorizationPolicy",
     ExperimentAuthorizationRecord: "ExperimentAuthorizationRecord",
+    ExperimentReplayContract: "ExperimentReplayContract",
+    ExperimentResultArtifact: "ExperimentResultArtifact",
+    ExperimentRunRecord: "ExperimentRunRecord",
 }
 
 
@@ -798,6 +813,77 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "decision_time": _timestamp_payload(record.decision_time),
             "decision_actor_id": str(record.decision_actor_id),
             "lifecycle": record.lifecycle.value,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentReplayContract):
+        return {
+            "engine_id": str(record.engine_id),
+            "version": record.version.number,
+            "family": record.family.value,
+            "no_lookahead": record.no_lookahead.value,
+            "ordering": record.ordering.value,
+            "numeric_semantics": record.numeric_semantics.value,
+            "decimal_precision": record.decimal_precision,
+            "supported_metrics": list(record.supported_metrics),
+            "supported_outputs": list(record.supported_outputs),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentResultArtifact):
+        return {
+            "artifact_id": str(record.artifact_id),
+            "version": record.version.number,
+            "run_id": str(record.run_id),
+            "run_version": record.run_version.number,
+            "run_input_fingerprint": record.run_input_fingerprint,
+            "authorization_ref": _trace_ref_payload(record.authorization_ref),
+            "specification_ref": _trace_ref_payload(record.specification_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "configuration_fingerprint": record.configuration_fingerprint,
+            "random_seed": record.random_seed,
+            "observation_count": record.observation_count,
+            "first_event_time": _timestamp_payload(record.first_event_time),
+            "last_event_time": _timestamp_payload(record.last_event_time),
+            "last_knowledge_time": _timestamp_payload(record.last_knowledge_time),
+            "close_min": record.close_min,
+            "close_max": record.close_max,
+            "simple_returns": list(record.simple_returns),
+            "simple_return_mean": record.simple_return_mean,
+            "simple_return_population_variance": record.simple_return_population_variance,
+            "return_series_fingerprint": record.return_series_fingerprint,
+            "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ExperimentRunRecord):
+        return {
+            "run_id": str(record.run_id),
+            "version": record.version.number,
+            "authorization_ref": _trace_ref_payload(record.authorization_ref),
+            "specification_ref": _trace_ref_payload(record.specification_ref),
+            "policy_ref": _trace_ref_payload(record.policy_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "configuration_fingerprint": record.configuration_fingerprint,
+            "random_seed": record.random_seed,
+            "observation_start": _timestamp_payload(record.observation_start),
+            "observation_end": _timestamp_payload(record.observation_end),
+            "knowledge_cutoff": _timestamp_payload(record.knowledge_cutoff),
+            "run_input_fingerprint": record.run_input_fingerprint,
+            "result_ref": _trace_ref_payload(record.result_ref),
+            "status": record.status.value,
+            "completed_at": _timestamp_payload(record.completed_at),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "research_execution": record.research_execution.value,
             "validation_status": record.validation_status.value,
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
@@ -1710,6 +1796,161 @@ def _decode_experiment_authorization_record(payload: Any) -> ExperimentAuthoriza
     )
 
 
+def _decode_experiment_replay_contract(payload: Any) -> ExperimentReplayContract:
+    fields = {
+        "engine_id",
+        "version",
+        "family",
+        "no_lookahead",
+        "ordering",
+        "numeric_semantics",
+        "decimal_precision",
+        "supported_metrics",
+        "supported_outputs",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentReplayContract.payload")
+    return ExperimentReplayContract(
+        cast(ArtifactId, _typed_id(item["engine_id"], ArtifactId, "engine_id")),
+        _version(item["version"], "version"),
+        ExperimentFamily(_text(item["family"], "family")),
+        NoLookaheadSemantics(_text(item["no_lookahead"], "no_lookahead")),
+        ReplayOrdering(_text(item["ordering"], "ordering")),
+        NumericSemantics(_text(item["numeric_semantics"], "numeric_semantics")),
+        _integer(item["decimal_precision"], "decimal_precision"),
+        _strings(item["supported_metrics"], "supported_metrics"),
+        _strings(item["supported_outputs"], "supported_outputs"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_experiment_result_artifact(payload: Any) -> ExperimentResultArtifact:
+    fields = {
+        "artifact_id",
+        "version",
+        "run_id",
+        "run_version",
+        "run_input_fingerprint",
+        "authorization_ref",
+        "specification_ref",
+        "policy_ref",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "engine_contract_ref",
+        "configuration_fingerprint",
+        "random_seed",
+        "observation_count",
+        "first_event_time",
+        "last_event_time",
+        "last_knowledge_time",
+        "close_min",
+        "close_max",
+        "simple_returns",
+        "simple_return_mean",
+        "simple_return_population_variance",
+        "return_series_fingerprint",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentResultArtifact.payload")
+    return ExperimentResultArtifact(
+        cast(ArtifactId, _typed_id(item["artifact_id"], ArtifactId, "artifact_id")),
+        _version(item["version"], "version"),
+        cast(RunId, _typed_id(item["run_id"], RunId, "run_id")),
+        _version(item["run_version"], "run_version"),
+        _text(item["run_input_fingerprint"], "run_input_fingerprint"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _text(item["configuration_fingerprint"], "configuration_fingerprint"),
+        _integer(item["random_seed"], "random_seed"),
+        _integer(item["observation_count"], "observation_count"),
+        _timestamp(item["first_event_time"], "first_event_time"),
+        _timestamp(item["last_event_time"], "last_event_time"),
+        _timestamp(item["last_knowledge_time"], "last_knowledge_time"),
+        _text(item["close_min"], "close_min"),
+        _text(item["close_max"], "close_max"),
+        _strings(item["simple_returns"], "simple_returns"),
+        _optional_text(item["simple_return_mean"], "simple_return_mean"),
+        _optional_text(
+            item["simple_return_population_variance"],
+            "simple_return_population_variance",
+        ),
+        _text(item["return_series_fingerprint"], "return_series_fingerprint"),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_experiment_run_record(payload: Any) -> ExperimentRunRecord:
+    fields = {
+        "run_id",
+        "version",
+        "authorization_ref",
+        "specification_ref",
+        "policy_ref",
+        "eligibility_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "engine_contract_ref",
+        "configuration_fingerprint",
+        "random_seed",
+        "observation_start",
+        "observation_end",
+        "knowledge_cutoff",
+        "run_input_fingerprint",
+        "result_ref",
+        "status",
+        "completed_at",
+        "provenance_ref",
+        "research_execution",
+        "validation_status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ExperimentRunRecord.payload")
+    return ExperimentRunRecord(
+        cast(RunId, _typed_id(item["run_id"], RunId, "run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["policy_ref"], "policy_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _text(item["configuration_fingerprint"], "configuration_fingerprint"),
+        _integer(item["random_seed"], "random_seed"),
+        _timestamp(item["observation_start"], "observation_start"),
+        _timestamp(item["observation_end"], "observation_end"),
+        _timestamp(item["knowledge_cutoff"], "knowledge_cutoff"),
+        _text(item["run_input_fingerprint"], "run_input_fingerprint"),
+        _trace_ref(item["result_ref"], "result_ref"),
+        ExperimentRunStatus(_text(item["status"], "status")),
+        _timestamp(item["completed_at"], "completed_at"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        ResearchExperimentExecutionStatus(_text(item["research_execution"], "research_execution")),
+        ValidationStatus(_text(item["validation_status"], "validation_status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -1732,6 +1973,9 @@ _DECODERS = {
     "ExperimentSpecification": _decode_experiment_specification,
     "ExperimentAuthorizationPolicy": _decode_experiment_authorization_policy,
     "ExperimentAuthorizationRecord": _decode_experiment_authorization_record,
+    "ExperimentReplayContract": _decode_experiment_replay_contract,
+    "ExperimentResultArtifact": _decode_experiment_result_artifact,
+    "ExperimentRunRecord": _decode_experiment_run_record,
 }
 
 
@@ -1758,6 +2002,9 @@ def decode[
         ExperimentSpecification,
         ExperimentAuthorizationPolicy,
         ExperimentAuthorizationRecord,
+        ExperimentReplayContract,
+        ExperimentResultArtifact,
+        ExperimentRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
