@@ -26,6 +26,7 @@ from ai_quant_lab import EXE_01
 from ai_quant_lab.core import strategy_backtest as backtest_module
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.csv_import import CsvImportReport
+from ai_quant_lab.core.data import InstrumentClass, InstrumentId, InstrumentIdentity
 from ai_quant_lab.core.dataset_store import (
     LocalDatasetRepository,
     RepositoryIntegrityFailure,
@@ -75,6 +76,7 @@ from ai_quant_lab.core.strategy_backtest import (
     MissingNextBar,
     StrategyBacktestResult,
     StrategyBacktestRunRequest,
+    UnsupportedCapitalDenomination,
     UnsupportedFunding,
     UnsupportedSizing,
     UnsupportedStrategy,
@@ -115,10 +117,13 @@ type BacktestContext = tuple[
     ExperimentSpecification,
     ExperimentAuthorizationPolicy,
     ExperimentAuthorizationResult,
+    InstrumentIdentity,
 ]
 
 
-def strategy(*, fixed_notional_minor: int = 10_000) -> StrategyDefinition:
+def strategy(
+    *, fixed_notional_minor: int = 10_000, capital_currency: str = "USD"
+) -> StrategyDefinition:
     return StrategyDefinition(
         ArtifactId("close-vs-open-long-only-v1"),
         V1,
@@ -128,7 +133,7 @@ def strategy(*, fixed_notional_minor: int = 10_000) -> StrategyDefinition:
         SidePermission.LONG_ONLY,
         0,
         fixed_notional_minor,
-        "USDT",
+        capital_currency,
         100,
         False,
         False,
@@ -239,11 +244,34 @@ def authorized_context(
     *,
     suffix: str = "backtest",
     spec_mutator: Callable[[ExperimentSpecification], ExperimentSpecification] | None = None,
+    capital_currency: str = "USD",
+    quote_asset: str | None = "USD",
 ) -> BacktestContext:
     csv_path = tmp_path / f"strategy-{suffix}.csv"
     csv_path.write_text(_six_bar_csv(), encoding="utf-8")
     onboarding, source, instrument, schema, timeframe, repository = real_csv_context(
         tmp_path, path=csv_path, allowed_root=tmp_path, suffix=suffix
+    )
+    instrument = replace(instrument, quote_asset=quote_asset)
+    instrument_ref = exact(instrument, instrument.instrument_id, instrument.version)
+    declaration = replace(onboarding.declaration, instrument_ref=instrument_ref)
+    declaration_ref = exact(declaration, declaration.provenance_id, declaration.version)
+    ingestion = replace(
+        onboarding.csv_request.ingestion,
+        instrument_ref=instrument_ref,
+        observation_provenance_ref=declaration_ref,
+        manifest_provenance_ref=declaration_ref,
+        lock_provenance_ref=declaration_ref,
+    )
+    onboarding = replace(
+        onboarding,
+        declaration=declaration,
+        csv_request=replace(
+            onboarding.csv_request,
+            ingestion=ingestion,
+            normalization_provenance_ref=declaration_ref,
+            normalized_provenance_ref=declaration_ref,
+        ),
     )
     admitted = onboard_real_csv(
         onboarding,
@@ -269,7 +297,7 @@ def authorized_context(
         report=admitted.report,
         repository=repository,
     ).record
-    definition = strategy()
+    definition = strategy(capital_currency=capital_currency)
     spec = specification(eligibility, definition)
     if spec_mutator is not None:
         spec = spec_mutator(spec)
@@ -300,11 +328,12 @@ def authorized_context(
         spec,
         policy,
         authorization,
+        instrument,
     )
 
 
 def request_for(context: BacktestContext) -> StrategyBacktestRunRequest:
-    _, _, _, _, _, eligibility, definition, spec, policy, authorization = context
+    _, _, _, _, _, eligibility, definition, spec, policy, authorization, _ = context
     engine = strategy_backtest_replay_contract()
     return StrategyBacktestRunRequest(
         ExperimentRunRequest(
@@ -336,6 +365,7 @@ def execute_context(
         spec,
         policy,
         authorization,
+        instrument,
     ) = context
     assert authorization.record.status is ExperimentAuthorizationDecision.AUTHORIZED
     request = request_for(context)
@@ -351,6 +381,7 @@ def execute_context(
         report=report,
         engine_contract=strategy_backtest_replay_contract(),
         strategy=definition,
+        instrument=instrument,
         repository=repository,
     )
     return request, result
@@ -358,6 +389,7 @@ def execute_context(
 
 def test_authorized_strategy_backtest_runs_with_exact_next_event_timing(tmp_path: Path) -> None:
     context = authorized_context(tmp_path)
+    assert context[6].capital_currency == context[10].quote_asset == "USD"
     _, result = execute_context(context)
     artifact = result.artifact
     assert result.record.status is BacktestRunStatus.COMPLETED
@@ -377,6 +409,49 @@ def test_authorized_strategy_backtest_runs_with_exact_next_event_timing(tmp_path
     assert artifact.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert artifact.execution_state is ExecutionState.PLANNED_CLOSED
     assert EXE_01.state is ExecutionState.PLANNED_CLOSED
+
+
+def test_capital_denomination_mismatch_fails_before_result_persistence(
+    tmp_path: Path,
+) -> None:
+    context = authorized_context(
+        tmp_path,
+        suffix="capital-mismatch",
+        capital_currency="USDT",
+        quote_asset="USD",
+    )
+    with pytest.raises(
+        UnsupportedCapitalDenomination,
+        match="strategy capital currency must equal governed instrument quote asset",
+    ):
+        execute_context(context)
+    objects = context[1].root / "objects"
+    assert not (objects / "backtest-result-artifact").exists()
+    assert not (objects / "backtest-run-record").exists()
+
+
+def test_missing_instrument_quote_asset_fails_closed(tmp_path: Path) -> None:
+    context = authorized_context(
+        tmp_path,
+        suffix="missing-quote",
+        capital_currency="USD",
+        quote_asset=None,
+    )
+    with pytest.raises(
+        UnsupportedCapitalDenomination,
+        match="instrument quote asset is required for strategy backtest capital denomination",
+    ):
+        execute_context(context)
+
+
+def test_unrelated_instrument_cannot_satisfy_capital_denomination(tmp_path: Path) -> None:
+    context = authorized_context(tmp_path, suffix="wrong-instrument")
+    unrelated = replace(context[10], symbol="OTHERUSD", quote_asset="USD")
+    with pytest.raises(
+        BacktestLineageMismatch,
+        match="instrument does not match exact source declaration",
+    ):
+        execute_context((*context[:10], unrelated))
 
 
 def test_accounting_costs_metrics_and_equity_identity_are_exact(tmp_path: Path) -> None:
@@ -528,6 +603,7 @@ def test_wrong_authorization_and_engine_refs_fail_closed(tmp_path: Path) -> None
         spec,
         policy,
         authorization,
+        instrument,
     ) = context
     with pytest.raises(ValueError):
         run_authorized_strategy_backtest(
@@ -542,6 +618,7 @@ def test_wrong_authorization_and_engine_refs_fail_closed(tmp_path: Path) -> None
             report=report,
             engine_contract=strategy_backtest_replay_contract(),
             strategy=definition,
+            instrument=instrument,
             repository=repository,
         )
 
@@ -585,6 +662,17 @@ def test_signed_zero_or_negative_execution_prices_fail_closed(tmp_path: Path) ->
         spec,
         policy,
         authorization,
+        InstrumentIdentity(
+            InstrumentId("external-spot-invalid-price"),
+            V1,
+            "EXTUSD",
+            InstrumentClass.SPOT,
+            "EXT",
+            "USD",
+            None,
+            None,
+            V1,
+        ),
     )
     with pytest.raises(InvalidExecutionPrice):
         execute_context(context)
@@ -613,6 +701,7 @@ def test_result_is_deterministic_idempotent_and_roundtrips(tmp_path: Path) -> No
         eligibility=context[5],
         engine_contract=strategy_backtest_replay_contract(),
         strategy=context[6],
+        instrument=context[10],
         report=context[3],
     )
 
@@ -631,6 +720,7 @@ def test_tampered_result_values_fail_exact_lineage_reconstruction(tmp_path: Path
             eligibility=context[5],
             engine_contract=strategy_backtest_replay_contract(),
             strategy=context[6],
+            instrument=context[10],
             report=context[3],
         )
 

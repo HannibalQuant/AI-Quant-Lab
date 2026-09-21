@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 
 from ai_quant_lab.core.csv_import import CsvImportReport
+from ai_quant_lab.core.data import InstrumentIdentity
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
 from ai_quant_lab.core.experiment_authorization import experiment_configuration_fingerprint
 from ai_quant_lab.core.experiment_contracts import (
@@ -103,6 +104,10 @@ class InvalidCapital(StrategyBacktestError):
 
 
 class UnsupportedFunding(StrategyBacktestError):
+    pass
+
+
+class UnsupportedCapitalDenomination(StrategyBacktestError):
     pass
 
 
@@ -302,6 +307,7 @@ def _run_input_fingerprint(
     policy: ExperimentAuthorizationPolicy,
     eligibility: ResearchDatasetEligibilityRecord,
     strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
 ) -> str:
     base = request.experiment_run
     return fingerprint(
@@ -313,12 +319,38 @@ def _run_input_fingerprint(
             "policy_fingerprint": fingerprint_record(policy),
             "eligibility_fingerprint": fingerprint_record(eligibility),
             "strategy_fingerprint": fingerprint_record(strategy),
+            "instrument_fingerprint": fingerprint_record(instrument),
             "engine_contract_ref": base.engine_contract_ref,
             "configuration_fingerprint": experiment_configuration_fingerprint(specification),
             "completed_at": base.completed_at,
             "provenance_ref": base.provenance_ref,
         }
     )
+
+
+def _verify_instrument_and_capital_denomination(
+    *,
+    instrument: InstrumentIdentity,
+    declaration: RealCsvSourceDeclaration | None,
+    report: CsvImportReport,
+    bars: tuple[MarketBar, ...],
+    strategy: StrategyDefinition,
+) -> None:
+    instrument_ref = _exact(instrument, instrument.instrument_id, instrument.version)
+    if declaration is not None and declaration.instrument_ref != instrument_ref:
+        raise BacktestLineageMismatch("instrument does not match exact source declaration")
+    if report.normalized_manifest.instrument_refs != (instrument_ref,):
+        raise BacktestLineageMismatch("instrument does not match exact normalized dataset scope")
+    if any(bar.instrument_ref != instrument_ref for bar in bars):
+        raise BacktestLineageMismatch("instrument does not match exact backtest bars")
+    if instrument.quote_asset is None:
+        raise UnsupportedCapitalDenomination(
+            "instrument quote asset is required for strategy backtest capital denomination"
+        )
+    if strategy.capital_currency != instrument.quote_asset:
+        raise UnsupportedCapitalDenomination(
+            "strategy capital currency must equal governed instrument quote asset"
+        )
 
 
 def _simulate(
@@ -551,6 +583,7 @@ def run_authorized_strategy_backtest(
     report: CsvImportReport,
     engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
     repository: LocalDatasetRepository,
 ) -> StrategyBacktestResult:
     base = request.experiment_run
@@ -576,12 +609,19 @@ def run_authorized_strategy_backtest(
         raise BacktestLineageMismatch("backtest request does not bind exact strategy")
     _require_scope(specification, engine_contract, strategy)
     bars = _select_replay_bars(specification, report)
+    _verify_instrument_and_capital_denomination(
+        instrument=instrument,
+        declaration=declaration,
+        report=report,
+        bars=bars,
+        strategy=strategy,
+    )
     if base.completed_at < max(
         specification.knowledge_cutoff, max(bar.availability_time for bar in bars)
     ):
         raise ExperimentTimeWindowMismatch("backtest completion precedes governed knowledge")
     run_input = _run_input_fingerprint(
-        request, authorization, specification, policy, eligibility, strategy
+        request, authorization, specification, policy, eligibility, strategy, instrument
     )
     artifact = _simulate(request, authorization, specification, strategy, bars, run_input)
     record = BacktestRunRecord(
@@ -616,6 +656,7 @@ def run_authorized_strategy_backtest(
         eligibility=eligibility,
         engine_contract=engine_contract,
         strategy=strategy,
+        instrument=instrument,
         report=report,
     )
     writes = (
@@ -638,17 +679,26 @@ def verify_strategy_backtest_lineage(
     eligibility: ResearchDatasetEligibilityRecord,
     engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
     report: CsvImportReport,
 ) -> None:
+    bars = _select_replay_bars(specification, report)
+    _verify_instrument_and_capital_denomination(
+        instrument=instrument,
+        declaration=None,
+        report=report,
+        bars=bars,
+        strategy=strategy,
+    )
     expected_input = _run_input_fingerprint(
-        request, authorization, specification, policy, eligibility, strategy
+        request, authorization, specification, policy, eligibility, strategy, instrument
     )
     expected_artifact = _simulate(
         request,
         authorization,
         specification,
         strategy,
-        _select_replay_bars(specification, report),
+        bars,
         expected_input,
     )
     if artifact != expected_artifact:

@@ -78,8 +78,13 @@ than initial capital.
 ## 12. Capital
 
 Initial capital comes from `ExperimentSpecification.capital_notional_minor` and is interpreted
-only with the strategy's explicit `capital_currency` and `capital_minor_unit_scale`. Sprint 12
-uses no FX conversion. Initial capital must be positive.
+only with the strategy's explicit `capital_currency` and `capital_minor_unit_scale`. The runner
+binds the caller-supplied `InstrumentIdentity` exactly to the source declaration, normalized
+manifest and replayed bars; its `quote_asset` is required and must exactly equal
+`capital_currency`. Initial capital, fixed notional, cash, commissions, realized/unrealized PnL
+and final equity therefore share that single governed quote-asset denomination. Sprint 12 uses
+no FX conversion and does not treat USD, USDT, USDC or any other assets as equivalent. Initial
+capital must be positive.
 
 ## 13. Commission
 
@@ -157,7 +162,9 @@ The exact chain is:
 `SimulatedOrder/Fill/Trade -> BacktestResultArtifact`.
 
 `verify_strategy_backtest_lineage()` recomputes the complete result from exact governed bars and
-rejects changed inputs, references, accounting values or result content.
+rejects changed inputs, references, accounting values or result content. The exact governed
+instrument fingerprint is part of the run-input fingerprint, and its reference must match the
+source declaration, normalized dataset scope and every replayed bar.
 
 ## 23. Reproducibility
 
@@ -179,10 +186,11 @@ Focused tests cover successful authorization/run, strict delayed next-event timi
 trade determinism, exact commission/slippage formulas, cash/equity identities, metrics, explicit
 zero versus unknown costs, unsupported funding/sizing, bad strategy/authorization references,
 positive execution-price requirements, terminal missing fills, exact lineage reconstruction,
-canonical round-trip, immutable reload, tamper/type/version/extra-field rejection and prohibited
-capability isolation. The full historical suite remains enabled and unchanged.
+capital/quote-asset equality, missing quote assets, unrelated instrument metadata, canonical
+round-trip, immutable reload, tamper/type/version/extra-field rejection and prohibited capability
+isolation. The full historical suite remains enabled and unchanged.
 
-Local evidence for the implementation tree: focused Sprint 12 `17 passed`; full suite `377
+Local evidence for the implementation tree: focused Sprint 12 `20 passed`; full suite `380
 passed`; governance-negative `14 passed`; combined Sprint 11/Sprint 12 execution-isolation plus
 governance-negative `16 passed`; `ruff format --check .` reports 127 formatted files; `ruff check
 .` passes; and `mypy` succeeds for 37 source files. GitHub Actions evidence is recorded on the
