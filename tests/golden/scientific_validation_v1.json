@@ -1,0 +1,17 @@
+{
+  "backtest_result_fingerprint": "sha256:e5f80daac6e2a9fb7ce474e9b15d5e53e0728a4ba3d100990caaebc943b8695e",
+  "confidence_level": "0.95",
+  "decision": "PASS",
+  "estimate": "0.078640719640179910044977511244376",
+  "format": "scientific-validation-v1",
+  "lower_bound": "0.07864071964017991004497751124437784",
+  "reason_codes": [
+    "PASSED_CONFIDENCE_BOUND"
+  ],
+  "sample_size": 4,
+  "seed": 73,
+  "upper_bound": "0.07864071964017991004497751124437784",
+  "validation_input_fingerprint": "sha256:c21ee7f6860144ab4d16bc69652a27ad4f19d36a9343991c5744357df1d18bb7",
+  "validation_plan_fingerprint": "sha256:0a47d994854c56b65bc25e52317b8fa24756f4d218f0e1513ea15d2459b8a165",
+  "validation_result_fingerprint": "sha256:44d2264c25953d19bb0e5fe65302020184c3e7436ffcfbed42869e8962bc2d0d"
+}
