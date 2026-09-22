@@ -120,6 +120,7 @@ class AccountingMismatch(StrategyBacktestError):
 
 
 _V1 = ObjectVersion(1)
+_V2 = ObjectVersion(2)
 _DECIMAL_CONTEXT = Context(prec=34, rounding=ROUND_HALF_EVEN)
 _BPS = Decimal(10_000)
 _METRICS = ("gross_pnl", "max_drawdown", "net_pnl", "total_return", "trade_count")
@@ -499,6 +500,7 @@ def _simulate(
             curve.append(
                 EquityPoint(
                     bar.availability_time,
+                    _bar_ref(bar),
                     _decimal(cash),
                     _decimal(quantity),
                     _decimal(position_value),
@@ -535,7 +537,7 @@ def _simulate(
 
     return BacktestResultArtifact(
         base.result_artifact_id,
-        _V1,
+        _V2,
         base.run_id,
         _V1,
         run_input,
@@ -566,8 +568,333 @@ def _simulate(
         ValidationStatus.NOT_VALIDATED,
         DeploymentAuthorizationStatus.NOT_AUTHORIZED,
         ExecutionState.PLANNED_CLOSED,
-        _V1,
+        _V2,
     )
+
+
+def _accounting_match(actual: Decimal, expected: Decimal, message: str) -> None:
+    if actual != expected:
+        raise AccountingMismatch(message)
+
+
+def verify_backtest_accounting(
+    *,
+    artifact: BacktestResultArtifact,
+    specification: ExperimentSpecification,
+    strategy: StrategyDefinition,
+    bars: tuple[MarketBar, ...],
+) -> None:
+    """Independently reconstruct the bounded Sprint 12 ledger and all summaries."""
+    if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
+        raise AccountingMismatch("independent accounting verification supports FIXED_NOTIONAL only")
+    if not bars or len(artifact.equity_curve) != len(bars):
+        raise AccountingMismatch("equity curve must bind every governed replay bar exactly once")
+    if (
+        artifact.capital_currency != strategy.capital_currency
+        or artifact.capital_minor_unit_scale != strategy.capital_minor_unit_scale
+    ):
+        raise AccountingMismatch("result denomination does not match exact strategy")
+
+    bar_refs = tuple(_bar_ref(bar) for bar in bars)
+    if len(set(bar_refs)) != len(bar_refs):
+        raise AccountingMismatch("governed replay bars must have unique exact references")
+    bars_by_ref = dict(zip(bar_refs, bars, strict=True))
+    bar_indexes = {reference: index for index, reference in enumerate(bar_refs)}
+    point_refs = tuple(point.bar_ref for point in artifact.equity_curve)
+    if point_refs != bar_refs:
+        raise AccountingMismatch("equity curve bar bindings do not match governed replay order")
+
+    order_ids = tuple(order.order_id for order in artifact.orders)
+    fill_ids = tuple(fill.fill_id for fill in artifact.fills)
+    trade_ids = tuple(trade.trade_id for trade in artifact.trades)
+    if (
+        len(set(order_ids)) != len(order_ids)
+        or len(set(fill_ids)) != len(fill_ids)
+        or len(set(trade_ids)) != len(trade_ids)
+    ):
+        raise AccountingMismatch("backtest ledger contains duplicate identities")
+    if len(artifact.orders) != len(artifact.fills):
+        raise AccountingMismatch("every simulated order must have exactly one fill")
+    fills_by_order: dict[ArtifactId, SimulatedFill] = {}
+    fills_by_id: dict[ArtifactId, SimulatedFill] = {}
+    fills_by_bar: dict[TraceabilityRef, SimulatedFill] = {}
+    strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
+
+    with localcontext(_DECIMAL_CONTEXT):
+        expected_entry_notional = Decimal(strategy.fixed_notional_minor) / Decimal(
+            strategy.capital_minor_unit_scale
+        )
+        for stored_fill in artifact.fills:
+            if stored_fill.order_id in fills_by_order:
+                raise AccountingMismatch("a simulated order has multiple fills")
+            if stored_fill.bar_ref in fills_by_bar:
+                raise AccountingMismatch("multiple fills on one replay event are unsupported")
+            fills_by_order[stored_fill.order_id] = stored_fill
+            fills_by_id[stored_fill.fill_id] = stored_fill
+            fills_by_bar[stored_fill.bar_ref] = stored_fill
+
+        prior_fill_time = None
+        for order in artifact.orders:
+            fill = fills_by_order.get(order.order_id)
+            if fill is None:
+                raise AccountingMismatch("simulated order has no matching fill")
+            source_bar = bars_by_ref.get(order.source_bar_ref)
+            fill_bar = bars_by_ref.get(order.fill_bar_ref)
+            if source_bar is None or fill_bar is None:
+                raise AccountingMismatch("order references a bar outside governed replay")
+            if (
+                order.side is not fill.side
+                or order.fill_bar_ref != fill.bar_ref
+                or order.strategy_ref != strategy_ref
+                or order.run_id != artifact.run_id
+                or order.run_version != artifact.run_version
+                or order.signal_time != source_bar.availability_time
+                or order.submitted_time != order.signal_time
+                or order.eligible_fill_time != fill.fill_time
+                or fill.fill_time != fill_bar.bar_open
+                or bar_indexes[order.source_bar_ref] >= bar_indexes[order.fill_bar_ref]
+            ):
+                raise AccountingMismatch("order/fill identity or temporal binding is inconsistent")
+            if not (
+                specification.observation_start <= fill.fill_time < specification.observation_end
+            ):
+                raise AccountingMismatch("fill is outside the authorized observation window")
+            if prior_fill_time is not None and fill.fill_time <= prior_fill_time:
+                raise AccountingMismatch("fills must be strictly time ordered")
+            prior_fill_time = fill.fill_time
+
+            reference = Decimal(fill.reference_price)
+            execution = Decimal(fill.execution_price)
+            quantity = Decimal(fill.quantity)
+            notional = Decimal(fill.fill_notional)
+            if reference != Decimal(fill_bar.open.text):
+                raise AccountingMismatch("fill reference price does not match exact fill bar open")
+            if specification.slippage_semantics is CostSemantics.DECLARED_ZERO:
+                expected_execution = reference
+            elif specification.slippage_semantics is CostSemantics.DECLARED_BPS:
+                direction = Decimal(1) if fill.side is SimulatedOrderSide.BUY else Decimal(-1)
+                expected_execution = reference * (
+                    Decimal(1) + direction * Decimal(specification.slippage_bps) / _BPS
+                )
+            else:
+                raise AccountingMismatch("unsupported slippage declaration in persisted result")
+            _accounting_match(execution, expected_execution, "fill execution price is inconsistent")
+            _accounting_match(notional, execution * quantity, "fill notional is inconsistent")
+            _accounting_match(
+                Decimal(order.notional), notional, "order notional does not match its fill"
+            )
+            if fill.side is SimulatedOrderSide.BUY and (
+                notional != expected_entry_notional
+                or Decimal(order.notional) != expected_entry_notional
+            ):
+                raise AccountingMismatch(
+                    "BUY notional does not match governed fixed-notional sizing"
+                )
+            expected_slippage = abs(execution - reference) * quantity
+            _accounting_match(
+                Decimal(fill.slippage_cost),
+                expected_slippage,
+                "fill slippage cost is inconsistent",
+            )
+            if specification.commission_semantics is CostSemantics.DECLARED_ZERO:
+                expected_commission = Decimal(0)
+            elif specification.commission_semantics is CostSemantics.DECLARED_BPS:
+                expected_commission = notional * Decimal(specification.commission_bps) / _BPS
+            else:
+                raise AccountingMismatch("unsupported commission declaration in persisted result")
+            _accounting_match(
+                Decimal(fill.commission),
+                expected_commission,
+                "fill commission is inconsistent",
+            )
+
+        if set(fills_by_order) != set(order_ids):
+            raise AccountingMismatch("backtest ledger contains an orphan fill")
+
+        trade_by_fill_pair: dict[tuple[ArtifactId, ArtifactId], SimulatedTrade] = {}
+        participating_fills: set[ArtifactId] = set()
+        for stored_trade in artifact.trades:
+            entry = fills_by_id.get(stored_trade.entry_fill_id)
+            exit_fill = fills_by_id.get(stored_trade.exit_fill_id)
+            if entry is None or exit_fill is None:
+                raise AccountingMismatch("trade references an unknown fill")
+            if (
+                stored_trade.entry_fill_id in participating_fills
+                or stored_trade.exit_fill_id in participating_fills
+            ):
+                raise AccountingMismatch("a fill participates in multiple completed trades")
+            participating_fills.update((stored_trade.entry_fill_id, stored_trade.exit_fill_id))
+            if (
+                entry.side is not SimulatedOrderSide.BUY
+                or exit_fill.side is not SimulatedOrderSide.SELL
+                or stored_trade.strategy_ref != strategy_ref
+                or stored_trade.run_id != artifact.run_id
+                or stored_trade.run_version != artifact.run_version
+                or stored_trade.entry_time != entry.fill_time
+                or stored_trade.exit_time != exit_fill.fill_time
+                or stored_trade.entry_time >= stored_trade.exit_time
+            ):
+                raise AccountingMismatch("trade identity or temporal binding is inconsistent")
+            quantity = Decimal(stored_trade.quantity)
+            _accounting_match(
+                quantity, Decimal(entry.quantity), "trade entry quantity is inconsistent"
+            )
+            _accounting_match(
+                quantity, Decimal(exit_fill.quantity), "trade exit quantity is inconsistent"
+            )
+            _accounting_match(
+                Decimal(stored_trade.entry_price),
+                Decimal(entry.execution_price),
+                "trade entry price is inconsistent",
+            )
+            _accounting_match(
+                Decimal(stored_trade.exit_price),
+                Decimal(exit_fill.execution_price),
+                "trade exit price is inconsistent",
+            )
+            gross = (Decimal(exit_fill.execution_price) - Decimal(entry.execution_price)) * quantity
+            commission = Decimal(entry.commission) + Decimal(exit_fill.commission)
+            slippage = Decimal(entry.slippage_cost) + Decimal(exit_fill.slippage_cost)
+            net = gross - commission
+            _accounting_match(
+                Decimal(stored_trade.gross_pnl), gross, "trade gross PnL is inconsistent"
+            )
+            _accounting_match(
+                Decimal(stored_trade.commission), commission, "trade commission is inconsistent"
+            )
+            _accounting_match(
+                Decimal(stored_trade.slippage_cost),
+                slippage,
+                "trade slippage cost is inconsistent",
+            )
+            _accounting_match(Decimal(stored_trade.net_pnl), net, "trade net PnL is inconsistent")
+            pair = (stored_trade.entry_fill_id, stored_trade.exit_fill_id)
+            if pair in trade_by_fill_pair:
+                raise AccountingMismatch("duplicate trade fill binding")
+            trade_by_fill_pair[pair] = stored_trade
+
+        scale = Decimal(strategy.capital_minor_unit_scale)
+        initial = Decimal(specification.capital_notional_minor) / scale
+        _accounting_match(
+            Decimal(artifact.initial_capital), initial, "initial capital is inconsistent"
+        )
+        cash = initial
+        quantity = Decimal(0)
+        entry_fill: SimulatedFill | None = None
+        realized = Decimal(0)
+        used_trades: set[ArtifactId] = set()
+
+        for bar, point in zip(bars, artifact.equity_curve, strict=True):
+            bar_ref = _bar_ref(bar)
+            fill = fills_by_bar.get(bar_ref)
+            if fill is not None:
+                fill_notional = Decimal(fill.fill_notional)
+                commission = Decimal(fill.commission)
+                fill_quantity = Decimal(fill.quantity)
+                if fill.side is SimulatedOrderSide.BUY:
+                    if quantity != 0 or entry_fill is not None or fill_quantity <= 0:
+                        raise InconsistentPositionTransition(
+                            "BUY requires one strictly positive transition from FLAT"
+                        )
+                    cash -= fill_notional + commission
+                    quantity = fill_quantity
+                    entry_fill = fill
+                else:
+                    if quantity <= 0 or entry_fill is None:
+                        raise InconsistentPositionTransition("SELL cannot transition from FLAT")
+                    _accounting_match(
+                        fill_quantity, quantity, "SELL quantity does not close exact LONG quantity"
+                    )
+                    trade = trade_by_fill_pair.get((entry_fill.fill_id, fill.fill_id))
+                    if trade is None:
+                        raise AccountingMismatch(
+                            "completed position has no exact trade ledger entry"
+                        )
+                    cash += fill_notional - commission
+                    realized += Decimal(trade.net_pnl)
+                    used_trades.add(trade.trade_id)
+                    quantity = Decimal(0)
+                    entry_fill = None
+
+            mark = Decimal(bar.close.text)
+            position_value = quantity * mark
+            unrealized = (
+                Decimal(0)
+                if entry_fill is None
+                else (mark - Decimal(entry_fill.execution_price)) * quantity
+            )
+            equity = cash + position_value
+            if point.event_time != bar.availability_time:
+                raise AccountingMismatch("equity event time does not match exact governed bar")
+            for actual, expected, message in (
+                (Decimal(point.cash), cash, "equity cash transition is inconsistent"),
+                (
+                    Decimal(point.position_quantity),
+                    quantity,
+                    "equity position quantity is inconsistent",
+                ),
+                (
+                    Decimal(point.position_value),
+                    position_value,
+                    "equity position value is inconsistent",
+                ),
+                (
+                    Decimal(point.unrealized_pnl),
+                    unrealized,
+                    "equity unrealized PnL is inconsistent",
+                ),
+                (
+                    Decimal(point.realized_pnl),
+                    realized,
+                    "equity realized PnL is inconsistent",
+                ),
+                (Decimal(point.equity), equity, "equity identity is inconsistent"),
+            ):
+                _accounting_match(actual, expected, message)
+
+        if used_trades != set(trade_ids):
+            raise AccountingMismatch("trade ledger does not match reconstructed position cycles")
+        expected_position = (
+            SimulatedPositionState.LONG if entry_fill is not None else SimulatedPositionState.FLAT
+        )
+        if artifact.open_position is not expected_position:
+            raise AccountingMismatch("final open-position state is inconsistent")
+        if expected_position is SimulatedPositionState.LONG:
+            unresolved = set(fill_ids) - participating_fills
+            if entry_fill is None or unresolved != {entry_fill.fill_id}:
+                raise AccountingMismatch("open LONG must have exactly one unresolved BUY fill")
+        elif quantity != 0 or set(fill_ids) != participating_fills:
+            raise AccountingMismatch("FLAT result contains an unresolved position fill")
+
+        final_equity = cash + quantity * Decimal(bars[-1].close.text)
+        _accounting_match(Decimal(artifact.final_cash), cash, "final cash is inconsistent")
+        _accounting_match(
+            Decimal(artifact.final_equity), final_equity, "final equity is inconsistent"
+        )
+        gross = sum((Decimal(trade.gross_pnl) for trade in artifact.trades), Decimal(0))
+        net = sum((Decimal(trade.net_pnl) for trade in artifact.trades), Decimal(0))
+        _accounting_match(Decimal(artifact.gross_pnl), gross, "gross PnL summary is inconsistent")
+        _accounting_match(Decimal(artifact.net_pnl), net, "net PnL summary is inconsistent")
+        if artifact.trade_count != len(artifact.trades):
+            raise AccountingMismatch("trade count summary is inconsistent")
+        _accounting_match(
+            Decimal(artifact.total_return),
+            final_equity / initial - Decimal(1),
+            "total return summary is inconsistent",
+        )
+        peak = initial
+        max_drawdown = Decimal(0)
+        for point in artifact.equity_curve:
+            point_equity = Decimal(point.equity)
+            peak = max(peak, point_equity)
+            if peak <= 0:
+                raise AccountingMismatch("drawdown peak must remain positive")
+            max_drawdown = max(max_drawdown, Decimal(1) - point_equity / peak)
+        _accounting_match(
+            Decimal(artifact.max_drawdown),
+            max_drawdown,
+            "max drawdown summary is inconsistent",
+        )
 
 
 def run_authorized_strategy_backtest(
@@ -689,6 +1016,12 @@ def verify_strategy_backtest_lineage(
         report=report,
         bars=bars,
         strategy=strategy,
+    )
+    verify_backtest_accounting(
+        artifact=artifact,
+        specification=specification,
+        strategy=strategy,
+        bars=bars,
     )
     expected_input = _run_input_fingerprint(
         request, authorization, specification, policy, eligibility, strategy, instrument

@@ -1,0 +1,28 @@
+{
+  "authorization_fingerprint": "sha256:1b1057c69016ead91319157541ecae2518b5c27a90b18fbb7d59cb4791ce337d",
+  "engine_fingerprint": "sha256:8ea51cde6c7f45042451962ef98445a11ba4ab4cf9ed32c0e24b3ec197ae21de",
+  "fill_ids": [
+    "artifact:deterministic-strategy-backtest-run-simulated-fill-0001",
+    "artifact:deterministic-strategy-backtest-run-simulated-fill-0002"
+  ],
+  "final_cash": "998.7217170826351530117294294029456",
+  "final_equity": "998.7217170826351530117294294029456",
+  "format": "backtest-result-hardening-v1",
+  "gross_pnl": "-1.079362279644491479750320917972386",
+  "instrument_fingerprint": "sha256:d17db0f42f211e1502fe7be283594b4748975db010679358ae71ac36f5f513f8",
+  "max_drawdown": "0.0021064619006180570863282000345992",
+  "net_pnl": "-1.278282917364846988270570597054414",
+  "open_position": "FLAT",
+  "order_ids": [
+    "artifact:deterministic-strategy-backtest-run-simulated-order-0001",
+    "artifact:deterministic-strategy-backtest-run-simulated-order-0002"
+  ],
+  "result_fingerprint": "sha256:ffa5d8590a092758df6eb364bd9118bfb7414ebe1965bc88d55773664b7c6f26",
+  "run_input_fingerprint": "sha256:d2a2641777a2984bee4787c61aa1c94245d8f713f506447af17fae730478cd3d",
+  "strategy_fingerprint": "sha256:5678cea5f63cf97cbb5b71d6d33fad0640add456c570cb198ad71edb0daf28e3",
+  "total_return": "-0.0012782829173648469882705705970544",
+  "trade_count": 1,
+  "trade_ids": [
+    "artifact:deterministic-strategy-backtest-run-simulated-trade-0001"
+  ]
+}
