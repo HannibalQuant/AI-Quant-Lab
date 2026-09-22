@@ -7,7 +7,8 @@ import copy
 import inspect
 import json
 from dataclasses import replace
-from decimal import Decimal
+from datetime import timedelta
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -15,10 +16,12 @@ import pytest
 from test_scientific_validation import (
     ValidationBundle,
     _context,
+    _multi_trade_csv,
     _run,
     exact,
     validation_plan,
 )
+from test_strategy_backtest import authorized_context
 
 from ai_quant_lab import EXE_01
 from ai_quant_lab.core import robustness_validation as robustness_module
@@ -29,6 +32,7 @@ from ai_quant_lab.core.dataset_store import (
     RepositoryWriteStatus,
     repository_key,
 )
+from ai_quant_lab.core.experiment_contracts import CostSemantics
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
@@ -45,6 +49,7 @@ from ai_quant_lab.core.robustness_validation import (
     RobustnessInputInvalid,
     RobustnessLineageMismatch,
     RobustnessValidationExecutionResult,
+    _compound_returns,
     run_robustness_validation,
     verify_robustness_validation_lineage,
 )
@@ -116,7 +121,7 @@ def robustness_plan(
         "0.05",
         "0.95",
         PerturbationPolicy.COMMISSION_MULTIPLIER,
-        ("1", "1.25", "1.5", "2"),
+        ("1", "2", "3", "4"),
         "0",
         "-0.05",
         ROBUSTNESS_AUTHORITY_REF,
@@ -163,6 +168,9 @@ def _execute(bundle: ValidationBundle, plan: RobustnessValidationPlan) -> Robust
         specification=context[7],
         policy=context[8],
         eligibility=context[5],
+        eligibility_policy=context[4],
+        admission=context[2],
+        declaration=context[0],
         engine_contract=strategy_backtest_replay_contract(),
         strategy=context[6],
         instrument=context[10],
@@ -200,6 +208,9 @@ def _verify(
         specification=context[7],
         policy=context[8],
         eligibility=context[5],
+        eligibility_policy=context[4],
+        admission=context[2],
+        declaration=context[0],
         engine_contract=strategy_backtest_replay_contract(),
         strategy=context[6] if strategy is None else strategy,
         instrument=context[10] if instrument is None else instrument,
@@ -334,10 +345,126 @@ def test_cost_perturbations_are_declared_and_monotonic(
     positive_bundle: RobustnessBundle,
 ) -> None:
     scenarios = positive_bundle[3].result.cost_perturbation.scenarios
-    assert tuple(item.commission_multiplier for item in scenarios) == ("1", "1.25", "1.5", "2")
-    returns = tuple(Decimal(item.total_return) for item in scenarios)
+    assert tuple(item.commission_multiplier for item in scenarios) == ("1", "2", "3", "4")
+    assert all(item.total_return is not None for item in scenarios)
+    returns = tuple(Decimal(item.total_return or "0") for item in scenarios)
     assert returns == tuple(sorted(returns, reverse=True))
     assert len({item.trade_count for item in scenarios}) == 1
+    source = positive_bundle[0][2].artifact
+    base = scenarios[0]
+    assert base.total_return == source.total_return
+    assert base.net_pnl == source.net_pnl
+    assert base.max_drawdown == source.max_drawdown
+    assert base.trade_count == source.trade_count
+    assert base.backtest_result_ref is not None
+    assert len({item.scenario_id for item in scenarios}) == len(scenarios)
+
+
+def test_cost_perturbation_is_true_deterministic_replay(
+    positive_bundle: RobustnessBundle,
+) -> None:
+    validation, _, plan, first = positive_bundle
+    second = _execute(validation, plan)[3]
+    first_scenarios = first.result.cost_perturbation.scenarios
+    assert first_scenarios == second.result.cost_perturbation.scenarios
+    assert first_scenarios[1].backtest_result_ref != first_scenarios[0].backtest_result_ref
+    assert first_scenarios[1].derived_commission_bps == 20
+    assert Decimal(first_scenarios[1].total_return or "0") < Decimal(
+        first_scenarios[0].total_return or "0"
+    )
+    assert first.result.strategy_ref == validation[2].artifact.strategy_ref
+    assert first.result.normalized_manifest_ref == validation[2].artifact.normalized_manifest_ref
+    assert first.result.normalized_lock_ref == validation[2].artifact.normalized_lock_ref
+
+
+def test_cost_perturbation_insufficient_cash_fails_without_impossible_fill(
+    tmp_path: Path,
+) -> None:
+    outcomes = ((100, 120),) * 4
+    hours = len(outcomes) * 5
+    context = authorized_context(
+        tmp_path,
+        suffix="robustness-insufficient-cash",
+        csv_text=_multi_trade_csv(outcomes),
+        spec_mutator=lambda spec: replace(
+            spec,
+            observation_end=spec.observation_start + timedelta(hours=hours),
+            capital_notional_minor=10_010,
+        ),
+    )
+    validation = _run(context, validation_plan())
+    source_ref = exact(
+        validation[3].result,
+        validation[3].result.validation_result_id,
+        validation[3].result.version,
+    )
+    result = _execute(validation, robustness_plan(source_ref))[3].result
+    base, doubled, *_ = result.cost_perturbation.scenarios
+    assert base.backtest_result_ref is not None
+    assert base.trade_count == validation[2].artifact.trade_count
+    assert doubled.derived_commission_bps == 20
+    assert doubled.backtest_result_ref is None
+    assert doubled.total_return is None
+    assert doubled.net_pnl is None
+    assert doubled.max_drawdown is None
+    assert doubled.trade_count is None
+    assert doubled.decision is RobustnessDecision.FAIL
+    assert doubled.reason_codes == (RobustnessReasonCode.COST_PERTURBATION_EXECUTION_FAILED,)
+    assert result.decision is RobustnessDecision.FAIL
+    assert RobustnessReasonCode.COST_PERTURBATION_EXECUTION_FAILED in result.reason_codes
+
+
+def test_declared_zero_commission_remains_zero_under_all_multipliers(
+    tmp_path: Path,
+) -> None:
+    outcomes = ((100, 120),) * 4
+    hours = len(outcomes) * 5
+    context = authorized_context(
+        tmp_path,
+        suffix="robustness-zero-commission",
+        csv_text=_multi_trade_csv(outcomes),
+        spec_mutator=lambda spec: replace(
+            spec,
+            observation_end=spec.observation_start + timedelta(hours=hours),
+            commission_semantics=CostSemantics.DECLARED_ZERO,
+            commission_bps=0,
+        ),
+    )
+    validation = _run(context, validation_plan())
+    source_ref = exact(
+        validation[3].result,
+        validation[3].result.validation_result_id,
+        validation[3].result.version,
+    )
+    scenarios = _execute(validation, robustness_plan(source_ref))[
+        3
+    ].result.cost_perturbation.scenarios
+    assert {item.derived_commission_bps for item in scenarios} == {0}
+    assert {item.total_return for item in scenarios} == {validation[2].artifact.total_return}
+    assert all(item.backtest_result_ref is not None for item in scenarios)
+
+
+@pytest.mark.parametrize(
+    ("returns", "expected"),
+    (
+        (("0.10", "0.10"), "0.21"),
+        (("0.10", "-0.10"), "-0.01"),
+    ),
+)
+def test_walk_forward_aggregate_return_is_compounded(
+    returns: tuple[str, ...], expected: str
+) -> None:
+    with localcontext(Context(prec=34, rounding=ROUND_HALF_EVEN)):
+        actual = _compound_returns(tuple(Decimal(value) for value in returns))
+    assert actual == Decimal(expected)
+
+
+def test_walk_forward_compounding_rejects_equity_below_zero() -> None:
+    with pytest.raises(
+        RobustnessInputInvalid,
+        match="walk-forward return cannot imply equity below zero",
+    ):
+        _compound_returns((Decimal("-1.01"),))
 
 
 def test_cost_perturbation_uses_declared_fail_threshold(
@@ -416,6 +543,9 @@ def test_source_scientific_validation_and_backtest_are_reverified(
             specification=context[7],
             policy=context[8],
             eligibility=context[5],
+            eligibility_policy=context[4],
+            admission=context[2],
+            declaration=context[0],
             engine_contract=strategy_backtest_replay_contract(),
             strategy=context[6],
             instrument=context[10],
@@ -443,6 +573,9 @@ def test_wrong_authority_fails_closed(positive_bundle: RobustnessBundle) -> None
             specification=context[7],
             policy=context[8],
             eligibility=context[5],
+            eligibility_policy=context[4],
+            admission=context[2],
+            declaration=context[0],
             engine_contract=strategy_backtest_replay_contract(),
             strategy=context[6],
             instrument=context[10],
@@ -578,15 +711,25 @@ def test_robustness_golden_is_pinned_and_read_only(
         "source_scientific_result_fingerprint": fingerprint_record(validation[3].result),
         "robustness_input_fingerprint": robustness.record.robustness_input_fingerprint,
         "partition_count": robustness.result.walk_forward.valid_window_count,
+        "aggregate_test_return": robustness.result.walk_forward.aggregate_test_return,
         "monte_carlo_seed": robustness.result.monte_carlo.seed,
         "monte_carlo_iterations": robustness.result.monte_carlo.iterations,
         "commission_multipliers": [
             item.commission_multiplier for item in robustness.result.cost_perturbation.scenarios
         ],
+        "derived_commission_bps": [
+            item.derived_commission_bps for item in robustness.result.cost_perturbation.scenarios
+        ],
+        "scenario_ids": [
+            str(item.scenario_id) for item in robustness.result.cost_perturbation.scenarios
+        ],
         "median_test_return": robustness.result.walk_forward.median_test_return,
         "monte_carlo_lower_return": robustness.result.monte_carlo.lower_terminal_return,
-        "worst_perturbed_return": min(
-            item.total_return for item in robustness.result.cost_perturbation.scenarios
+        "worst_perturbed_return": str(
+            min(
+                Decimal(item.total_return or "0")
+                for item in robustness.result.cost_perturbation.scenarios
+            )
         ),
         "decision": robustness.result.decision.value,
         "reason_codes": [item.value for item in robustness.result.reason_codes],

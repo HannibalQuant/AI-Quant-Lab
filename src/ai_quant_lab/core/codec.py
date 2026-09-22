@@ -461,11 +461,23 @@ def _cost_perturbation_payload(value: CostPerturbationSummary) -> dict[str, Any]
         "policy": value.policy.value,
         "scenarios": [
             {
+                "scenario_id": str(item.scenario_id),
                 "commission_multiplier": item.commission_multiplier,
+                "derived_commission_semantics": item.derived_commission_semantics.value,
+                "derived_commission_bps": item.derived_commission_bps,
+                "specification_ref": _trace_ref_payload(item.specification_ref),
+                "authorization_ref": _trace_ref_payload(item.authorization_ref),
+                "backtest_result_ref": (
+                    None
+                    if item.backtest_result_ref is None
+                    else _trace_ref_payload(item.backtest_result_ref)
+                ),
                 "total_return": item.total_return,
                 "net_pnl": item.net_pnl,
                 "max_drawdown": item.max_drawdown,
                 "trade_count": item.trade_count,
+                "decision": item.decision.value,
+                "reason_codes": [reason.value for reason in item.reason_codes],
             }
             for item in value.scenarios
         ],
@@ -2984,20 +2996,38 @@ def _decode_cost_scenario(payload: Any) -> CostPerturbationScenario:
     item = _strict_object(
         payload,
         {
+            "scenario_id",
             "commission_multiplier",
+            "derived_commission_semantics",
+            "derived_commission_bps",
+            "specification_ref",
+            "authorization_ref",
+            "backtest_result_ref",
             "total_return",
             "net_pnl",
             "max_drawdown",
             "trade_count",
+            "decision",
+            "reason_codes",
         },
         "CostPerturbationScenario",
     )
     return CostPerturbationScenario(
+        cast(ArtifactId, _typed_id(item["scenario_id"], ArtifactId, "scenario_id")),
         _text(item["commission_multiplier"], "commission_multiplier"),
-        _text(item["total_return"], "total_return"),
-        _text(item["net_pnl"], "net_pnl"),
-        _text(item["max_drawdown"], "max_drawdown"),
-        _integer(item["trade_count"], "trade_count"),
+        CostSemantics(_text(item["derived_commission_semantics"], "derived_commission_semantics")),
+        _integer(item["derived_commission_bps"], "derived_commission_bps"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _optional_trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _optional_text(item["total_return"], "total_return"),
+        _optional_text(item["net_pnl"], "net_pnl"),
+        _optional_text(item["max_drawdown"], "max_drawdown"),
+        None if item["trade_count"] is None else _integer(item["trade_count"], "trade_count"),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
     )
 
 

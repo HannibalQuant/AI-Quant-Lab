@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
 from ai_quant_lab.core.data import DatasetLockId
+from ai_quant_lab.core.experiment_contracts import CostSemantics
 from ai_quant_lab.core.market_data import MarketBarId
 from ai_quant_lab.core.model import (
     ArtifactId,
@@ -60,6 +61,7 @@ class RobustnessDecision(StrEnum):
 
 class RobustnessReasonCode(StrEnum):
     ALL_ENABLED_METHODS_PASSED = "ALL_ENABLED_METHODS_PASSED"
+    COST_PERTURBATION_EXECUTION_FAILED = "COST_PERTURBATION_EXECUTION_FAILED"
     COST_PERTURBATION_FAILED = "COST_PERTURBATION_FAILED"
     COST_PERTURBATION_INCONCLUSIVE = "COST_PERTURBATION_INCONCLUSIVE"
     INSUFFICIENT_TEST_TRADES = "INSUFFICIENT_TEST_TRADES"
@@ -405,23 +407,69 @@ class MonteCarloSummary:
 
 @dataclass(frozen=True, slots=True)
 class CostPerturbationScenario:
+    scenario_id: ArtifactId
     commission_multiplier: str
-    total_return: str
-    net_pnl: str
-    max_drawdown: str
-    trade_count: int
+    derived_commission_semantics: CostSemantics
+    derived_commission_bps: int
+    specification_ref: TraceabilityRef
+    authorization_ref: TraceabilityRef
+    backtest_result_ref: TraceabilityRef | None
+    total_return: str | None
+    net_pnl: str | None
+    max_drawdown: str | None
+    trade_count: int | None
+    decision: RobustnessDecision
+    reason_codes: tuple[RobustnessReasonCode, ...]
 
     def __post_init__(self) -> None:
         if (
-            _decimal(self.commission_multiplier, "scenario.commission_multiplier") < 1
-            or _decimal(self.max_drawdown, "scenario.max_drawdown") < 0
+            not isinstance(self.scenario_id, ArtifactId)
+            or _decimal(self.commission_multiplier, "scenario.commission_multiplier") < 1
+            or self.derived_commission_semantics
+            not in (CostSemantics.DECLARED_ZERO, CostSemantics.DECLARED_BPS)
+            or isinstance(self.derived_commission_bps, bool)
+            or not isinstance(self.derived_commission_bps, int)
+            or not 0 <= self.derived_commission_bps <= 100_000
+            or not isinstance(self.decision, RobustnessDecision)
+        ):
+            raise RobustnessValidationContractError("cost scenario is invalid")
+        _exact(self.specification_ref, ExperimentId, "scenario.specification_ref")
+        _exact(self.authorization_ref, ArtifactId, "scenario.authorization_ref")
+        _reasons(self.reason_codes)
+        if self.derived_commission_semantics is CostSemantics.DECLARED_ZERO:
+            if self.derived_commission_bps != 0:
+                raise RobustnessValidationContractError("declared-zero scenario must have zero bps")
+        elif self.derived_commission_bps <= 0:
+            raise RobustnessValidationContractError("declared-bps scenario must have positive bps")
+        numeric = (self.total_return, self.net_pnl, self.max_drawdown)
+        if self.decision is RobustnessDecision.FAIL and self.backtest_result_ref is None:
+            if any(value is not None for value in numeric) or self.trade_count is not None:
+                raise RobustnessValidationContractError(
+                    "failed cost execution cannot contain synthetic statistics"
+                )
+            if self.reason_codes != (RobustnessReasonCode.COST_PERTURBATION_EXECUTION_FAILED,):
+                raise RobustnessValidationContractError(
+                    "failed cost execution requires exact failure reason"
+                )
+            return
+        if self.backtest_result_ref is None:
+            raise RobustnessValidationContractError("successful cost scenario requires result ref")
+        _exact(self.backtest_result_ref, ArtifactId, "scenario.backtest_result_ref")
+        if any(value is None for value in numeric) or self.trade_count is None:
+            raise RobustnessValidationContractError("cost scenario statistics are incomplete")
+        assert self.total_return is not None
+        assert self.net_pnl is not None
+        assert self.max_drawdown is not None
+        assert self.trade_count is not None
+        _decimal(self.total_return, "scenario.total_return")
+        _decimal(self.net_pnl, "scenario.net_pnl")
+        if (
+            _decimal(self.max_drawdown, "scenario.max_drawdown") < 0
             or isinstance(self.trade_count, bool)
             or not isinstance(self.trade_count, int)
             or self.trade_count < 0
         ):
-            raise RobustnessValidationContractError("cost scenario is invalid")
-        _decimal(self.total_return, "scenario.total_return")
-        _decimal(self.net_pnl, "scenario.net_pnl")
+            raise RobustnessValidationContractError("cost scenario statistics are invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -439,7 +487,13 @@ class CostPerturbationSummary:
         ):
             raise RobustnessValidationContractError("cost perturbation summary is invalid")
         multipliers = tuple(Decimal(item.commission_multiplier) for item in self.scenarios)
-        if tuple(sorted(multipliers)) != multipliers or len(set(multipliers)) != len(multipliers):
+        scenario_ids = tuple(item.scenario_id for item in self.scenarios)
+        if (
+            multipliers[0] != Decimal(1)
+            or tuple(sorted(multipliers)) != multipliers
+            or len(set(multipliers)) != len(multipliers)
+            or len(set(scenario_ids)) != len(scenario_ids)
+        ):
             raise RobustnessValidationContractError("cost scenarios must be sorted and unique")
         _reasons(self.reason_codes)
 

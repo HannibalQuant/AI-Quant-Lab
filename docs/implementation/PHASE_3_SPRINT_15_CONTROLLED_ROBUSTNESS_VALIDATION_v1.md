@@ -48,9 +48,14 @@ fingerprinted plan inputs. The immutable strategy, experiment, dataset, engine a
 ledger remain fixed across slices; there is no fitting, tuning or per-slice parameter selection.
 
 Each TEST slice records exact partitions, completed trade count, return, net PnL, maximum drawdown
-and method decision. Aggregation records valid windows, positive-window ratio, median and worst
-test return, additive bounded test-return summary, maximum test drawdown and minimum per-slice
-trade count. All thresholds are explicit plan fields.
+and method decision. `trade_count` and `net_pnl` are exit-attributed completed-trade statistics: a
+trade belongs to the TEST slice containing its exit. `total_return` is instead equity-based over
+the exact TEST window, so these measures are related but not interchangeable.
+
+Aggregation records valid windows, positive-window ratio, median and worst test return, maximum
+test drawdown and minimum per-slice trade count. `aggregate_test_return` compounds chronological,
+non-overlapping TEST returns exactly as `product(1 + r_i) - 1`; it is not their arithmetic sum.
+Any factor below zero fails closed. All thresholds are explicit plan fields.
 
 This is a rolling evaluation foundation over the exact verified ledger/equity evidence. TRAIN
 ranges establish preceding temporal context; they do not train a model.
@@ -70,11 +75,21 @@ synthetic market bar is created.
 ## 8. Perturbation semantics
 
 The only family is `COMMISSION_MULTIPLIER`. The plan carries a sorted, unique tuple beginning at
-one. For each scenario, the verifier independently revalues the exact immutable ledger by applying
-the additional declared commission factor to fills and completed trades, then reconstructs final
-return, net PnL and equity-curve drawdown. Strategy parameters, signals, fills, quantities,
-slippage and funding are unchanged. This is deterministic accounting perturbation, not a new
-backtest search or an exchange-cost forecast.
+one. Each multiplier derives exact integer commission basis points from the source specification;
+fractional-bps derivations fail closed, while `DECLARED_ZERO` remains exactly zero and never
+invents a cost.
+
+Every scenario receives deterministic specification, authorization, run and result identities
+bound to the plan, source specification, source strategy, source backtest and multiplier. It then
+passes through the same authorization reconstruction and public deterministic strategy-backtest
+engine as the source run. Dataset, bars, strategy, signal logic, sizing, slippage, funding and
+observation window remain unchanged; only commission changes. The multiplier-one scenario must
+reproduce the source statistics exactly.
+
+If the engine rejects an entry because perturbed commission makes fixed notional plus commission
+exceed available cash, the scenario records `FAIL / COST_PERTURBATION_EXECUTION_FAILED` with no
+synthetic statistics or result ref. Original fills are never reused. This is a true governed replay,
+not post-hoc ledger subtraction or an exchange-cost forecast.
 
 ## 9. Decision rules
 
@@ -135,8 +150,10 @@ force. No database or mutable catalog is added.
 
 New read-only `tests/golden/robustness_validation_v1.json` pins a repository-owned synthetic PASS
 case: plan and source-result fingerprints, robustness-input fingerprint, partition count,
-Monte Carlo seed/iterations and lower return, exact commission scenarios, bounded summaries,
-decision, reason codes and result fingerprint. All earlier goldens remain byte-identical.
+compounded aggregate TEST return, Monte Carlo seed/iterations and lower return, deterministic cost
+scenario IDs, derived commission bps, bounded summaries, decision, reason codes and result
+fingerprint. The Sprint 15 golden changed because corrected compounding and true engine replay are
+part of its governed identity; all earlier goldens remain byte-identical.
 
 ## 16. Tamper detection
 
@@ -171,7 +188,8 @@ from being promoted to an out-of-sample holdout claim.
 
 Focused tests cover explicit plan bounds and authority, robust PASS, fragile FAIL, insufficient
 evidence, exact non-overlapping partitions, all three Monte Carlo decision paths, deterministic
-seed behavior, declared and failing cost scenarios, source-validation/backtest re-verification,
+seed behavior, exact compounded-return examples, true cost replay, deterministic scenario identity,
+capital-infeasible cost failure without reused fills, source-validation/backtest re-verification,
 strategy/instrument mismatch, output tampering, strict codec, immutable persistence, corruption,
 wrong type/version, golden evidence, reproducible bytes and prohibited-capability isolation.
 
@@ -230,10 +248,11 @@ authority and release/risk decisions block stronger robustness or operational cl
 ## 24. Limitations
 
 Rolling slices evaluate the fixed verified ledger; they do not refit a model. Trade bootstrap does
-not preserve serial dependence or simulate markets. Cost perturbation covers commission only and
-does not alter signals, fills, slippage or funding. Aggregate test returns are a bounded additive
-summary, not a compounded portfolio claim. Evidence is limited to the existing one-instrument,
-long-only, fixed-notional synthetic architecture fixture.
+not preserve serial dependence or simulate markets. Cost perturbation reruns the exact engine but
+covers commission only; it does not perturb slippage, funding or strategy parameters. Compounded
+TEST returns summarize chronological non-overlapping windows and are not a deployable portfolio
+claim. Evidence is limited to the existing one-instrument, long-only, fixed-notional synthetic
+architecture fixture.
 
 ## 25. Sprint 16 recommendation — discussion only
 

@@ -897,7 +897,7 @@ def verify_backtest_accounting(
         )
 
 
-def run_authorized_strategy_backtest(
+def evaluate_authorized_strategy_backtest(
     request: StrategyBacktestRunRequest,
     *,
     authorization: ExperimentAuthorizationRecord,
@@ -911,8 +911,8 @@ def run_authorized_strategy_backtest(
     engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
     instrument: InstrumentIdentity,
-    repository: LocalDatasetRepository,
 ) -> StrategyBacktestResult:
+    """Execute the exact authorized engine without persisting derived artifacts."""
     base = request.experiment_run
     try:
         _verify_authorization(
@@ -986,13 +986,46 @@ def run_authorized_strategy_backtest(
         instrument=instrument,
         report=report,
     )
+    return StrategyBacktestResult(record, artifact, ())
+
+
+def run_authorized_strategy_backtest(
+    request: StrategyBacktestRunRequest,
+    *,
+    authorization: ExperimentAuthorizationRecord,
+    specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
+    report: CsvImportReport,
+    engine_contract: ExperimentReplayContract,
+    strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
+    repository: LocalDatasetRepository,
+) -> StrategyBacktestResult:
+    result = evaluate_authorized_strategy_backtest(
+        request,
+        authorization=authorization,
+        specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        eligibility_policy=eligibility_policy,
+        admission=admission,
+        declaration=declaration,
+        report=report,
+        engine_contract=engine_contract,
+        strategy=strategy,
+        instrument=instrument,
+    )
     writes = (
         repository.store(engine_contract),
         repository.store(strategy),
-        repository.store(artifact),
-        repository.store(record),
+        repository.store(result.artifact),
+        repository.store(result.record),
     )
-    return StrategyBacktestResult(record, artifact, writes)
+    return StrategyBacktestResult(result.record, result.artifact, writes)
 
 
 def verify_strategy_backtest_lineage(

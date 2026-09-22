@@ -3,30 +3,36 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Context, Decimal, localcontext
 
 from ai_quant_lab.core.csv_import import CsvImportReport
 from ai_quant_lab.core.data import InstrumentIdentity
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
+from ai_quant_lab.core.experiment_authorization import experiment_configuration_fingerprint
 from ai_quant_lab.core.experiment_contracts import (
+    CostSemantics,
     ExperimentAuthorizationPolicy,
     ExperimentAuthorizationRecord,
     ExperimentSpecification,
 )
-from ai_quant_lab.core.experiment_runner import _select_replay_bars
+from ai_quant_lab.core.experiment_runner import ExperimentRunRequest, _select_replay_bars
 from ai_quant_lab.core.experiment_runner_contracts import ExperimentReplayContract
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.market_data import MarketBar
 from ai_quant_lab.core.model import (
     ArtifactId,
     ExecutionState,
+    ExperimentId,
     ObjectVersion,
+    RunId,
     TraceabilityRef,
     fingerprint,
 )
+from ai_quant_lab.core.real_csv_contracts import RealCsvAdmissionRecord, RealCsvSourceDeclaration
 from ai_quant_lab.core.research_eligibility_contracts import (
     DeploymentAuthorizationStatus,
+    ResearchDatasetEligibilityPolicy,
     ResearchDatasetEligibilityRecord,
 )
 from ai_quant_lab.core.robustness_validation_contracts import (
@@ -55,7 +61,11 @@ from ai_quant_lab.core.scientific_validation_contracts import (
     ValidationRequest,
     ValidationRunRecord,
 )
-from ai_quant_lab.core.strategy_backtest import StrategyBacktestRunRequest
+from ai_quant_lab.core.strategy_backtest import (
+    InvalidCapital,
+    StrategyBacktestRunRequest,
+    evaluate_authorized_strategy_backtest,
+)
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
@@ -85,6 +95,7 @@ class RobustnessPartitionInvalid(RobustnessValidationError):
 
 _V1 = ObjectVersion(1)
 _DECIMAL_CONTEXT = Context(prec=34, rounding=ROUND_HALF_EVEN)
+_COST_PERTURBATION_DERIVATION = "TRUE_AUTHORIZED_ENGINE_REPLAY_V1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +158,16 @@ def _drawdown(values: tuple[Decimal, ...], starting_equity: Decimal) -> Decimal:
         if peak > 0:
             maximum = max(maximum, Decimal(1) - equity / peak)
     return maximum
+
+
+def _compound_returns(values: tuple[Decimal, ...]) -> Decimal:
+    aggregate = Decimal(1)
+    for value in values:
+        factor = Decimal(1) + value
+        if factor < 0:
+            raise RobustnessInputInvalid("walk-forward return cannot imply equity below zero")
+        aggregate *= factor
+    return aggregate - Decimal(1)
 
 
 def _partition(
@@ -247,7 +268,7 @@ def _walk_forward(
     ordered_returns = sorted(returns)
     median_return = _median(ordered_returns)
     worst_return = min(returns, default=Decimal(0))
-    aggregate = sum(returns, Decimal(0))
+    aggregate = _compound_returns(tuple(returns))
     maximum_drawdown = max(drawdowns, default=Decimal(0))
     minimum_trades = min(counts, default=0)
 
@@ -334,56 +355,178 @@ def _monte_carlo(
     )
 
 
-def _adjusted_drawdown(
-    *,
-    artifact: BacktestResultArtifact,
-    multiplier: Decimal,
-) -> Decimal:
-    extra_factor = multiplier - Decimal(1)
-    adjusted: list[Decimal] = []
-    for point in artifact.equity_curve:
-        extra = sum(
-            (
-                Decimal(fill.commission) * extra_factor
-                for fill in artifact.fills
-                if fill.fill_time <= point.event_time
-            ),
-            Decimal(0),
-        )
-        adjusted.append(Decimal(point.equity) - extra)
-    return _drawdown(tuple(adjusted), Decimal(artifact.initial_capital))
-
-
 def _cost_perturbation(
-    *, plan: RobustnessValidationPlan, artifact: BacktestResultArtifact
+    *,
+    request: RobustnessValidationRequest,
+    plan: RobustnessValidationPlan,
+    artifact: BacktestResultArtifact,
+    backtest_request: StrategyBacktestRunRequest,
+    authorization: ExperimentAuthorizationRecord,
+    specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
+    report: CsvImportReport,
+    engine_contract: ExperimentReplayContract,
+    strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
 ) -> CostPerturbationSummary:
-    initial = Decimal(artifact.initial_capital)
-    all_commission = sum((Decimal(fill.commission) for fill in artifact.fills), Decimal(0))
-    trade_commission = sum((Decimal(trade.commission) for trade in artifact.trades), Decimal(0))
     scenarios: list[CostPerturbationScenario] = []
     for multiplier_text in plan.commission_multipliers:
         multiplier = Decimal(multiplier_text)
-        extra_factor = multiplier - Decimal(1)
-        adjusted_net = Decimal(artifact.net_pnl) - trade_commission * extra_factor
-        adjusted_equity = Decimal(artifact.final_equity) - all_commission * extra_factor
-        total_return = adjusted_equity / initial - Decimal(1)
+        if specification.commission_semantics is CostSemantics.DECLARED_ZERO:
+            derived_bps = 0
+        elif specification.commission_semantics is CostSemantics.DECLARED_BPS:
+            exact_bps = Decimal(specification.commission_bps) * multiplier
+            integral_bps = exact_bps.to_integral_value()
+            if exact_bps != integral_bps:
+                raise RobustnessInputInvalid(
+                    "commission multiplier must produce exact integer basis points"
+                )
+            derived_bps = int(integral_bps)
+        else:
+            raise RobustnessInputInvalid(
+                "cost perturbation requires declared-zero or declared-bps commission"
+            )
+        scenario_fingerprint = fingerprint(
+            {
+                "robustness_plan_fingerprint": fingerprint_record(plan),
+                "source_specification_fingerprint": fingerprint_record(specification),
+                "source_strategy_fingerprint": fingerprint_record(strategy),
+                "source_backtest_fingerprint": fingerprint_record(artifact),
+                "commission_multiplier": multiplier_text,
+                "derived_commission_semantics": specification.commission_semantics,
+                "derived_commission_bps": derived_bps,
+                "derivation": _COST_PERTURBATION_DERIVATION,
+            }
+        )
+        suffix = scenario_fingerprint.removeprefix("sha256:")[:16]
+        scenario_id = ArtifactId(f"robustness-cost-scenario-{suffix}")
+        derived_specification = replace(
+            specification,
+            experiment_id=ExperimentId(f"robustness-cost-experiment-{suffix}"),
+            commission_bps=derived_bps,
+        )
+        derived_authorization = replace(
+            authorization,
+            authorization_id=ArtifactId(f"robustness-cost-authorization-{suffix}"),
+            specification_ref=_exact(
+                derived_specification,
+                derived_specification.experiment_id,
+                derived_specification.version,
+            ),
+            configuration_fingerprint=experiment_configuration_fingerprint(derived_specification),
+        )
+        derived_run = ExperimentRunRequest(
+            RunId(f"robustness-cost-run-{suffix}"),
+            ArtifactId(f"robustness-cost-result-{suffix}"),
+            _exact(
+                derived_authorization,
+                derived_authorization.authorization_id,
+                derived_authorization.version,
+            ),
+            _exact(
+                derived_specification,
+                derived_specification.experiment_id,
+                derived_specification.version,
+            ),
+            backtest_request.experiment_run.policy_ref,
+            backtest_request.experiment_run.eligibility_ref,
+            backtest_request.experiment_run.engine_contract_ref,
+            backtest_request.experiment_run.completed_at,
+            request.provenance_ref,
+        )
+        derived_request = StrategyBacktestRunRequest(
+            derived_run,
+            backtest_request.strategy_ref,
+        )
+        specification_ref = derived_run.specification_ref
+        authorization_ref = derived_run.authorization_ref
+        try:
+            replay = evaluate_authorized_strategy_backtest(
+                derived_request,
+                authorization=derived_authorization,
+                specification=derived_specification,
+                policy=policy,
+                eligibility=eligibility,
+                eligibility_policy=eligibility_policy,
+                admission=admission,
+                declaration=declaration,
+                report=report,
+                engine_contract=engine_contract,
+                strategy=strategy,
+                instrument=instrument,
+            )
+        except InvalidCapital:
+            scenarios.append(
+                CostPerturbationScenario(
+                    scenario_id,
+                    multiplier_text,
+                    derived_specification.commission_semantics,
+                    derived_bps,
+                    specification_ref,
+                    authorization_ref,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    RobustnessDecision.FAIL,
+                    _reasons(RobustnessReasonCode.COST_PERTURBATION_EXECUTION_FAILED),
+                )
+            )
+            continue
+        replay_artifact = replay.artifact
+        if multiplier == 1 and (
+            replay_artifact.total_return != artifact.total_return
+            or replay_artifact.net_pnl != artifact.net_pnl
+            or replay_artifact.max_drawdown != artifact.max_drawdown
+            or replay_artifact.trade_count != artifact.trade_count
+        ):
+            raise RobustnessLineageMismatch(
+                "base cost perturbation does not reproduce source backtest"
+            )
+        scenario_return = Decimal(replay_artifact.total_return)
+        if scenario_return <= Decimal(plan.perturbation_fail_return_threshold):
+            scenario_decision = RobustnessDecision.FAIL
+            scenario_reasons = _reasons(RobustnessReasonCode.COST_PERTURBATION_FAILED)
+        elif scenario_return >= Decimal(plan.perturbation_pass_return_floor):
+            scenario_decision = RobustnessDecision.PASS
+            scenario_reasons = _reasons(RobustnessReasonCode.ALL_ENABLED_METHODS_PASSED)
+        else:
+            scenario_decision = RobustnessDecision.INCONCLUSIVE
+            scenario_reasons = _reasons(RobustnessReasonCode.COST_PERTURBATION_INCONCLUSIVE)
         scenarios.append(
             CostPerturbationScenario(
+                scenario_id,
                 multiplier_text,
-                _decimal(total_return),
-                _decimal(adjusted_net),
-                _decimal(_adjusted_drawdown(artifact=artifact, multiplier=multiplier)),
-                artifact.trade_count,
+                derived_specification.commission_semantics,
+                derived_bps,
+                specification_ref,
+                authorization_ref,
+                _exact(
+                    replay_artifact,
+                    replay_artifact.artifact_id,
+                    replay_artifact.version,
+                ),
+                replay_artifact.total_return,
+                replay_artifact.net_pnl,
+                replay_artifact.max_drawdown,
+                replay_artifact.trade_count,
+                scenario_decision,
+                scenario_reasons,
             )
         )
-    worst = min(Decimal(item.total_return) for item in scenarios)
-    if worst <= Decimal(plan.perturbation_fail_return_threshold):
+    if any(item.decision is RobustnessDecision.FAIL for item in scenarios):
         decision = RobustnessDecision.FAIL
-        reasons = _reasons(RobustnessReasonCode.COST_PERTURBATION_FAILED)
-    elif all(
-        Decimal(item.total_return) >= Decimal(plan.perturbation_pass_return_floor)
-        for item in scenarios
-    ):
+        reasons = _reasons(
+            RobustnessReasonCode.COST_PERTURBATION_EXECUTION_FAILED
+            if any(item.backtest_result_ref is None for item in scenarios)
+            else RobustnessReasonCode.COST_PERTURBATION_FAILED
+        )
+    elif all(item.decision is RobustnessDecision.PASS for item in scenarios):
         decision = RobustnessDecision.PASS
         reasons = _reasons(RobustnessReasonCode.ALL_ENABLED_METHODS_PASSED)
     else:
@@ -427,6 +570,7 @@ def _input_fingerprint(
                 "step_bars": plan.step_bars,
             },
             "commission_multipliers": plan.commission_multipliers,
+            "cost_perturbation_derivation": _COST_PERTURBATION_DERIVATION,
         }
     )
 
@@ -472,15 +616,40 @@ def _evaluate(
     plan: RobustnessValidationPlan,
     scientific_result: ScientificValidationResult,
     backtest_artifact: BacktestResultArtifact,
+    backtest_request: StrategyBacktestRunRequest,
+    authorization: ExperimentAuthorizationRecord,
     specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
+    engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
     report: CsvImportReport,
 ) -> RobustnessValidationResult:
     bars = _select_replay_bars(specification, report)
     with localcontext(_DECIMAL_CONTEXT):
         walk_forward = _walk_forward(plan=plan, bars=bars, artifact=backtest_artifact)
         monte_carlo = _monte_carlo(plan=plan, artifact=backtest_artifact)
-        perturbation = _cost_perturbation(plan=plan, artifact=backtest_artifact)
+        perturbation = _cost_perturbation(
+            request=request,
+            plan=plan,
+            artifact=backtest_artifact,
+            backtest_request=backtest_request,
+            authorization=authorization,
+            specification=specification,
+            policy=policy,
+            eligibility=eligibility,
+            eligibility_policy=eligibility_policy,
+            admission=admission,
+            declaration=declaration,
+            report=report,
+            engine_contract=engine_contract,
+            strategy=strategy,
+            instrument=instrument,
+        )
     method_decisions = (
         walk_forward.decision,
         monte_carlo.decision,
@@ -497,7 +666,7 @@ def _evaluate(
         if monte_carlo.decision is RobustnessDecision.FAIL:
             reasons.append(RobustnessReasonCode.MONTE_CARLO_FAILED)
         if perturbation.decision is RobustnessDecision.FAIL:
-            reasons.append(RobustnessReasonCode.COST_PERTURBATION_FAILED)
+            reasons.extend(perturbation.reason_codes)
     elif all(value is RobustnessDecision.PASS for value in method_decisions):
         decision = RobustnessDecision.PASS
         reasons.append(RobustnessReasonCode.ALL_ENABLED_METHODS_PASSED)
@@ -550,6 +719,9 @@ def run_robustness_validation(
     specification: ExperimentSpecification,
     policy: ExperimentAuthorizationPolicy,
     eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
     engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
     instrument: InstrumentIdentity,
@@ -591,8 +763,17 @@ def run_robustness_validation(
         plan=plan,
         scientific_result=scientific_result,
         backtest_artifact=backtest_artifact,
+        backtest_request=backtest_request,
+        authorization=authorization,
         specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        eligibility_policy=eligibility_policy,
+        admission=admission,
+        declaration=declaration,
+        engine_contract=engine_contract,
         strategy=strategy,
+        instrument=instrument,
         report=report,
     )
     input_fingerprint = _input_fingerprint(
@@ -639,6 +820,9 @@ def run_robustness_validation(
         specification=specification,
         policy=policy,
         eligibility=eligibility,
+        eligibility_policy=eligibility_policy,
+        admission=admission,
+        declaration=declaration,
         engine_contract=engine_contract,
         strategy=strategy,
         instrument=instrument,
@@ -665,6 +849,9 @@ def verify_robustness_validation_lineage(
     specification: ExperimentSpecification,
     policy: ExperimentAuthorizationPolicy,
     eligibility: ResearchDatasetEligibilityRecord,
+    eligibility_policy: ResearchDatasetEligibilityPolicy,
+    admission: RealCsvAdmissionRecord,
+    declaration: RealCsvSourceDeclaration,
     engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
     instrument: InstrumentIdentity,
@@ -705,8 +892,17 @@ def verify_robustness_validation_lineage(
         plan=plan,
         scientific_result=scientific_result,
         backtest_artifact=backtest_artifact,
+        backtest_request=backtest_request,
+        authorization=authorization,
         specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        eligibility_policy=eligibility_policy,
+        admission=admission,
+        declaration=declaration,
+        engine_contract=engine_contract,
         strategy=strategy,
+        instrument=instrument,
         report=report,
     )
     expected_input = _input_fingerprint(

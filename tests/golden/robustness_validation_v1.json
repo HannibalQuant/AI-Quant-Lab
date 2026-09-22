@@ -1,11 +1,18 @@
 {
+  "aggregate_test_return": "0.057843329466232789964096278423239",
   "commission_multipliers": [
     "1",
-    "1.25",
-    "1.5",
-    "2"
+    "2",
+    "3",
+    "4"
   ],
   "decision": "PASS",
+  "derived_commission_bps": [
+    10,
+    20,
+    30,
+    40
+  ],
   "format": "robustness-validation-v1",
   "median_test_return": "0.018916381002531524031937143561756",
   "monte_carlo_iterations": 200,
@@ -15,9 +22,15 @@
   "reason_codes": [
     "ALL_ENABLED_METHODS_PASSED"
   ],
-  "robustness_input_fingerprint": "sha256:8a942750a860e441791f6c1cc2fe28c851f2a5b6c1a88cd070c465abe5f6bba1",
-  "robustness_plan_fingerprint": "sha256:d89c00affa13d5b4b6a0e7a5b3f54cca6ea967ce77ed2c37ed738aa75bd341b3",
-  "robustness_result_fingerprint": "sha256:603864fabbd86c8b38f664a4eae0a8b47f5d27e8db18284be05947f448216b71",
+  "robustness_input_fingerprint": "sha256:f86a9a378ed0a7db4e007b44a0f429d4f74307ba326302d3ff22e53f932e94a5",
+  "robustness_plan_fingerprint": "sha256:60e09867283bc9269ad442abc6349dee71d2a33997d555a516d48a1208203356",
+  "robustness_result_fingerprint": "sha256:519e21d530a9c37092a7a10e45f4c30253167ab5aa23e685f81147241e836ac1",
+  "scenario_ids": [
+    "artifact:robustness-cost-scenario-fe7d728e18c6a03a",
+    "artifact:robustness-cost-scenario-42cae6b6985e2f9c",
+    "artifact:robustness-cost-scenario-eaf6b4737cab4316",
+    "artifact:robustness-cost-scenario-0c7fdcea2b89710d"
+  ],
   "source_scientific_result_fingerprint": "sha256:5e4962cd6ef82aaa6dd472ceda0bd84c187835b76c1bad90e1bd103b98b02d0e",
-  "worst_perturbed_return": "0.077761199400299850074962518740628"
+  "worst_perturbed_return": "0.076002158920539730134932533733132"
 }
