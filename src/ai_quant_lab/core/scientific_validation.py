@@ -257,6 +257,40 @@ def _verify_request(
         raise ValidationAuthorityInvalid("validation request lacks exact governed authority")
 
 
+def _verify_source_backtest(
+    *,
+    record: BacktestRunRecord,
+    artifact: BacktestResultArtifact,
+    request: StrategyBacktestRunRequest,
+    authorization: ExperimentAuthorizationRecord,
+    specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    engine_contract: ExperimentReplayContract,
+    strategy: StrategyDefinition,
+    instrument: InstrumentIdentity,
+    report: CsvImportReport,
+) -> None:
+    try:
+        verify_strategy_backtest_lineage(
+            record=record,
+            artifact=artifact,
+            request=request,
+            authorization=authorization,
+            specification=specification,
+            policy=policy,
+            eligibility=eligibility,
+            engine_contract=engine_contract,
+            strategy=strategy,
+            instrument=instrument,
+            report=report,
+        )
+    except ValueError as exc:
+        raise ValidationInputInvalid(
+            "scientific validation source backtest failed exact verification"
+        ) from exc
+
+
 def run_scientific_validation(
     request: ValidationRequest,
     *,
@@ -275,22 +309,19 @@ def run_scientific_validation(
     repository: LocalDatasetRepository,
 ) -> ScientificValidationExecutionResult:
     _verify_request(request, plan=plan, artifact=backtest_artifact, record=backtest_record)
-    try:
-        verify_strategy_backtest_lineage(
-            record=backtest_record,
-            artifact=backtest_artifact,
-            request=backtest_request,
-            authorization=authorization,
-            specification=specification,
-            policy=policy,
-            eligibility=eligibility,
-            engine_contract=engine_contract,
-            strategy=strategy,
-            instrument=instrument,
-            report=report,
-        )
-    except ValueError as exc:
-        raise ValidationInputInvalid("backtest input failed exact verification") from exc
+    _verify_source_backtest(
+        record=backtest_record,
+        artifact=backtest_artifact,
+        request=backtest_request,
+        authorization=authorization,
+        specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        engine_contract=engine_contract,
+        strategy=strategy,
+        instrument=instrument,
+        report=report,
+    )
     result = _evaluate(
         request=request,
         plan=plan,
@@ -331,9 +362,15 @@ def run_scientific_validation(
         plan=plan,
         backtest_record=backtest_record,
         backtest_artifact=backtest_artifact,
+        backtest_request=backtest_request,
+        authorization=authorization,
         specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        engine_contract=engine_contract,
         strategy=strategy,
         instrument=instrument,
+        report=report,
     )
     writes = (
         repository.store(plan),
@@ -351,11 +388,30 @@ def verify_scientific_validation_lineage(
     plan: ValidationPlan,
     backtest_record: BacktestRunRecord,
     backtest_artifact: BacktestResultArtifact,
+    backtest_request: StrategyBacktestRunRequest,
+    authorization: ExperimentAuthorizationRecord,
     specification: ExperimentSpecification,
+    policy: ExperimentAuthorizationPolicy,
+    eligibility: ResearchDatasetEligibilityRecord,
+    engine_contract: ExperimentReplayContract,
     strategy: StrategyDefinition,
     instrument: InstrumentIdentity,
+    report: CsvImportReport,
 ) -> None:
     _verify_request(request, plan=plan, artifact=backtest_artifact, record=backtest_record)
+    _verify_source_backtest(
+        record=backtest_record,
+        artifact=backtest_artifact,
+        request=backtest_request,
+        authorization=authorization,
+        specification=specification,
+        policy=policy,
+        eligibility=eligibility,
+        engine_contract=engine_contract,
+        strategy=strategy,
+        instrument=instrument,
+        report=report,
+    )
     expected_result = _evaluate(
         request=request,
         plan=plan,
@@ -372,8 +428,6 @@ def verify_scientific_validation_lineage(
         strategy=strategy,
         instrument=instrument,
     )
-    if result != expected_result:
-        raise ValidationLineageMismatch("scientific validation result is not deterministic")
     if (
         record.validation_plan_ref != request.validation_plan_ref
         or record.backtest_result_ref != request.backtest_result_ref
@@ -387,3 +441,5 @@ def verify_scientific_validation_lineage(
         != _exact(result, result.validation_result_id, result.version)
     ):
         raise ValidationLineageMismatch("validation run does not bind exact deterministic inputs")
+    if result != expected_result:
+        raise ValidationLineageMismatch("scientific validation result is not deterministic")

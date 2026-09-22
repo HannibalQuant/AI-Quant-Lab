@@ -15,6 +15,7 @@ from test_real_csv_onboarding import HEADER
 from test_strategy_backtest import BacktestContext, authorized_context, execute_context
 
 from ai_quant_lab import EXE_01
+from ai_quant_lab.core import scientific_validation as validation_module
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.dataset_store import (
     RepositoryIntegrityFailure,
@@ -198,6 +199,38 @@ def _run(context: BacktestContext, plan: ValidationPlan) -> ValidationBundle:
         repository=context[1],
     )
     return request, backtest_request, backtest, result, context
+
+
+def _verify(
+    bundle: ValidationBundle,
+    *,
+    request: ValidationRequest | None = None,
+    backtest_record: Any | None = None,
+    backtest_artifact: Any | None = None,
+    result: ScientificValidationResult | None = None,
+    record: ValidationRunRecord | None = None,
+    specification: Any | None = None,
+    strategy: Any | None = None,
+    instrument: Any | None = None,
+) -> None:
+    original_request, backtest_request, backtest, validation, context = bundle
+    verify_scientific_validation_lineage(
+        record=validation.record if record is None else record,
+        result=validation.result if result is None else result,
+        request=original_request if request is None else request,
+        plan=validation_plan(),
+        backtest_record=backtest.record if backtest_record is None else backtest_record,
+        backtest_artifact=backtest.artifact if backtest_artifact is None else backtest_artifact,
+        backtest_request=backtest_request,
+        authorization=context[9].record,
+        specification=context[7] if specification is None else specification,
+        policy=context[8],
+        eligibility=context[5],
+        engine_contract=strategy_backtest_replay_contract(),
+        strategy=context[6] if strategy is None else strategy,
+        instrument=context[10] if instrument is None else instrument,
+        report=context[3],
+    )
 
 
 @pytest.fixture
@@ -435,6 +468,129 @@ def _unsafe[T](record: T, **changes: object) -> T:
     return clone
 
 
+def test_validation_lineage_reverifies_coherently_substituted_source_backtest(
+    pass_bundle: ValidationBundle,
+) -> None:
+    original_request, _, backtest, validation, context = pass_bundle
+    substituted_artifact = _unsafe(backtest.artifact, total_return="0")
+    substituted_record = replace(
+        backtest.record,
+        result_ref=exact(
+            substituted_artifact,
+            substituted_artifact.artifact_id,
+            substituted_artifact.version,
+        ),
+    )
+    substituted_request = replace(
+        original_request,
+        backtest_result_ref=exact(
+            substituted_artifact,
+            substituted_artifact.artifact_id,
+            substituted_artifact.version,
+        ),
+        backtest_run_ref=exact(
+            substituted_record,
+            substituted_record.run_id,
+            substituted_record.version,
+        ),
+    )
+    substituted_result = validation_module._evaluate(
+        request=substituted_request,
+        plan=validation_plan(),
+        artifact=substituted_artifact,
+        record=substituted_record,
+        specification=context[7],
+        strategy=context[6],
+    )
+    substituted_validation_record = replace(
+        validation.record,
+        backtest_result_ref=substituted_request.backtest_result_ref,
+        backtest_run_ref=substituted_request.backtest_run_ref,
+        validation_input_fingerprint=validation_module._validation_input_fingerprint(
+            plan=validation_plan(),
+            artifact=substituted_artifact,
+            record=substituted_record,
+            specification=context[7],
+            strategy=context[6],
+            instrument=context[10],
+        ),
+        validation_result_ref=exact(
+            substituted_result,
+            substituted_result.validation_result_id,
+            substituted_result.version,
+        ),
+    )
+
+    with pytest.raises(
+        ValidationInputInvalid,
+        match="scientific validation source backtest failed exact verification",
+    ):
+        _verify(
+            pass_bundle,
+            request=substituted_request,
+            backtest_record=substituted_record,
+            backtest_artifact=substituted_artifact,
+            result=substituted_result,
+            record=substituted_validation_record,
+        )
+
+
+def test_validation_lineage_rejects_source_backtest_binding_and_replay_changes(
+    pass_bundle: ValidationBundle,
+) -> None:
+    request, _, backtest, _, context = pass_bundle
+    wrong_binding_record = _unsafe(backtest.record, result_ref=request.validation_plan_ref)
+    wrong_binding_request = replace(
+        request,
+        backtest_run_ref=exact(
+            wrong_binding_record,
+            wrong_binding_record.run_id,
+            wrong_binding_record.version,
+        ),
+    )
+    with pytest.raises(
+        ValidationInputInvalid,
+        match="scientific validation source backtest failed exact verification",
+    ):
+        _verify(
+            pass_bundle,
+            request=wrong_binding_request,
+            backtest_record=wrong_binding_record,
+        )
+
+    artifact_cases = (
+        _unsafe(backtest.artifact, specification_ref=backtest.artifact.strategy_ref),
+        _unsafe(backtest.artifact, strategy_ref=backtest.artifact.specification_ref),
+        _unsafe(backtest.artifact, final_equity="0"),
+    )
+    for artifact in artifact_cases:
+        changed_record = _unsafe(
+            backtest.record,
+            result_ref=exact(artifact, artifact.artifact_id, artifact.version),
+        )
+        changed_request = replace(
+            request,
+            backtest_result_ref=exact(artifact, artifact.artifact_id, artifact.version),
+            backtest_run_ref=exact(changed_record, changed_record.run_id, changed_record.version),
+        )
+        with pytest.raises(
+            ValidationInputInvalid,
+            match="scientific validation source backtest failed exact verification",
+        ):
+            _verify(
+                pass_bundle,
+                request=changed_request,
+                backtest_record=changed_record,
+                backtest_artifact=artifact,
+            )
+
+    with pytest.raises(
+        ValidationInputInvalid,
+        match="scientific validation source backtest failed exact verification",
+    ):
+        _verify(pass_bundle, instrument=replace(context[10], symbol="SUBSTITUTED"))
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (
@@ -455,27 +611,17 @@ def _unsafe[T](record: T, **changes: object) -> T:
 def test_validation_lineage_rejects_result_tamper(
     pass_bundle: ValidationBundle, field: str, value: object
 ) -> None:
-    request, _, backtest, validation, context = pass_bundle
+    _, _, _, validation, _ = pass_bundle
     context_result = validation.result
     # The verifier independently recomputes every scientific output from exact inputs.
     with pytest.raises(ValidationLineageMismatch):
-        verify_scientific_validation_lineage(
-            record=validation.record,
-            result=_unsafe(context_result, **{field: value}),
-            request=request,
-            plan=validation_plan(),
-            backtest_record=backtest.record,
-            backtest_artifact=backtest.artifact,
-            specification=context[7],
-            strategy=context[6],
-            instrument=context[10],
-        )
+        _verify(pass_bundle, result=_unsafe(context_result, **{field: value}))
 
 
 def test_validation_lineage_rejects_refs_seed_and_run_binding_tamper(
     pass_bundle: ValidationBundle,
 ) -> None:
-    request, _, backtest, validation, context = pass_bundle
+    request, _, _, validation, _ = pass_bundle
     cases = (
         _unsafe(validation.result, validation_plan_ref=request.backtest_result_ref),
         _unsafe(validation.result, backtest_result_ref=request.validation_plan_ref),
@@ -484,29 +630,9 @@ def test_validation_lineage_rejects_refs_seed_and_run_binding_tamper(
     )
     for result in cases:
         with pytest.raises(ValidationLineageMismatch):
-            verify_scientific_validation_lineage(
-                record=validation.record,
-                result=result,
-                request=request,
-                plan=validation_plan(),
-                backtest_record=backtest.record,
-                backtest_artifact=backtest.artifact,
-                specification=context[7],
-                strategy=context[6],
-                instrument=context[10],
-            )
+            _verify(pass_bundle, result=result)
     with pytest.raises(ValidationLineageMismatch):
-        verify_scientific_validation_lineage(
-            record=_unsafe(validation.record, random_seed=999),
-            result=validation.result,
-            request=request,
-            plan=validation_plan(),
-            backtest_record=backtest.record,
-            backtest_artifact=backtest.artifact,
-            specification=context[7],
-            strategy=context[6],
-            instrument=context[10],
-        )
+        _verify(pass_bundle, record=_unsafe(validation.record, random_seed=999))
 
 
 def test_scientific_validation_golden_is_pinned_and_read_only(tmp_path: Path) -> None:

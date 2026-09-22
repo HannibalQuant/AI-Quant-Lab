@@ -31,7 +31,7 @@ not authorize risk, deployment or execution.
 
 ## 5. Hypothesis semantics
 
-The closed Sprint 14 hypothesis pair is preregistered in `ValidationPlan`:
+The closed Sprint 14 hypothesis pair is pre-specified in `ValidationPlan`:
 
 - null: `EXPECTED_TOTAL_RETURN_NONPOSITIVE`
 - alternative: `EXPECTED_TOTAL_RETURN_POSITIVE`
@@ -110,7 +110,8 @@ Before evaluation, `run_scientific_validation()` reuses
 `verify_strategy_backtest_lineage()`, which includes deterministic replay and independent Sprint
 13 accounting verification. The validator accepts only current BacktestResultArtifact v2.
 
-`verify_scientific_validation_lineage()` then verifies and recomputes:
+`verify_scientific_validation_lineage()` independently repeats the authoritative source-backtest
+verification before it verifies and recomputes:
 
 `ValidationPlan -> BacktestResultArtifact -> BacktestRunRecord -> ValidationRunRecord -> ScientificValidationResult`
 
@@ -155,8 +156,8 @@ isolation remain enabled.
 
 Local quality evidence on Python 3.12:
 
-- focused Sprint 14: `26 passed`;
-- full suite: `444 passed`;
+- focused Sprint 14: `28 passed`;
+- full suite: `446 passed`;
 - governance-negative / execution isolation: `14 passed`;
 - `ruff format --check .`, `ruff check .` and `mypy`: passed.
 
@@ -174,7 +175,7 @@ The unchanged CI matrix independently runs the same gates on Python 3.12 and 3.1
 | IP-06 | OPEN | OPEN | No emergency/reactivation runtime. |
 | IP-07 | OPEN | OPEN | No deployment approval or expiry workflow. |
 | IP-08 | OPEN | OPEN | No freshness/monitoring crosswalk. |
-| IP-09 | OPEN | PARTIALLY_RESOLVED | One bounded preregistered trade-bootstrap method; OOS, dependence-aware robustness, corrected multiplicity and broader approval remain open. |
+| IP-09 | OPEN | PARTIALLY_RESOLVED | One bounded pre-specified trade-bootstrap method; temporal preregistration, OOS, dependence-aware robustness, corrected multiplicity and broader approval remain open. |
 | IP-10 | OPEN | OPEN | Multiplicity ambiguity blocks; no monitoring methodology. |
 | IP-11 | PARTIALLY_RESOLVED | PARTIALLY_RESOLVED | Verified result input and minimum evidence; provider/universal quality authority remains open. |
 | IP-12 | OPEN | OPEN | No new legal, retention or licensing authority. |
