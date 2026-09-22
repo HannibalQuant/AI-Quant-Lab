@@ -246,9 +246,10 @@ def authorized_context(
     spec_mutator: Callable[[ExperimentSpecification], ExperimentSpecification] | None = None,
     capital_currency: str = "USD",
     quote_asset: str | None = "USD",
+    csv_text: str | None = None,
 ) -> BacktestContext:
     csv_path = tmp_path / f"strategy-{suffix}.csv"
-    csv_path.write_text(_six_bar_csv(), encoding="utf-8")
+    csv_path.write_text(_six_bar_csv() if csv_text is None else csv_text, encoding="utf-8")
     onboarding, source, instrument, schema, timeframe, repository = real_csv_context(
         tmp_path, path=csv_path, allowed_root=tmp_path, suffix=suffix
     )

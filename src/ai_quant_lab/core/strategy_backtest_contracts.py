@@ -251,6 +251,7 @@ class SimulatedTrade:
 @dataclass(frozen=True, slots=True)
 class EquityPoint:
     event_time: datetime
+    bar_ref: TraceabilityRef
     cash: str
     position_quantity: str
     position_value: str
@@ -260,6 +261,7 @@ class EquityPoint:
 
     def __post_init__(self) -> None:
         require_utc(self.event_time, "equity.event_time")
+        _exact(self.bar_ref, MarketBarId, "equity.bar_ref")
         for field in (
             "cash",
             "position_quantity",
@@ -310,10 +312,10 @@ class BacktestResultArtifact:
     def __post_init__(self) -> None:
         if (
             not isinstance(self.artifact_id, ArtifactId)
-            or self.version != ObjectVersion(1)
+            or self.version != ObjectVersion(2)
             or not isinstance(self.run_id, RunId)
             or self.run_version != ObjectVersion(1)
-            or self.contract_version != ObjectVersion(1)
+            or self.contract_version != ObjectVersion(2)
         ):
             raise StrategyBacktestContractError("unsupported backtest result contract")
         _fingerprint(self.run_input_fingerprint, "run_input_fingerprint")
@@ -349,6 +351,13 @@ class BacktestResultArtifact:
             raise StrategyBacktestContractError("max_drawdown must be non-negative magnitude")
         if self.trade_count != len(self.trades) or len(self.orders) != len(self.fills):
             raise StrategyBacktestContractError("backtest result cardinality is inconsistent")
+        if (
+            len({order.order_id for order in self.orders}) != len(self.orders)
+            or len({fill.fill_id for fill in self.fills}) != len(self.fills)
+            or len({trade.trade_id for trade in self.trades}) != len(self.trades)
+            or len({point.bar_ref for point in self.equity_curve}) != len(self.equity_curve)
+        ):
+            raise StrategyBacktestContractError("backtest ledger identities must be unique")
         if not self.equity_curve:
             raise StrategyBacktestContractError("backtest requires an equity curve")
         if tuple(point.event_time for point in self.equity_curve) != tuple(

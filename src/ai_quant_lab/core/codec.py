@@ -469,6 +469,7 @@ def _simulated_trade_payload(record: SimulatedTrade) -> dict[str, Any]:
 def _equity_point_payload(record: EquityPoint) -> dict[str, Any]:
     return {
         "event_time": _timestamp_payload(record.event_time),
+        "bar_ref": _trace_ref_payload(record.bar_ref),
         "cash": record.cash,
         "position_quantity": record.position_quantity,
         "position_value": record.position_value,
@@ -2268,6 +2269,7 @@ def _decode_equity_point(payload: Any, field: str) -> EquityPoint:
         payload,
         {
             "event_time",
+            "bar_ref",
             "cash",
             "position_quantity",
             "position_value",
@@ -2279,6 +2281,7 @@ def _decode_equity_point(payload: Any, field: str) -> EquityPoint:
     )
     return EquityPoint(
         _timestamp(item["event_time"], f"{field}.event_time"),
+        _trace_ref(item["bar_ref"], f"{field}.bar_ref"),
         _text(item["cash"], f"{field}.cash"),
         _text(item["position_quantity"], f"{field}.position_quantity"),
         _text(item["position_value"], f"{field}.position_value"),
