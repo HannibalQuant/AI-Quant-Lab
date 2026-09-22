@@ -1,0 +1,23 @@
+{
+  "commission_multipliers": [
+    "1",
+    "1.25",
+    "1.5",
+    "2"
+  ],
+  "decision": "PASS",
+  "format": "robustness-validation-v1",
+  "median_test_return": "0.018916381002531524031937143561756",
+  "monte_carlo_iterations": 200,
+  "monte_carlo_lower_return": "0.07864071964017991004497751124437784",
+  "monte_carlo_seed": 97,
+  "partition_count": 3,
+  "reason_codes": [
+    "ALL_ENABLED_METHODS_PASSED"
+  ],
+  "robustness_input_fingerprint": "sha256:8a942750a860e441791f6c1cc2fe28c851f2a5b6c1a88cd070c465abe5f6bba1",
+  "robustness_plan_fingerprint": "sha256:d89c00affa13d5b4b6a0e7a5b3f54cca6ea967ce77ed2c37ed738aa75bd341b3",
+  "robustness_result_fingerprint": "sha256:603864fabbd86c8b38f664a4eae0a8b47f5d27e8db18284be05947f448216b71",
+  "source_scientific_result_fingerprint": "sha256:5e4962cd6ef82aaa6dd472ceda0bd84c187835b76c1bad90e1bd103b98b02d0e",
+  "worst_perturbed_return": "0.077761199400299850074962518740628"
+}
