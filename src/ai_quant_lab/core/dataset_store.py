@@ -42,6 +42,11 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityPolicy,
     ResearchDatasetEligibilityRecord,
 )
+from ai_quant_lab.core.scientific_validation_contracts import (
+    ScientificValidationResult,
+    ValidationPlan,
+    ValidationRunRecord,
+)
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
@@ -71,6 +76,9 @@ type StoredDatasetObject = (
     | StrategyDefinition
     | BacktestResultArtifact
     | BacktestRunRecord
+    | ValidationPlan
+    | ScientificValidationResult
+    | ValidationRunRecord
 )
 
 
@@ -131,6 +139,9 @@ class StoredObjectType(StrEnum):
     STRATEGY_DEFINITION = "strategy-definition"
     BACKTEST_RESULT_ARTIFACT = "backtest-result-artifact"
     BACKTEST_RUN_RECORD = "backtest-run-record"
+    VALIDATION_PLAN = "validation-plan"
+    SCIENTIFIC_VALIDATION_RESULT = "scientific-validation-result"
+    VALIDATION_RUN_RECORD = "validation-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -221,6 +232,9 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     StrategyDefinition: StoredObjectType.STRATEGY_DEFINITION,
     BacktestResultArtifact: StoredObjectType.BACKTEST_RESULT_ARTIFACT,
     BacktestRunRecord: StoredObjectType.BACKTEST_RUN_RECORD,
+    ValidationPlan: StoredObjectType.VALIDATION_PLAN,
+    ScientificValidationResult: StoredObjectType.SCIENTIFIC_VALIDATION_RESULT,
+    ValidationRunRecord: StoredObjectType.VALIDATION_RUN_RECORD,
 }
 
 
@@ -266,6 +280,12 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.artifact_id)
     if isinstance(record, BacktestRunRecord):
         return str(record.run_id)
+    if isinstance(record, ValidationPlan):
+        return str(record.validation_plan_id)
+    if isinstance(record, ScientificValidationResult):
+        return str(record.validation_result_id)
+    if isinstance(record, ValidationRunRecord):
+        return str(record.validation_run_id)
     return str(record.dataset_id)
 
 

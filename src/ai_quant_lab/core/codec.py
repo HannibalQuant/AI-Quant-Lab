@@ -121,6 +121,23 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityStatus,
     ValidationStatus,
 )
+from ai_quant_lab.core.scientific_validation_contracts import (
+    AlternativeHypothesis,
+    HoldoutEvidenceStatus,
+    HoldoutPolicy,
+    MultiplicityPolicy,
+    NullHypothesis,
+    OutOfSampleEvidenceStatus,
+    ScientificValidationBoundary,
+    ScientificValidationDecision,
+    ScientificValidationResult,
+    UncertaintyMethod,
+    ValidationMetric,
+    ValidationPlan,
+    ValidationReasonCode,
+    ValidationRunRecord,
+    ValidationRunStatus,
+)
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
@@ -172,6 +189,9 @@ type GovernedRecord = (
     | StrategyDefinition
     | BacktestResultArtifact
     | BacktestRunRecord
+    | ValidationPlan
+    | ScientificValidationResult
+    | ValidationRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -226,6 +246,9 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     StrategyDefinition: "StrategyDefinition",
     BacktestResultArtifact: "BacktestResultArtifact",
     BacktestRunRecord: "BacktestRunRecord",
+    ValidationPlan: "ValidationPlan",
+    ScientificValidationResult: "ScientificValidationResult",
+    ValidationRunRecord: "ValidationRunRecord",
 }
 
 
@@ -1051,6 +1074,76 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "completed_at": _timestamp_payload(record.completed_at),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "validation_status": record.validation_status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ValidationPlan):
+        return {
+            "validation_plan_id": str(record.validation_plan_id),
+            "version": record.version.number,
+            "target_experiment_family": record.target_experiment_family.value,
+            "target_metrics": [item.value for item in record.target_metrics],
+            "primary_metric": record.primary_metric.value,
+            "null_hypothesis": record.null_hypothesis.value,
+            "alternative_hypothesis": record.alternative_hypothesis.value,
+            "min_sample_size": record.min_sample_size,
+            "min_trade_count": record.min_trade_count,
+            "uncertainty_method": record.uncertainty_method.value,
+            "confidence_level": record.confidence_level,
+            "bootstrap_iterations": record.bootstrap_iterations,
+            "random_seed": record.random_seed,
+            "holdout_policy": record.holdout_policy.value,
+            "multiplicity_policy": record.multiplicity_policy.value,
+            "validator_authority_ref": _trace_ref_payload(record.validator_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ScientificValidationResult):
+        return {
+            "validation_result_id": str(record.validation_result_id),
+            "version": record.version.number,
+            "validation_plan_ref": _trace_ref_payload(record.validation_plan_ref),
+            "backtest_result_ref": _trace_ref_payload(record.backtest_result_ref),
+            "backtest_run_ref": _trace_ref_payload(record.backtest_run_ref),
+            "experiment_ref": _trace_ref_payload(record.experiment_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "primary_metric": record.primary_metric.value,
+            "estimate": record.estimate,
+            "lower_bound": record.lower_bound,
+            "upper_bound": record.upper_bound,
+            "confidence_level": record.confidence_level,
+            "uncertainty_method": record.uncertainty_method.value,
+            "sample_size": record.sample_size,
+            "trade_count": record.trade_count,
+            "holdout_status": record.holdout_status.value,
+            "multiplicity_policy": record.multiplicity_policy.value,
+            "decision": record.decision.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "validator_authority_ref": _trace_ref_payload(record.validator_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "scientific_boundary": record.scientific_boundary.value,
+            "out_of_sample_evidence": record.out_of_sample_evidence.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ValidationRunRecord):
+        return {
+            "validation_run_id": str(record.validation_run_id),
+            "version": record.version.number,
+            "validation_plan_ref": _trace_ref_payload(record.validation_plan_ref),
+            "backtest_result_ref": _trace_ref_payload(record.backtest_result_ref),
+            "backtest_run_ref": _trace_ref_payload(record.backtest_run_ref),
+            "validation_input_fingerprint": record.validation_input_fingerprint,
+            "random_seed": record.random_seed,
+            "validation_result_ref": _trace_ref_payload(record.validation_result_ref),
+            "validator_authority_ref": _trace_ref_payload(record.validator_authority_ref),
+            "completed_at": _timestamp_payload(record.completed_at),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "status": record.status.value,
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
             "contract_version": record.contract_version.number,
@@ -2435,6 +2528,166 @@ def _decode_backtest_run(payload: Any) -> BacktestRunRecord:
     )
 
 
+def _decode_validation_plan(payload: Any) -> ValidationPlan:
+    fields = {
+        "validation_plan_id",
+        "version",
+        "target_experiment_family",
+        "target_metrics",
+        "primary_metric",
+        "null_hypothesis",
+        "alternative_hypothesis",
+        "min_sample_size",
+        "min_trade_count",
+        "uncertainty_method",
+        "confidence_level",
+        "bootstrap_iterations",
+        "random_seed",
+        "holdout_policy",
+        "multiplicity_policy",
+        "validator_authority_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ValidationPlan.payload")
+    return ValidationPlan(
+        cast(
+            ArtifactId,
+            _typed_id(item["validation_plan_id"], ArtifactId, "validation_plan_id"),
+        ),
+        _version(item["version"], "version"),
+        ExperimentFamily(_text(item["target_experiment_family"], "target_experiment_family")),
+        tuple(
+            ValidationMetric(value) for value in _strings(item["target_metrics"], "target_metrics")
+        ),
+        ValidationMetric(_text(item["primary_metric"], "primary_metric")),
+        NullHypothesis(_text(item["null_hypothesis"], "null_hypothesis")),
+        AlternativeHypothesis(_text(item["alternative_hypothesis"], "alternative_hypothesis")),
+        _integer(item["min_sample_size"], "min_sample_size"),
+        _integer(item["min_trade_count"], "min_trade_count"),
+        UncertaintyMethod(_text(item["uncertainty_method"], "uncertainty_method")),
+        _text(item["confidence_level"], "confidence_level"),
+        _integer(item["bootstrap_iterations"], "bootstrap_iterations"),
+        _integer(item["random_seed"], "random_seed"),
+        HoldoutPolicy(_text(item["holdout_policy"], "holdout_policy")),
+        MultiplicityPolicy(_text(item["multiplicity_policy"], "multiplicity_policy")),
+        _trace_ref(item["validator_authority_ref"], "validator_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_scientific_validation_result(payload: Any) -> ScientificValidationResult:
+    fields = {
+        "validation_result_id",
+        "version",
+        "validation_plan_ref",
+        "backtest_result_ref",
+        "backtest_run_ref",
+        "experiment_ref",
+        "strategy_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "primary_metric",
+        "estimate",
+        "lower_bound",
+        "upper_bound",
+        "confidence_level",
+        "uncertainty_method",
+        "sample_size",
+        "trade_count",
+        "holdout_status",
+        "multiplicity_policy",
+        "decision",
+        "reason_codes",
+        "validator_authority_ref",
+        "provenance_ref",
+        "scientific_boundary",
+        "out_of_sample_evidence",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ScientificValidationResult.payload")
+    return ScientificValidationResult(
+        cast(
+            ValidationId,
+            _typed_id(item["validation_result_id"], ValidationId, "validation_result_id"),
+        ),
+        _version(item["version"], "version"),
+        _trace_ref(item["validation_plan_ref"], "validation_plan_ref"),
+        _trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _trace_ref(item["backtest_run_ref"], "backtest_run_ref"),
+        _trace_ref(item["experiment_ref"], "experiment_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        ValidationMetric(_text(item["primary_metric"], "primary_metric")),
+        _text(item["estimate"], "estimate"),
+        _text(item["lower_bound"], "lower_bound"),
+        _text(item["upper_bound"], "upper_bound"),
+        _text(item["confidence_level"], "confidence_level"),
+        UncertaintyMethod(_text(item["uncertainty_method"], "uncertainty_method")),
+        _integer(item["sample_size"], "sample_size"),
+        _integer(item["trade_count"], "trade_count"),
+        HoldoutEvidenceStatus(_text(item["holdout_status"], "holdout_status")),
+        MultiplicityPolicy(_text(item["multiplicity_policy"], "multiplicity_policy")),
+        ScientificValidationDecision(_text(item["decision"], "decision")),
+        tuple(
+            ValidationReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _trace_ref(item["validator_authority_ref"], "validator_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        ScientificValidationBoundary(_text(item["scientific_boundary"], "scientific_boundary")),
+        OutOfSampleEvidenceStatus(_text(item["out_of_sample_evidence"], "out_of_sample_evidence")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_validation_run(payload: Any) -> ValidationRunRecord:
+    fields = {
+        "validation_run_id",
+        "version",
+        "validation_plan_ref",
+        "backtest_result_ref",
+        "backtest_run_ref",
+        "validation_input_fingerprint",
+        "random_seed",
+        "validation_result_ref",
+        "validator_authority_ref",
+        "completed_at",
+        "provenance_ref",
+        "status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ValidationRunRecord.payload")
+    return ValidationRunRecord(
+        cast(RunId, _typed_id(item["validation_run_id"], RunId, "validation_run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["validation_plan_ref"], "validation_plan_ref"),
+        _trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _trace_ref(item["backtest_run_ref"], "backtest_run_ref"),
+        _text(item["validation_input_fingerprint"], "validation_input_fingerprint"),
+        _integer(item["random_seed"], "random_seed"),
+        _trace_ref(item["validation_result_ref"], "validation_result_ref"),
+        _trace_ref(item["validator_authority_ref"], "validator_authority_ref"),
+        _timestamp(item["completed_at"], "completed_at"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        ValidationRunStatus(_text(item["status"], "status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -2463,6 +2716,9 @@ _DECODERS = {
     "StrategyDefinition": _decode_strategy_definition,
     "BacktestResultArtifact": _decode_backtest_result,
     "BacktestRunRecord": _decode_backtest_run,
+    "ValidationPlan": _decode_validation_plan,
+    "ScientificValidationResult": _decode_scientific_validation_result,
+    "ValidationRunRecord": _decode_validation_run,
 }
 
 
@@ -2495,6 +2751,9 @@ def decode[
         StrategyDefinition,
         BacktestResultArtifact,
         BacktestRunRecord,
+        ValidationPlan,
+        ScientificValidationResult,
+        ValidationRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

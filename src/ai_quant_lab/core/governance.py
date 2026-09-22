@@ -1,4 +1,4 @@
-"""Exact Sprint 12 implementation-precondition registry."""
+"""Exact Sprint 14 implementation-precondition registry."""
 
 # fmt: off  # Dense governed register mirrors Sprint 12 Section 48.
 
@@ -67,7 +67,7 @@ PRECONDITIONS = (
     _ip(6, "Emergency and release/reactivation authority", "RSK-02,HUM-02", "RSK,DEC,HUM,command", "GOV + humans", "Approve roles/dual control", P.OPEN, "Containment persists", "IP-03,IP-07", "T09,T11,T33", "OPEN: no emergency runtime"),
     _ip(7, "Approval/confirmation/expiry policy", "HUM-01,HUM-02", "command,decision", "GOV + IAM", "Approve scoped policy", P.OPEN, "Require fresh confirmation", "IP-03", "T09,T14,T35", "OPEN: no approval runtime"),
     _ip(8, "Evidence/validation/monitoring freshness", "AUD-02,VAL-06,MON-01", "EVI,VAL,MON", "EVI + VAL + MON", "Approve freshness crosswalk", P.OPEN, "Unassessed/stale cannot authorize", "IP-05", "T05,T20,T27", "OPEN: UNASSESSED is explicit"),
-    _ip(9, "Validation method specifications", "VAL-01,VAL-02,VAL-03,VAL-04,VAL-05,VAL-06,VAL-07", "VAL", "VAL + GOV", "Approve method scopes", P.OPEN, "No validation claim", "IP-08", "T12,T20,T21,T22", "OPEN: outside Sprint 1"),
+    _ip(9, "Validation method specifications", "VAL-01,VAL-02,VAL-03,VAL-04,VAL-05,VAL-06,VAL-07", "VAL", "VAL + GOV", "Approve method scopes", P.PARTIALLY_RESOLVED, "No validation claim outside exact bounded method", "IP-08", "T12,T20,T21,T22", "PARTIAL: one exact preregistered TOTAL_RETURN trade-bootstrap method has deterministic PASS/FAIL/INCONCLUSIVE, authority binding and lineage; holdout evidence, dependence-aware robustness, corrected multiplicity and broader method approval remain open"),
     _ip(10, "Monitoring thresholds/windows/multiplicity", "MON-01,MON-02,MON-03", "MON", "MON + VAL + RSK", "Approve methodology", P.OPEN, "Observation only", "IP-08", "T22,T23,T34", "OPEN: outside Sprint 1"),
     _ip(11, "Data quality/reconciliation semantics", "DAT-01,DAT-02,DAT-03,DAT-04,DAT-05", "DAT", "DAT + GOV", "Approve source contracts", P.PARTIALLY_RESOLVED, "Quarantine unknown/conflict", "IP-04,IP-05", "T15,T16,T32", "PARTIAL: versioned eligibility policy applies explicit row/rejection/quarantine/gap/completeness bounds to an exact quality snapshot; universal provider quality acceptance remains open"),
     _ip(12, "Retention/privacy/licensing/legal policy", "AUD-01,AUD-02,AUD-03,DAT-01", "AUD,DAT,ledgers", "GOV + Legal + Data", "Approve policy", P.OPEN, "Preserve and restrict", "", "T25,T30", "OPEN: eligibility enforces declared permission, retention and local-use restrictions fail-closed; no legal verification, competent legal authority, recovery or deletion workflow exists"),
