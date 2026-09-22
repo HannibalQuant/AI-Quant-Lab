@@ -585,6 +585,8 @@ def verify_backtest_accounting(
     bars: tuple[MarketBar, ...],
 ) -> None:
     """Independently reconstruct the bounded Sprint 12 ledger and all summaries."""
+    if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
+        raise AccountingMismatch("independent accounting verification supports FIXED_NOTIONAL only")
     if not bars or len(artifact.equity_curve) != len(bars):
         raise AccountingMismatch("equity curve must bind every governed replay bar exactly once")
     if (
@@ -619,6 +621,9 @@ def verify_backtest_accounting(
     strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
 
     with localcontext(_DECIMAL_CONTEXT):
+        expected_entry_notional = Decimal(strategy.fixed_notional_minor) / Decimal(
+            strategy.capital_minor_unit_scale
+        )
         for stored_fill in artifact.fills:
             if stored_fill.order_id in fills_by_order:
                 raise AccountingMismatch("a simulated order has multiple fills")
@@ -678,6 +683,13 @@ def verify_backtest_accounting(
             _accounting_match(
                 Decimal(order.notional), notional, "order notional does not match its fill"
             )
+            if fill.side is SimulatedOrderSide.BUY and (
+                notional != expected_entry_notional
+                or Decimal(order.notional) != expected_entry_notional
+            ):
+                raise AccountingMismatch(
+                    "BUY notional does not match governed fixed-notional sizing"
+                )
             expected_slippage = abs(execution - reference) * quantity
             _accounting_match(
                 Decimal(fill.slippage_cost),

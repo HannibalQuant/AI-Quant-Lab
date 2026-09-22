@@ -35,6 +35,9 @@ initial capital, it independently applies each exact fill:
 
 BUY requires `FLAT` and positive quantity. SELL requires `LONG` and must close the exact open
 quantity. Negative quantity, double entry, SELL while flat and hidden mutation fail closed.
+For every BUY, the independent verifier reconstructs the exact governed `FIXED_NOTIONAL` entry
+size from `StrategyDefinition.fixed_notional_minor / capital_minor_unit_scale`; an internally
+self-consistent order/fill notional cannot replace that sizing declaration.
 
 ## 5. Order/fill invariants
 

@@ -69,6 +69,13 @@ def _unsafe(artifact: BacktestResultArtifact, **changes: object) -> BacktestResu
     return clone
 
 
+def _decimal_text(value: Decimal) -> str:
+    if value == 0:
+        return "0"
+    text = format(value, "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
 def _replace_item(
     artifact: BacktestResultArtifact,
     collection: str,
@@ -103,6 +110,84 @@ def test_valid_flat_result_passes_independent_accounting_verification(tmp_path: 
     assert artifact.open_position is SimulatedPositionState.FLAT
     assert final.position_quantity == final.position_value == final.unrealized_pnl == "0"
     assert len(artifact.trades) == artifact.trade_count == 1
+
+
+def test_independent_verifier_rejects_coherent_wrong_fixed_notional(tmp_path: Path) -> None:
+    context, artifact = _flat_result(tmp_path, suffix="coherent-wrong-fixed-notional")
+    factor = Decimal("0.5")
+    initial = Decimal(artifact.initial_capital)
+
+    with localcontext(Context(prec=34, rounding=ROUND_HALF_EVEN)):
+        orders = tuple(
+            replace(order, notional=_decimal_text(Decimal(order.notional) * factor))
+            for order in artifact.orders
+        )
+        fills = tuple(
+            replace(
+                fill,
+                quantity=_decimal_text(Decimal(fill.quantity) * factor),
+                fill_notional=_decimal_text(Decimal(fill.fill_notional) * factor),
+                commission=_decimal_text(Decimal(fill.commission) * factor),
+                slippage_cost=_decimal_text(Decimal(fill.slippage_cost) * factor),
+            )
+            for fill in artifact.fills
+        )
+        trades = tuple(
+            replace(
+                trade,
+                quantity=_decimal_text(Decimal(trade.quantity) * factor),
+                gross_pnl=_decimal_text(Decimal(trade.gross_pnl) * factor),
+                commission=_decimal_text(Decimal(trade.commission) * factor),
+                slippage_cost=_decimal_text(Decimal(trade.slippage_cost) * factor),
+                net_pnl=_decimal_text(Decimal(trade.net_pnl) * factor),
+            )
+            for trade in artifact.trades
+        )
+        curve = tuple(
+            replace(
+                point,
+                cash=_decimal_text(initial + (Decimal(point.cash) - initial) * factor),
+                position_quantity=_decimal_text(Decimal(point.position_quantity) * factor),
+                position_value=_decimal_text(Decimal(point.position_value) * factor),
+                unrealized_pnl=_decimal_text(Decimal(point.unrealized_pnl) * factor),
+                realized_pnl=_decimal_text(Decimal(point.realized_pnl) * factor),
+                equity=_decimal_text(initial + (Decimal(point.equity) - initial) * factor),
+            )
+            for point in artifact.equity_curve
+        )
+        peak = initial
+        max_drawdown = Decimal(0)
+        for point in curve:
+            equity = Decimal(point.equity)
+            peak = max(peak, equity)
+            max_drawdown = max(max_drawdown, Decimal(1) - equity / peak)
+        coherent_tamper = _unsafe(
+            artifact,
+            orders=orders,
+            fills=fills,
+            trades=trades,
+            equity_curve=curve,
+            final_cash=_decimal_text(initial + (Decimal(artifact.final_cash) - initial) * factor),
+            final_equity=_decimal_text(
+                initial + (Decimal(artifact.final_equity) - initial) * factor
+            ),
+            gross_pnl=_decimal_text(Decimal(artifact.gross_pnl) * factor),
+            net_pnl=_decimal_text(Decimal(artifact.net_pnl) * factor),
+            total_return=_decimal_text(Decimal(artifact.total_return) * factor),
+            max_drawdown=_decimal_text(max_drawdown),
+        )
+
+    expected = Decimal(context[6].fixed_notional_minor) / Decimal(
+        context[6].capital_minor_unit_scale
+    )
+    assert expected == Decimal("100")
+    assert Decimal(coherent_tamper.orders[0].notional) == Decimal("50")
+    assert Decimal(coherent_tamper.fills[0].fill_notional) == Decimal("50")
+    with pytest.raises(
+        AccountingMismatch,
+        match="BUY notional does not match governed fixed-notional sizing",
+    ):
+        _verify(context, coherent_tamper)
 
 
 def test_valid_open_long_result_has_exact_unforced_valuation(tmp_path: Path) -> None:
