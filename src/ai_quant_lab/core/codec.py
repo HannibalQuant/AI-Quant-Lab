@@ -4002,7 +4002,6 @@ def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
 
 
 
-
 def _decode_parity_tolerance_policy(payload: Any) -> ParityTolerancePolicy:
     fields = {
         "policy_id",
@@ -4180,8 +4179,7 @@ def _decode_pine_python_parity_result(payload: Any) -> PinePythonParityResult:
         tuple(_decode_parity_mismatch(value) for value in item["mismatches"]),
         PinePythonParityDecision(_text(item["decision"], "decision")),
         tuple(
-            PineParityReasonCode(value)
-            for value in _strings(item["reason_codes"], "reason_codes")
+            PineParityReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
         ),
         _text(item["input_fingerprint"], "input_fingerprint"),
         PineParitySemanticStatus(_text(item["semantic_parity"], "semantic_parity")),
