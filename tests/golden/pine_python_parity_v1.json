@@ -1,0 +1,17 @@
+{
+  "decision": "PLACEHOLDER",
+  "evidence_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "expected_event_count": 0,
+  "format": "pine-python-parity-v1",
+  "input_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "mismatch_count": 0,
+  "observed_event_count": 0,
+  "pine_artifact_ref": "placeholder",
+  "policy_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "python_backtest_ref": "placeholder",
+  "repaint_assessment": "NOT_EVALUATED",
+  "result_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "run_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "semantic_parity": "PLACEHOLDER"
+}
