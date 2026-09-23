@@ -235,11 +235,21 @@ class PineExecutionEvidence:
         indexes = tuple(event.event_index for event in self.events)
         if indexes != tuple(range(len(self.events))):
             raise PinePythonParityContractError("event indexes must be contiguous from zero")
+        signals = tuple(event.signal_time for event in self.events)
+        if signals != tuple(sorted(signals)):
+            raise PinePythonParityContractError("signal events must be time ordered")
         executions = tuple(event.execution_time for event in self.events)
         if executions != tuple(sorted(executions)) or len(set(executions)) != len(executions):
             raise PinePythonParityContractError("execution events must be strictly time ordered")
         state = SimulatedPositionState.FLAT
         for event in self.events:
+            if (
+                event.signal_time < self.observation_start
+                or event.execution_time > self.observation_end
+            ):
+                raise PinePythonParityContractError(
+                    "execution event lies outside the declared observation window"
+                )
             if (
                 state is SimulatedPositionState.FLAT
                 and event.action is not PineExecutionAction.ENTRY
