@@ -42,6 +42,11 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityPolicy,
     ResearchDatasetEligibilityRecord,
 )
+from ai_quant_lab.core.robustness_validation_contracts import (
+    RobustnessValidationPlan,
+    RobustnessValidationResult,
+    RobustnessValidationRunRecord,
+)
 from ai_quant_lab.core.scientific_validation_contracts import (
     ScientificValidationResult,
     ValidationPlan,
@@ -79,6 +84,9 @@ type StoredDatasetObject = (
     | ValidationPlan
     | ScientificValidationResult
     | ValidationRunRecord
+    | RobustnessValidationPlan
+    | RobustnessValidationResult
+    | RobustnessValidationRunRecord
 )
 
 
@@ -142,6 +150,9 @@ class StoredObjectType(StrEnum):
     VALIDATION_PLAN = "validation-plan"
     SCIENTIFIC_VALIDATION_RESULT = "scientific-validation-result"
     VALIDATION_RUN_RECORD = "validation-run-record"
+    ROBUSTNESS_VALIDATION_PLAN = "robustness-validation-plan"
+    ROBUSTNESS_VALIDATION_RESULT = "robustness-validation-result"
+    ROBUSTNESS_VALIDATION_RUN_RECORD = "robustness-validation-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -235,6 +246,9 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     ValidationPlan: StoredObjectType.VALIDATION_PLAN,
     ScientificValidationResult: StoredObjectType.SCIENTIFIC_VALIDATION_RESULT,
     ValidationRunRecord: StoredObjectType.VALIDATION_RUN_RECORD,
+    RobustnessValidationPlan: StoredObjectType.ROBUSTNESS_VALIDATION_PLAN,
+    RobustnessValidationResult: StoredObjectType.ROBUSTNESS_VALIDATION_RESULT,
+    RobustnessValidationRunRecord: StoredObjectType.ROBUSTNESS_VALIDATION_RUN_RECORD,
 }
 
 
@@ -286,6 +300,12 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.validation_result_id)
     if isinstance(record, ValidationRunRecord):
         return str(record.validation_run_id)
+    if isinstance(record, RobustnessValidationPlan):
+        return str(record.robustness_plan_id)
+    if isinstance(record, RobustnessValidationResult):
+        return str(record.robustness_result_id)
+    if isinstance(record, RobustnessValidationRunRecord):
+        return str(record.robustness_run_id)
     return str(record.dataset_id)
 
 

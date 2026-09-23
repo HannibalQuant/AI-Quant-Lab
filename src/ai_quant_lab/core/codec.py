@@ -121,6 +121,26 @@ from ai_quant_lab.core.research_eligibility_contracts import (
     ResearchDatasetEligibilityStatus,
     ValidationStatus,
 )
+from ai_quant_lab.core.robustness_validation_contracts import (
+    CostPerturbationScenario,
+    CostPerturbationSummary,
+    MonteCarloPolicy,
+    MonteCarloSummary,
+    PerturbationPolicy,
+    RobustnessDecision,
+    RobustnessHoldoutEvidence,
+    RobustnessMethod,
+    RobustnessReasonCode,
+    RobustnessRunStatus,
+    RobustnessValidationPlan,
+    RobustnessValidationResult,
+    RobustnessValidationRunRecord,
+    TemporalPartitionEvidence,
+    TemporalPartitionRole,
+    WalkForwardPolicy,
+    WalkForwardSliceResult,
+    WalkForwardSummary,
+)
 from ai_quant_lab.core.scientific_validation_contracts import (
     AlternativeHypothesis,
     HoldoutEvidenceStatus,
@@ -192,6 +212,9 @@ type GovernedRecord = (
     | ValidationPlan
     | ScientificValidationResult
     | ValidationRunRecord
+    | RobustnessValidationPlan
+    | RobustnessValidationResult
+    | RobustnessValidationRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -249,6 +272,9 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ValidationPlan: "ValidationPlan",
     ScientificValidationResult: "ScientificValidationResult",
     ValidationRunRecord: "ValidationRunRecord",
+    RobustnessValidationPlan: "RobustnessValidationPlan",
+    RobustnessValidationResult: "RobustnessValidationResult",
+    RobustnessValidationRunRecord: "RobustnessValidationRunRecord",
 }
 
 
@@ -374,6 +400,89 @@ def _trace_ref_payload(reference: TraceabilityRef) -> dict[str, Any]:
         "object_id": str(reference.object_id),
         "version": reference.version.number,
         "expected_fingerprint": reference.expected_fingerprint,
+    }
+
+
+def _partition_payload(value: TemporalPartitionEvidence) -> dict[str, Any]:
+    return {
+        "partition_id": str(value.partition_id),
+        "role": value.role.value,
+        "start_index": value.start_index,
+        "end_index": value.end_index,
+        "bar_refs": [_trace_ref_payload(item) for item in value.bar_refs],
+    }
+
+
+def _walk_forward_slice_payload(value: WalkForwardSliceResult) -> dict[str, Any]:
+    return {
+        "slice_id": str(value.slice_id),
+        "train_partition": _partition_payload(value.train_partition),
+        "test_partition": _partition_payload(value.test_partition),
+        "trade_count": value.trade_count,
+        "total_return": value.total_return,
+        "net_pnl": value.net_pnl,
+        "max_drawdown": value.max_drawdown,
+        "decision": value.decision.value,
+    }
+
+
+def _walk_forward_payload(value: WalkForwardSummary) -> dict[str, Any]:
+    return {
+        "slices": [_walk_forward_slice_payload(item) for item in value.slices],
+        "valid_window_count": value.valid_window_count,
+        "positive_window_ratio": value.positive_window_ratio,
+        "median_test_return": value.median_test_return,
+        "worst_test_return": value.worst_test_return,
+        "aggregate_test_return": value.aggregate_test_return,
+        "maximum_test_drawdown": value.maximum_test_drawdown,
+        "minimum_trade_count": value.minimum_trade_count,
+        "decision": value.decision.value,
+        "reason_codes": [item.value for item in value.reason_codes],
+    }
+
+
+def _monte_carlo_payload(value: MonteCarloSummary) -> dict[str, Any]:
+    return {
+        "policy": value.policy.value,
+        "iterations": value.iterations,
+        "seed": value.seed,
+        "median_terminal_return": value.median_terminal_return,
+        "lower_terminal_return": value.lower_terminal_return,
+        "upper_terminal_return": value.upper_terminal_return,
+        "worst_observed_drawdown": value.worst_observed_drawdown,
+        "positive_terminal_fraction": value.positive_terminal_fraction,
+        "decision": value.decision.value,
+        "reason_codes": [item.value for item in value.reason_codes],
+    }
+
+
+def _cost_perturbation_payload(value: CostPerturbationSummary) -> dict[str, Any]:
+    return {
+        "policy": value.policy.value,
+        "scenarios": [
+            {
+                "scenario_id": str(item.scenario_id),
+                "commission_multiplier": item.commission_multiplier,
+                "derived_commission_semantics": item.derived_commission_semantics.value,
+                "derived_commission_bps": item.derived_commission_bps,
+                "specification_ref": _trace_ref_payload(item.specification_ref),
+                "authorization_ref": _trace_ref_payload(item.authorization_ref),
+                "backtest_result_ref": (
+                    None
+                    if item.backtest_result_ref is None
+                    else _trace_ref_payload(item.backtest_result_ref)
+                ),
+                "total_return": item.total_return,
+                "net_pnl": item.net_pnl,
+                "max_drawdown": item.max_drawdown,
+                "trade_count": item.trade_count,
+                "decision": item.decision.value,
+                "reason_codes": [reason.value for reason in item.reason_codes],
+            }
+            for item in value.scenarios
+        ],
+        "decision": value.decision.value,
+        "reason_codes": [item.value for item in value.reason_codes],
     }
 
 
@@ -1142,6 +1251,87 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "validation_result_ref": _trace_ref_payload(record.validation_result_ref),
             "validator_authority_ref": _trace_ref_payload(record.validator_authority_ref),
             "completed_at": _timestamp_payload(record.completed_at),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "status": record.status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, RobustnessValidationPlan):
+        return {
+            "robustness_plan_id": str(record.robustness_plan_id),
+            "version": record.version.number,
+            "source_scientific_validation_ref": _trace_ref_payload(
+                record.source_scientific_validation_ref
+            ),
+            "target_methods": [item.value for item in record.target_methods],
+            "walk_forward_policy": record.walk_forward_policy.value,
+            "train_bars": record.train_bars,
+            "test_bars": record.test_bars,
+            "step_bars": record.step_bars,
+            "minimum_window_count": record.minimum_window_count,
+            "minimum_completed_trades_per_test_slice": (
+                record.minimum_completed_trades_per_test_slice
+            ),
+            "walk_forward_pass_positive_ratio": record.walk_forward_pass_positive_ratio,
+            "walk_forward_fail_positive_ratio": record.walk_forward_fail_positive_ratio,
+            "walk_forward_pass_worst_return_floor": (record.walk_forward_pass_worst_return_floor),
+            "walk_forward_severe_loss_floor": record.walk_forward_severe_loss_floor,
+            "monte_carlo_policy": record.monte_carlo_policy.value,
+            "monte_carlo_iterations": record.monte_carlo_iterations,
+            "monte_carlo_seed": record.monte_carlo_seed,
+            "monte_carlo_lower_quantile": record.monte_carlo_lower_quantile,
+            "monte_carlo_upper_quantile": record.monte_carlo_upper_quantile,
+            "perturbation_policy": record.perturbation_policy.value,
+            "commission_multipliers": list(record.commission_multipliers),
+            "perturbation_pass_return_floor": record.perturbation_pass_return_floor,
+            "perturbation_fail_return_threshold": record.perturbation_fail_return_threshold,
+            "robustness_authority_ref": _trace_ref_payload(record.robustness_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, RobustnessValidationResult):
+        return {
+            "robustness_result_id": str(record.robustness_result_id),
+            "version": record.version.number,
+            "robustness_plan_ref": _trace_ref_payload(record.robustness_plan_ref),
+            "scientific_validation_result_ref": _trace_ref_payload(
+                record.scientific_validation_result_ref
+            ),
+            "validation_run_ref": _trace_ref_payload(record.validation_run_ref),
+            "backtest_result_ref": _trace_ref_payload(record.backtest_result_ref),
+            "backtest_run_ref": _trace_ref_payload(record.backtest_run_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "experiment_ref": _trace_ref_payload(record.experiment_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "walk_forward": _walk_forward_payload(record.walk_forward),
+            "monte_carlo": _monte_carlo_payload(record.monte_carlo),
+            "cost_perturbation": _cost_perturbation_payload(record.cost_perturbation),
+            "holdout_evidence": record.holdout_evidence.value,
+            "decision": record.decision.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "robustness_authority_ref": _trace_ref_payload(record.robustness_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, RobustnessValidationRunRecord):
+        return {
+            "robustness_run_id": str(record.robustness_run_id),
+            "version": record.version.number,
+            "robustness_plan_ref": _trace_ref_payload(record.robustness_plan_ref),
+            "scientific_validation_result_ref": _trace_ref_payload(
+                record.scientific_validation_result_ref
+            ),
+            "validation_run_ref": _trace_ref_payload(record.validation_run_ref),
+            "backtest_result_ref": _trace_ref_payload(record.backtest_result_ref),
+            "backtest_run_ref": _trace_ref_payload(record.backtest_run_ref),
+            "robustness_input_fingerprint": record.robustness_input_fingerprint,
+            "monte_carlo_seed": record.monte_carlo_seed,
+            "robustness_result_ref": _trace_ref_payload(record.robustness_result_ref),
+            "robustness_authority_ref": _trace_ref_payload(record.robustness_authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "status": record.status.value,
             "deployment_authorization": record.deployment_authorization.value,
@@ -2688,6 +2878,353 @@ def _decode_validation_run(payload: Any) -> ValidationRunRecord:
     )
 
 
+def _decode_partition(payload: Any, field: str) -> TemporalPartitionEvidence:
+    item = _strict_object(
+        payload,
+        {"partition_id", "role", "start_index", "end_index", "bar_refs"},
+        field,
+    )
+    refs = item["bar_refs"]
+    if not isinstance(refs, list):
+        raise InvalidSerialization(f"{field}.bar_refs must be an array")
+    return TemporalPartitionEvidence(
+        cast(ArtifactId, _typed_id(item["partition_id"], ArtifactId, "partition_id")),
+        TemporalPartitionRole(_text(item["role"], "role")),
+        _integer(item["start_index"], "start_index"),
+        _integer(item["end_index"], "end_index"),
+        tuple(_trace_ref(value, f"{field}.bar_refs[]") for value in refs),
+    )
+
+
+def _decode_walk_forward_slice(payload: Any) -> WalkForwardSliceResult:
+    item = _strict_object(
+        payload,
+        {
+            "slice_id",
+            "train_partition",
+            "test_partition",
+            "trade_count",
+            "total_return",
+            "net_pnl",
+            "max_drawdown",
+            "decision",
+        },
+        "WalkForwardSliceResult",
+    )
+    return WalkForwardSliceResult(
+        cast(ArtifactId, _typed_id(item["slice_id"], ArtifactId, "slice_id")),
+        _decode_partition(item["train_partition"], "train_partition"),
+        _decode_partition(item["test_partition"], "test_partition"),
+        _integer(item["trade_count"], "trade_count"),
+        _text(item["total_return"], "total_return"),
+        _text(item["net_pnl"], "net_pnl"),
+        _text(item["max_drawdown"], "max_drawdown"),
+        RobustnessDecision(_text(item["decision"], "decision")),
+    )
+
+
+def _decode_walk_forward(payload: Any) -> WalkForwardSummary:
+    item = _strict_object(
+        payload,
+        {
+            "slices",
+            "valid_window_count",
+            "positive_window_ratio",
+            "median_test_return",
+            "worst_test_return",
+            "aggregate_test_return",
+            "maximum_test_drawdown",
+            "minimum_trade_count",
+            "decision",
+            "reason_codes",
+        },
+        "WalkForwardSummary",
+    )
+    slices = item["slices"]
+    if not isinstance(slices, list):
+        raise InvalidSerialization("walk_forward.slices must be an array")
+    return WalkForwardSummary(
+        tuple(_decode_walk_forward_slice(value) for value in slices),
+        _integer(item["valid_window_count"], "valid_window_count"),
+        _text(item["positive_window_ratio"], "positive_window_ratio"),
+        _text(item["median_test_return"], "median_test_return"),
+        _text(item["worst_test_return"], "worst_test_return"),
+        _text(item["aggregate_test_return"], "aggregate_test_return"),
+        _text(item["maximum_test_drawdown"], "maximum_test_drawdown"),
+        _integer(item["minimum_trade_count"], "minimum_trade_count"),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+    )
+
+
+def _decode_monte_carlo(payload: Any) -> MonteCarloSummary:
+    item = _strict_object(
+        payload,
+        {
+            "policy",
+            "iterations",
+            "seed",
+            "median_terminal_return",
+            "lower_terminal_return",
+            "upper_terminal_return",
+            "worst_observed_drawdown",
+            "positive_terminal_fraction",
+            "decision",
+            "reason_codes",
+        },
+        "MonteCarloSummary",
+    )
+    return MonteCarloSummary(
+        MonteCarloPolicy(_text(item["policy"], "policy")),
+        _integer(item["iterations"], "iterations"),
+        _integer(item["seed"], "seed"),
+        _text(item["median_terminal_return"], "median_terminal_return"),
+        _text(item["lower_terminal_return"], "lower_terminal_return"),
+        _text(item["upper_terminal_return"], "upper_terminal_return"),
+        _text(item["worst_observed_drawdown"], "worst_observed_drawdown"),
+        _text(item["positive_terminal_fraction"], "positive_terminal_fraction"),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+    )
+
+
+def _decode_cost_scenario(payload: Any) -> CostPerturbationScenario:
+    item = _strict_object(
+        payload,
+        {
+            "scenario_id",
+            "commission_multiplier",
+            "derived_commission_semantics",
+            "derived_commission_bps",
+            "specification_ref",
+            "authorization_ref",
+            "backtest_result_ref",
+            "total_return",
+            "net_pnl",
+            "max_drawdown",
+            "trade_count",
+            "decision",
+            "reason_codes",
+        },
+        "CostPerturbationScenario",
+    )
+    return CostPerturbationScenario(
+        cast(ArtifactId, _typed_id(item["scenario_id"], ArtifactId, "scenario_id")),
+        _text(item["commission_multiplier"], "commission_multiplier"),
+        CostSemantics(_text(item["derived_commission_semantics"], "derived_commission_semantics")),
+        _integer(item["derived_commission_bps"], "derived_commission_bps"),
+        _trace_ref(item["specification_ref"], "specification_ref"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _optional_trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _optional_text(item["total_return"], "total_return"),
+        _optional_text(item["net_pnl"], "net_pnl"),
+        _optional_text(item["max_drawdown"], "max_drawdown"),
+        None if item["trade_count"] is None else _integer(item["trade_count"], "trade_count"),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+    )
+
+
+def _decode_cost_perturbation(payload: Any) -> CostPerturbationSummary:
+    item = _strict_object(
+        payload,
+        {"policy", "scenarios", "decision", "reason_codes"},
+        "CostPerturbationSummary",
+    )
+    scenarios = item["scenarios"]
+    if not isinstance(scenarios, list):
+        raise InvalidSerialization("cost_perturbation.scenarios must be an array")
+    return CostPerturbationSummary(
+        PerturbationPolicy(_text(item["policy"], "policy")),
+        tuple(_decode_cost_scenario(value) for value in scenarios),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+    )
+
+
+def _decode_robustness_plan(payload: Any) -> RobustnessValidationPlan:
+    fields = {
+        "robustness_plan_id",
+        "version",
+        "source_scientific_validation_ref",
+        "target_methods",
+        "walk_forward_policy",
+        "train_bars",
+        "test_bars",
+        "step_bars",
+        "minimum_window_count",
+        "minimum_completed_trades_per_test_slice",
+        "walk_forward_pass_positive_ratio",
+        "walk_forward_fail_positive_ratio",
+        "walk_forward_pass_worst_return_floor",
+        "walk_forward_severe_loss_floor",
+        "monte_carlo_policy",
+        "monte_carlo_iterations",
+        "monte_carlo_seed",
+        "monte_carlo_lower_quantile",
+        "monte_carlo_upper_quantile",
+        "perturbation_policy",
+        "commission_multipliers",
+        "perturbation_pass_return_floor",
+        "perturbation_fail_return_threshold",
+        "robustness_authority_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "RobustnessValidationPlan.payload")
+    return RobustnessValidationPlan(
+        cast(
+            ArtifactId,
+            _typed_id(item["robustness_plan_id"], ArtifactId, "robustness_plan_id"),
+        ),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_scientific_validation_ref"], "source_scientific_validation_ref"),
+        tuple(
+            RobustnessMethod(value) for value in _strings(item["target_methods"], "target_methods")
+        ),
+        WalkForwardPolicy(_text(item["walk_forward_policy"], "walk_forward_policy")),
+        _integer(item["train_bars"], "train_bars"),
+        _integer(item["test_bars"], "test_bars"),
+        _integer(item["step_bars"], "step_bars"),
+        _integer(item["minimum_window_count"], "minimum_window_count"),
+        _integer(
+            item["minimum_completed_trades_per_test_slice"],
+            "minimum_completed_trades_per_test_slice",
+        ),
+        _text(item["walk_forward_pass_positive_ratio"], "walk_forward_pass_positive_ratio"),
+        _text(item["walk_forward_fail_positive_ratio"], "walk_forward_fail_positive_ratio"),
+        _text(
+            item["walk_forward_pass_worst_return_floor"],
+            "walk_forward_pass_worst_return_floor",
+        ),
+        _text(item["walk_forward_severe_loss_floor"], "walk_forward_severe_loss_floor"),
+        MonteCarloPolicy(_text(item["monte_carlo_policy"], "monte_carlo_policy")),
+        _integer(item["monte_carlo_iterations"], "monte_carlo_iterations"),
+        _integer(item["monte_carlo_seed"], "monte_carlo_seed"),
+        _text(item["monte_carlo_lower_quantile"], "monte_carlo_lower_quantile"),
+        _text(item["monte_carlo_upper_quantile"], "monte_carlo_upper_quantile"),
+        PerturbationPolicy(_text(item["perturbation_policy"], "perturbation_policy")),
+        _strings(item["commission_multipliers"], "commission_multipliers"),
+        _text(item["perturbation_pass_return_floor"], "perturbation_pass_return_floor"),
+        _text(
+            item["perturbation_fail_return_threshold"],
+            "perturbation_fail_return_threshold",
+        ),
+        _trace_ref(item["robustness_authority_ref"], "robustness_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_robustness_result(payload: Any) -> RobustnessValidationResult:
+    fields = {
+        "robustness_result_id",
+        "version",
+        "robustness_plan_ref",
+        "scientific_validation_result_ref",
+        "validation_run_ref",
+        "backtest_result_ref",
+        "backtest_run_ref",
+        "strategy_ref",
+        "experiment_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "walk_forward",
+        "monte_carlo",
+        "cost_perturbation",
+        "holdout_evidence",
+        "decision",
+        "reason_codes",
+        "robustness_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "RobustnessValidationResult.payload")
+    return RobustnessValidationResult(
+        cast(
+            ArtifactId,
+            _typed_id(item["robustness_result_id"], ArtifactId, "robustness_result_id"),
+        ),
+        _version(item["version"], "version"),
+        _trace_ref(item["robustness_plan_ref"], "robustness_plan_ref"),
+        _trace_ref(item["scientific_validation_result_ref"], "scientific_validation_result_ref"),
+        _trace_ref(item["validation_run_ref"], "validation_run_ref"),
+        _trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _trace_ref(item["backtest_run_ref"], "backtest_run_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["experiment_ref"], "experiment_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _decode_walk_forward(item["walk_forward"]),
+        _decode_monte_carlo(item["monte_carlo"]),
+        _decode_cost_perturbation(item["cost_perturbation"]),
+        RobustnessHoldoutEvidence(_text(item["holdout_evidence"], "holdout_evidence")),
+        RobustnessDecision(_text(item["decision"], "decision")),
+        tuple(
+            RobustnessReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _trace_ref(item["robustness_authority_ref"], "robustness_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_robustness_run(payload: Any) -> RobustnessValidationRunRecord:
+    fields = {
+        "robustness_run_id",
+        "version",
+        "robustness_plan_ref",
+        "scientific_validation_result_ref",
+        "validation_run_ref",
+        "backtest_result_ref",
+        "backtest_run_ref",
+        "robustness_input_fingerprint",
+        "monte_carlo_seed",
+        "robustness_result_ref",
+        "robustness_authority_ref",
+        "provenance_ref",
+        "status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "RobustnessValidationRunRecord.payload")
+    return RobustnessValidationRunRecord(
+        cast(RunId, _typed_id(item["robustness_run_id"], RunId, "robustness_run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["robustness_plan_ref"], "robustness_plan_ref"),
+        _trace_ref(item["scientific_validation_result_ref"], "scientific_validation_result_ref"),
+        _trace_ref(item["validation_run_ref"], "validation_run_ref"),
+        _trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _trace_ref(item["backtest_run_ref"], "backtest_run_ref"),
+        _text(item["robustness_input_fingerprint"], "robustness_input_fingerprint"),
+        _integer(item["monte_carlo_seed"], "monte_carlo_seed"),
+        _trace_ref(item["robustness_result_ref"], "robustness_result_ref"),
+        _trace_ref(item["robustness_authority_ref"], "robustness_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        RobustnessRunStatus(_text(item["status"], "status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -2719,6 +3256,9 @@ _DECODERS = {
     "ValidationPlan": _decode_validation_plan,
     "ScientificValidationResult": _decode_scientific_validation_result,
     "ValidationRunRecord": _decode_validation_run,
+    "RobustnessValidationPlan": _decode_robustness_plan,
+    "RobustnessValidationResult": _decode_robustness_result,
+    "RobustnessValidationRunRecord": _decode_robustness_run,
 }
 
 
@@ -2754,6 +3294,9 @@ def decode[
         ValidationPlan,
         ScientificValidationResult,
         ValidationRunRecord,
+        RobustnessValidationPlan,
+        RobustnessValidationResult,
+        RobustnessValidationRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
