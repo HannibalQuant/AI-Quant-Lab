@@ -128,7 +128,9 @@ class ParityTolerancePolicy:
         ):
             _decimal(getattr(self, field), field)
         if Decimal(self.relative_price_tolerance) > Decimal("0.01"):
-            raise PinePythonParityContractError("relative price tolerance exceeds bounded 1% ceiling")
+            raise PinePythonParityContractError(
+                "relative price tolerance exceeds bounded 1% ceiling"
+            )
         _exact(self.authority_ref, "authority_ref")
         _exact(self.provenance_ref, "provenance_ref")
 
@@ -240,9 +242,15 @@ class PineExecutionEvidence:
             raise PinePythonParityContractError("execution events must be strictly time ordered")
         state = SimulatedPositionState.FLAT
         for event in self.events:
-            if state is SimulatedPositionState.FLAT and event.action is not PineExecutionAction.ENTRY:
+            if (
+                state is SimulatedPositionState.FLAT
+                and event.action is not PineExecutionAction.ENTRY
+            ):
                 raise PinePythonParityContractError("EXIT while FLAT is invalid")
-            if state is SimulatedPositionState.LONG and event.action is not PineExecutionAction.EXIT:
+            if (
+                state is SimulatedPositionState.LONG
+                and event.action is not PineExecutionAction.EXIT
+            ):
                 raise PinePythonParityContractError("ENTRY while LONG is invalid")
             state = event.position_after
 
