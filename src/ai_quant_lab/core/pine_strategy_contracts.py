@@ -315,14 +315,15 @@ class PineStrategyIntakeRecord:
             if (
                 self.source_artifact_ref is None
                 or self.normalized_source_sha256 is None
-                or self.reason_codes
-                != (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,)
+                or self.reason_codes != (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,)
             ):
                 raise PineStrategyContractError("accepted Pine intake record is inconsistent")
             _exact(self.source_artifact_ref, ArtifactId, "source_artifact_ref")
         else:
             if self.source_artifact_ref is not None:
-                raise PineStrategyContractError("failed Pine intake cannot reference a source artifact")
+                raise PineStrategyContractError(
+                    "failed Pine intake cannot reference a source artifact"
+                )
             if PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE in self.reason_codes:
                 raise PineStrategyContractError("failed Pine intake cannot carry accepted reason")
         _exact(self.authority_ref, AuthorityBindingId, "authority_ref")
