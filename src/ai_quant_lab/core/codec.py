@@ -4001,7 +4001,6 @@ def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
     )
 
 
-
 def _decode_parity_tolerance_policy(payload: Any) -> ParityTolerancePolicy:
     fields = {
         "policy_id",
