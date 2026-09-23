@@ -1,0 +1,25 @@
+{
+  "artifact_fingerprint": "sha256:ee5087e756e3260210fee5c12e2c5a232baed3c9d66609ed22283e42a02a952a",
+  "backtest_ref": "artifact:opt-bt-result-6c6043438f48ae15fb61",
+  "candidate_ref": "artifact:optimization-candidate-6c6043438f48ae15fb61",
+  "format": "pine-strategy-intake-v1",
+  "input_fingerprint": "sha256:a8edbf0169a33ed415851c1e4c4cc24dfc326bbe5d54c2590871ddb27ae540e6",
+  "intake_record_fingerprint": "sha256:71091082a6321132d4bc666d32b2ff06550c415e6e2bc695c193c04005da2dc4",
+  "intake_status": "ACCEPTED",
+  "normalized_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "pine_version": "PINE_V6",
+  "raw_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "reason_codes": [
+    "ACCEPTED_BOUNDED_STATIC_INTAKE"
+  ],
+  "repaint_assessment": "NOT_EVALUATED",
+  "requested_artifact_id": "artifact:governed-pine-strategy-source",
+  "robustness_ref": "artifact:opt-robustness-result-6c6043438f48ae15fb61",
+  "scientific_ref": "validation:opt-validation-result-6c6043438f48ae15fb61",
+  "script_kind": "STRATEGY",
+  "selection_ref": "artifact:controlled-optimization-selection-result",
+  "semantic_parity": "NOT_EVALUATED",
+  "source_byte_size": 260,
+  "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
+  "title": "Synthetic governed strategy"
+}

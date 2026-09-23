@@ -43,6 +43,10 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationSelectionResult,
     OptimizationTrialRecord,
 )
+from ai_quant_lab.core.pine_strategy_contracts import (
+    PineStrategyIntakeRecord,
+    PineStrategySourceArtifact,
+)
 from ai_quant_lab.core.real_csv_contracts import (
     RealCsvAdmissionRecord,
     RealCsvSourceDeclaration,
@@ -103,6 +107,8 @@ type StoredDatasetObject = (
     | OptimizationTrialRecord
     | OptimizationSelectionResult
     | OptimizationRunRecord
+    | PineStrategySourceArtifact
+    | PineStrategyIntakeRecord
 )
 
 
@@ -176,6 +182,8 @@ class StoredObjectType(StrEnum):
     OPTIMIZATION_TRIAL_RECORD = "optimization-trial-record"
     OPTIMIZATION_SELECTION_RESULT = "optimization-selection-result"
     OPTIMIZATION_RUN_RECORD = "optimization-run-record"
+    PINE_STRATEGY_SOURCE_ARTIFACT = "pine-strategy-source-artifact"
+    PINE_STRATEGY_INTAKE_RECORD = "pine-strategy-intake-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -279,6 +287,8 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     OptimizationTrialRecord: StoredObjectType.OPTIMIZATION_TRIAL_RECORD,
     OptimizationSelectionResult: StoredObjectType.OPTIMIZATION_SELECTION_RESULT,
     OptimizationRunRecord: StoredObjectType.OPTIMIZATION_RUN_RECORD,
+    PineStrategySourceArtifact: StoredObjectType.PINE_STRATEGY_SOURCE_ARTIFACT,
+    PineStrategyIntakeRecord: StoredObjectType.PINE_STRATEGY_INTAKE_RECORD,
 }
 
 
@@ -350,6 +360,10 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.selection_result_id)
     if isinstance(record, OptimizationRunRecord):
         return str(record.optimization_run_id)
+    if isinstance(record, PineStrategySourceArtifact):
+        return str(record.pine_artifact_id)
+    if isinstance(record, PineStrategyIntakeRecord):
+        return str(record.intake_run_id)
     return str(record.dataset_id)
 
 

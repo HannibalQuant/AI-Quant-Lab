@@ -115,6 +115,17 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationTrialStatus,
     SelectionDecision,
 )
+from ai_quant_lab.core.pine_strategy_contracts import (
+    PineDefaultQuantityType,
+    PineIntakeReasonCode,
+    PineIntakeStatus,
+    PineLanguageVersion,
+    PineScriptKind,
+    PineSemanticParityStatus,
+    PineStrategyIntakeRecord,
+    PineStrategySourceArtifact,
+    RepaintAssessmentStatus,
+)
 from ai_quant_lab.core.real_csv_contracts import (
     AcquisitionMethod,
     AvailabilitySemantics,
@@ -242,6 +253,8 @@ type GovernedRecord = (
     | OptimizationTrialRecord
     | OptimizationSelectionResult
     | OptimizationRunRecord
+    | PineStrategySourceArtifact
+    | PineStrategyIntakeRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -309,6 +322,8 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     OptimizationTrialRecord: "OptimizationTrialRecord",
     OptimizationSelectionResult: "OptimizationSelectionResult",
     OptimizationRunRecord: "OptimizationRunRecord",
+    PineStrategySourceArtifact: "PineStrategySourceArtifact",
+    PineStrategyIntakeRecord: "PineStrategyIntakeRecord",
 }
 
 
@@ -1494,6 +1509,67 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "selection_authority_ref": _trace_ref_payload(record.selection_authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "status": record.status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, PineStrategySourceArtifact):
+        return {
+            "pine_artifact_id": str(record.pine_artifact_id),
+            "version": record.version.number,
+            "pine_language_version": record.pine_language_version.value,
+            "source_text": record.source_text,
+            "normalized_source_text": record.normalized_source_text,
+            "source_sha256": record.source_sha256,
+            "normalized_source_sha256": record.normalized_source_sha256,
+            "source_byte_size": record.source_byte_size,
+            "script_kind": record.script_kind.value,
+            "declared_script_title": record.declared_script_title,
+            "pyramiding": record.pyramiding,
+            "process_orders_on_close": record.process_orders_on_close,
+            "calc_on_every_tick": record.calc_on_every_tick,
+            "default_qty_type": record.default_qty_type.value,
+            "default_qty_value": record.default_qty_value,
+            "strategy_definition_ref": _trace_ref_payload(record.strategy_definition_ref),
+            "optimization_candidate_definition_ref": (
+                None
+                if record.optimization_candidate_definition_ref is None
+                else _trace_ref_payload(record.optimization_candidate_definition_ref)
+            ),
+            "optimization_candidate_result_ref": (
+                None
+                if record.optimization_candidate_result_ref is None
+                else _trace_ref_payload(record.optimization_candidate_result_ref)
+            ),
+            "optimization_selection_ref": (
+                None
+                if record.optimization_selection_ref is None
+                else _trace_ref_payload(record.optimization_selection_ref)
+            ),
+            "source_backtest_result_ref": _trace_ref_payload(record.source_backtest_result_ref),
+            "source_scientific_validation_ref": _trace_ref_payload(
+                record.source_scientific_validation_ref
+            ),
+            "source_robustness_result_ref": _trace_ref_payload(record.source_robustness_result_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "semantic_parity": record.semantic_parity.value,
+            "repaint_assessment": record.repaint_assessment.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, PineStrategyIntakeRecord):
+        return {
+            "intake_run_id": str(record.intake_run_id),
+            "version": record.version.number,
+            "source_artifact_ref": _trace_ref_payload(record.source_artifact_ref),
+            "normalized_source_sha256": record.normalized_source_sha256,
+            "input_fingerprint": record.input_fingerprint,
+            "status": record.status.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
             "contract_version": record.contract_version.number,
@@ -3664,6 +3740,116 @@ def _decode_optimization_run(payload: Any) -> OptimizationRunRecord:
     )
 
 
+def _decode_pine_source_artifact(payload: Any) -> PineStrategySourceArtifact:
+    fields = {
+        "pine_artifact_id",
+        "version",
+        "pine_language_version",
+        "source_text",
+        "normalized_source_text",
+        "source_sha256",
+        "normalized_source_sha256",
+        "source_byte_size",
+        "script_kind",
+        "declared_script_title",
+        "pyramiding",
+        "process_orders_on_close",
+        "calc_on_every_tick",
+        "default_qty_type",
+        "default_qty_value",
+        "strategy_definition_ref",
+        "optimization_candidate_definition_ref",
+        "optimization_candidate_result_ref",
+        "optimization_selection_ref",
+        "source_backtest_result_ref",
+        "source_scientific_validation_ref",
+        "source_robustness_result_ref",
+        "provenance_ref",
+        "authority_ref",
+        "semantic_parity",
+        "repaint_assessment",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "PineStrategySourceArtifact.payload")
+    return PineStrategySourceArtifact(
+        cast(ArtifactId, _typed_id(item["pine_artifact_id"], ArtifactId, "pine_artifact_id")),
+        _version(item["version"], "version"),
+        PineLanguageVersion(_text(item["pine_language_version"], "pine_language_version")),
+        _text(item["source_text"], "source_text"),
+        _text(item["normalized_source_text"], "normalized_source_text"),
+        _text(item["source_sha256"], "source_sha256"),
+        _text(item["normalized_source_sha256"], "normalized_source_sha256"),
+        _integer(item["source_byte_size"], "source_byte_size"),
+        PineScriptKind(_text(item["script_kind"], "script_kind")),
+        _text(item["declared_script_title"], "declared_script_title"),
+        _integer(item["pyramiding"], "pyramiding"),
+        _boolean(item["process_orders_on_close"], "process_orders_on_close"),
+        _boolean(item["calc_on_every_tick"], "calc_on_every_tick"),
+        PineDefaultQuantityType(_text(item["default_qty_type"], "default_qty_type")),
+        _text(item["default_qty_value"], "default_qty_value"),
+        _trace_ref(item["strategy_definition_ref"], "strategy_definition_ref"),
+        _optional_trace_ref(
+            item["optimization_candidate_definition_ref"],
+            "optimization_candidate_definition_ref",
+        ),
+        _optional_trace_ref(
+            item["optimization_candidate_result_ref"],
+            "optimization_candidate_result_ref",
+        ),
+        _optional_trace_ref(item["optimization_selection_ref"], "optimization_selection_ref"),
+        _trace_ref(item["source_backtest_result_ref"], "source_backtest_result_ref"),
+        _trace_ref(item["source_scientific_validation_ref"], "source_scientific_validation_ref"),
+        _trace_ref(item["source_robustness_result_ref"], "source_robustness_result_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        PineSemanticParityStatus(_text(item["semantic_parity"], "semantic_parity")),
+        RepaintAssessmentStatus(_text(item["repaint_assessment"], "repaint_assessment")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
+    fields = {
+        "intake_run_id",
+        "version",
+        "source_artifact_ref",
+        "normalized_source_sha256",
+        "input_fingerprint",
+        "status",
+        "reason_codes",
+        "authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "PineStrategyIntakeRecord.payload")
+    return PineStrategyIntakeRecord(
+        cast(RunId, _typed_id(item["intake_run_id"], RunId, "intake_run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["source_artifact_ref"], "source_artifact_ref"),
+        _text(item["normalized_source_sha256"], "normalized_source_sha256"),
+        _text(item["input_fingerprint"], "input_fingerprint"),
+        PineIntakeStatus(_text(item["status"], "status")),
+        tuple(
+            PineIntakeReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -3705,6 +3891,8 @@ _DECODERS = {
     "OptimizationTrialRecord": _decode_optimization_trial,
     "OptimizationSelectionResult": _decode_selection_result,
     "OptimizationRunRecord": _decode_optimization_run,
+    "PineStrategySourceArtifact": _decode_pine_source_artifact,
+    "PineStrategyIntakeRecord": _decode_pine_intake_record,
 }
 
 
@@ -3750,6 +3938,8 @@ def decode[
         OptimizationTrialRecord,
         OptimizationSelectionResult,
         OptimizationRunRecord,
+        PineStrategySourceArtifact,
+        PineStrategyIntakeRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
