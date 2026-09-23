@@ -63,6 +63,10 @@ class PineLineageMismatch(PineStrategyIntakeError):
     pass
 
 
+class PineAuthorityInvalid(PineStrategyIntakeError):
+    pass
+
+
 _V1 = ObjectVersion(1)
 _MAX_SOURCE_BYTES = 256 * 1024
 _VERSION_LINE = re.compile(r"^[ \t]*//@version[ \t]*=[ \t]*([0-9]+)[ \t]*$")
@@ -91,6 +95,7 @@ class PineOptimizationSelectionEvidence:
 class PineStrategyIntakeContext:
     strategy: StrategyDefinition
     evidence: OptimizationEvidence
+    pine_intake_authority_ref: TraceabilityRef
     optimization: PineOptimizationSelectionEvidence | None = None
 
 
@@ -413,6 +418,8 @@ def _verify_robustness(evidence: OptimizationEvidence) -> None:
 
 
 def _verify_context(request: PineStrategyIntakeRequest, context: PineStrategyIntakeContext) -> None:
+    if request.authority_ref != context.pine_intake_authority_ref:
+        raise PineAuthorityInvalid("Pine intake request lacks exact governed intake authority")
     strategy_ref = _exact(context.strategy, context.strategy.strategy_id, context.strategy.version)
     if (
         request.strategy_definition_ref != strategy_ref
@@ -513,15 +520,19 @@ def _input_fingerprint(
     request: PineStrategyIntakeRequest,
     *,
     raw_hash: str,
-    normalized_hash: str,
-    declaration: _StaticDeclaration,
+    normalized_hash: str | None,
+    declaration: _StaticDeclaration | None,
+    status: PineIntakeStatus,
+    reasons: tuple[PineIntakeReasonCode, ...],
 ) -> str:
     return fingerprint(
         {
+            "requested_artifact_id": request.requested_artifact_id,
             "raw_source_sha256": raw_hash,
             "normalized_source_sha256": normalized_hash,
-            "pine_language_version": declaration.version,
-            "script_kind": declaration.kind,
+            "source_byte_size": len(request.source_bytes),
+            "pine_language_version": None if declaration is None else declaration.version,
+            "script_kind": None if declaration is None else declaration.kind,
             "strategy_definition_ref": request.strategy_definition_ref,
             "optimization_candidate_definition_ref": (
                 request.optimization_candidate_definition_ref
@@ -533,6 +544,8 @@ def _input_fingerprint(
             "source_robustness_result_ref": request.source_robustness_result_ref,
             "authority_ref": request.authority_ref,
             "provenance_ref": request.provenance_ref,
+            "status": status,
+            "reason_codes": reasons,
         }
     )
 
@@ -542,8 +555,8 @@ def _build(
     *,
     context: PineStrategyIntakeContext,
 ) -> tuple[PineStrategySourceArtifact, PineStrategyIntakeRecord]:
-    source, normalized, raw_hash, normalized_hash = _decode_source(request.source_bytes)
     _verify_context(request, context)
+    source, normalized, raw_hash, normalized_hash = _decode_source(request.source_bytes)
     declaration = _parse_static_source(source, context.strategy)
     artifact = PineStrategySourceArtifact(
         request.requested_artifact_id,
@@ -576,19 +589,25 @@ def _build(
         ExecutionState.PLANNED_CLOSED,
         _V1,
     )
+    reasons = (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,)
     record = PineStrategyIntakeRecord(
         request.intake_run_id,
         _V1,
+        request.requested_artifact_id,
         _exact(artifact, artifact.pine_artifact_id, artifact.version),
+        raw_hash,
         normalized_hash,
+        len(request.source_bytes),
         _input_fingerprint(
             request,
             raw_hash=raw_hash,
             normalized_hash=normalized_hash,
             declaration=declaration,
+            status=PineIntakeStatus.ACCEPTED,
+            reasons=reasons,
         ),
         PineIntakeStatus.ACCEPTED,
-        (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,),
+        reasons,
         request.authority_ref,
         request.provenance_ref,
         DeploymentAuthorizationStatus.NOT_AUTHORIZED,
@@ -598,13 +617,60 @@ def _build(
     return artifact, record
 
 
+def _failure_identity(source_bytes: bytes) -> tuple[str, str | None]:
+    raw_hash = pine_sha256(source_bytes)
+    try:
+        source = source_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw_hash, None
+    normalized = normalize_pine_source(source)
+    return raw_hash, pine_sha256(normalized.encode("utf-8"))
+
+
+def _failed_record(
+    request: PineStrategyIntakeRequest,
+    failure: PineIntakeFailure,
+) -> PineStrategyIntakeRecord:
+    raw_hash, normalized_hash = _failure_identity(request.source_bytes)
+    reasons = tuple(sorted(failure.reason_codes, key=lambda item: item.value))
+    return PineStrategyIntakeRecord(
+        request.intake_run_id,
+        _V1,
+        request.requested_artifact_id,
+        None,
+        raw_hash,
+        normalized_hash,
+        len(request.source_bytes),
+        _input_fingerprint(
+            request,
+            raw_hash=raw_hash,
+            normalized_hash=normalized_hash,
+            declaration=None,
+            status=failure.status,
+            reasons=reasons,
+        ),
+        failure.status,
+        reasons,
+        request.authority_ref,
+        request.provenance_ref,
+        DeploymentAuthorizationStatus.NOT_AUTHORIZED,
+        ExecutionState.PLANNED_CLOSED,
+        _V1,
+    )
+
+
 def intake_pine_strategy(
     request: PineStrategyIntakeRequest,
     *,
     context: PineStrategyIntakeContext,
     repository: LocalDatasetRepository,
 ) -> PineStrategyIntakeExecutionResult:
-    artifact, record = _build(request, context=context)
+    try:
+        artifact, record = _build(request, context=context)
+    except PineIntakeFailure as failure:
+        _verify_context(request, context)
+        repository.store(_failed_record(request, failure))
+        raise
     writes = (repository.store(artifact), repository.store(record))
     return PineStrategyIntakeExecutionResult(artifact, record, writes)
 
