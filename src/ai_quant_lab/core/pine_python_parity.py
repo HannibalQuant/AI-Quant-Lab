@@ -191,6 +191,7 @@ def import_pine_execution_csv(
         observation_start.astimezone(UTC),
         observation_end.astimezone(UTC),
         PineEvidenceSourceFormat.CSV_V1,
+        text,
         digest,
         len(source_bytes),
         tuple(events),
