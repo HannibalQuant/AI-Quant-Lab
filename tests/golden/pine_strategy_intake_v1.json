@@ -3,8 +3,8 @@
   "backtest_ref": "artifact:opt-bt-result-6c6043438f48ae15fb61",
   "candidate_ref": "artifact:optimization-candidate-6c6043438f48ae15fb61",
   "format": "pine-strategy-intake-v1",
-  "input_fingerprint": "sha256:a8edbf0169a33ed415851c1e4c4cc24dfc326bbe5d54c2590871ddb27ae540e6",
-  "intake_record_fingerprint": "sha256:71091082a6321132d4bc666d32b2ff06550c415e6e2bc695c193c04005da2dc4",
+  "input_fingerprint": "sha256:96789335d010161a9ec2349c7dc3a2d8ee28ac0e2bd42248e9e2766f33e5cf7c",
+  "intake_record_fingerprint": "sha256:4ed44ccd604582772e1fa23026d31b4871ff840fb643ab93bbbb767cef5642da",
   "intake_status": "ACCEPTED",
   "normalized_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
   "pine_version": "PINE_V6",
@@ -12,6 +12,10 @@
   "reason_codes": [
     "ACCEPTED_BOUNDED_STATIC_INTAKE"
   ],
+  "record_normalized_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "record_raw_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "record_requested_artifact_id": "artifact:governed-pine-strategy-source",
+  "record_source_byte_size": 260,
   "repaint_assessment": "NOT_EVALUATED",
   "requested_artifact_id": "artifact:governed-pine-strategy-source",
   "robustness_ref": "artifact:opt-robustness-result-6c6043438f48ae15fb61",
