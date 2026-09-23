@@ -48,6 +48,7 @@ from ai_quant_lab.core.pine_strategy_contracts import (
     pine_sha256,
 )
 from ai_quant_lab.core.pine_strategy_intake import (
+    PineAuthorityInvalid,
     PineIntakeFailure,
     PineLineageMismatch,
     PineOptimizationSelectionEvidence,
@@ -127,7 +128,7 @@ def _selected_context(selection_bundle: tuple[Any, ...]) -> tuple[Any, ...]:
         execution.candidate_results,
         execution.trials,
     )
-    context = PineStrategyIntakeContext(evidence.strategy, evidence, optimization)
+    context = PineStrategyIntakeContext(evidence.strategy, evidence, AUTHORITY_REF, optimization)
     request = PineStrategyIntakeRequest(
         RunId("governed-pine-intake-run"),
         ArtifactId("governed-pine-strategy-source"),
@@ -163,7 +164,7 @@ def _selected_context(selection_bundle: tuple[Any, ...]) -> tuple[Any, ...]:
 
 def _direct_context(selection_bundle: tuple[Any, ...]) -> tuple[Any, ...]:
     source, *_, repository = selection_bundle
-    context = PineStrategyIntakeContext(source.strategy, source)
+    context = PineStrategyIntakeContext(source.strategy, source, AUTHORITY_REF)
     request = PineStrategyIntakeRequest(
         RunId("direct-pine-intake-run"),
         ArtifactId("direct-pine-strategy-source"),
@@ -412,7 +413,11 @@ def test_missing_or_incompatible_static_settings_fail_closed(
     mismatched = valid_source().replace(b"pyramiding=0", b"pyramiding=1")
     with pytest.raises(PineIntakeFailure) as unsupported:
         intake_pine_strategy(
-            replace(request, source_bytes=mismatched),
+            replace(
+                request,
+                intake_run_id=RunId("governed-pine-intake-run-mismatch"),
+                source_bytes=mismatched,
+            ),
             context=context,
             repository=selection_bundle[-1],
         )
@@ -429,6 +434,142 @@ def test_external_data_request_is_unsupported(selection_bundle: tuple[Any, ...])
             repository=selection_bundle[-1],
         )
     assert captured.value.reason_codes == (PineIntakeReasonCode.UNSUPPORTED_FEATURE,)
+
+
+def test_wrong_governed_intake_authority_fails_closed(
+    selection_bundle: tuple[Any, ...],
+) -> None:
+    request, context, *_ = _selected_context(selection_bundle)
+    wrong = replace(
+        request,
+        authority_ref=TraceabilityRef(
+            AuthorityBindingId("wrong-pine-intake-authority"),
+            V1,
+            "sha256:" + "9" * 64,
+        ),
+    )
+    with pytest.raises(PineAuthorityInvalid, match="exact governed intake authority"):
+        intake_pine_strategy(wrong, context=context, repository=selection_bundle[-1])
+
+
+@pytest.mark.parametrize(
+    ("source", "status", "reason", "normalized_expected"),
+    (
+        (
+            b'//@version=5\nstrategy("x")\n',
+            PineIntakeStatus.UNSUPPORTED,
+            PineIntakeReasonCode.UNSUPPORTED_VERSION,
+            True,
+        ),
+        (
+            b'//@version=6\nindicator("x")\n',
+            PineIntakeStatus.REJECTED,
+            PineIntakeReasonCode.INDICATOR_NOT_STRATEGY,
+            True,
+        ),
+        (
+            b'strategy("x")\n',
+            PineIntakeStatus.INCOMPLETE,
+            PineIntakeReasonCode.MISSING_VERSION,
+            True,
+        ),
+        (
+            b"\xff",
+            PineIntakeStatus.REJECTED,
+            PineIntakeReasonCode.INVALID_ENCODING,
+            False,
+        ),
+    ),
+)
+def test_failed_static_intake_is_persisted_for_audit(
+    selection_bundle: tuple[Any, ...],
+    source: bytes,
+    status: PineIntakeStatus,
+    reason: PineIntakeReasonCode,
+    normalized_expected: bool,
+) -> None:
+    request, context, *_ = _selected_context(selection_bundle)
+    repository = selection_bundle[-1]
+    with pytest.raises(PineIntakeFailure):
+        intake_pine_strategy(
+            replace(request, source_bytes=source),
+            context=context,
+            repository=repository,
+        )
+    key = repository_key(
+        PineStrategyIntakeRecord(
+            request.intake_run_id,
+            V1,
+            request.requested_artifact_id,
+            None,
+            pine_sha256(source),
+            (
+                pine_sha256(normalize_pine_source(source.decode("utf-8")).encode("utf-8"))
+                if normalized_expected
+                else None
+            ),
+            len(source),
+            "sha256:" + "0" * 64,
+            status,
+            (reason,),
+            AUTHORITY_REF,
+            PROVENANCE_REF,
+            DeploymentAuthorizationStatus.NOT_AUTHORIZED,
+            ExecutionState.PLANNED_CLOSED,
+            V1,
+        )
+    )
+    loaded = repository.load(key, PineStrategyIntakeRecord).record
+    assert loaded.status is status
+    assert loaded.reason_codes == (reason,)
+    assert loaded.source_artifact_ref is None
+    assert loaded.requested_artifact_id == request.requested_artifact_id
+    assert loaded.source_sha256 == pine_sha256(source)
+    assert (loaded.normalized_source_sha256 is not None) is normalized_expected
+    assert loaded.source_byte_size == len(source)
+    assert loaded.authority_ref == AUTHORITY_REF
+    assert loaded.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    assert loaded.execution_state is ExecutionState.PLANNED_CLOSED
+
+
+def test_rejected_intake_is_deterministic_and_idempotent(
+    selection_bundle: tuple[Any, ...],
+) -> None:
+    request, context, *_ = _selected_context(selection_bundle)
+    repository = selection_bundle[-1]
+    rejected = replace(
+        request,
+        source_bytes=b'//@version=5\nstrategy("x")\n',
+    )
+    with pytest.raises(PineIntakeFailure):
+        intake_pine_strategy(rejected, context=context, repository=repository)
+    key = repository_key(
+        PineStrategyIntakeRecord(
+            rejected.intake_run_id,
+            V1,
+            rejected.requested_artifact_id,
+            None,
+            pine_sha256(rejected.source_bytes),
+            pine_sha256(normalize_pine_source(rejected.source_bytes.decode("utf-8")).encode("utf-8")),
+            len(rejected.source_bytes),
+            "sha256:" + "0" * 64,
+            PineIntakeStatus.UNSUPPORTED,
+            (PineIntakeReasonCode.UNSUPPORTED_VERSION,),
+            AUTHORITY_REF,
+            PROVENANCE_REF,
+            DeploymentAuthorizationStatus.NOT_AUTHORIZED,
+            ExecutionState.PLANNED_CLOSED,
+            V1,
+        )
+    )
+    first = repository.load(key, PineStrategyIntakeRecord).record
+    first_bytes = encode(first)
+    with pytest.raises(PineIntakeFailure):
+        intake_pine_strategy(rejected, context=context, repository=repository)
+    second = repository.load(key, PineStrategyIntakeRecord).record
+    assert encode(second) == first_bytes
+    assert second.input_fingerprint == first.input_fingerprint
+    assert repository.store(second).status is RepositoryWriteStatus.ALREADY_PRESENT_IDENTICAL
 
 
 def test_wrong_strategy_fingerprint_is_rejected(selection_bundle: tuple[Any, ...]) -> None:
@@ -477,6 +618,7 @@ def test_parent_strategy_cannot_substitute_for_selected_candidate(
     parent_context = PineStrategyIntakeContext(
         optimization.source.strategy,
         optimization.source,
+        AUTHORITY_REF,
         optimization,
     )
     parent_request = replace(
@@ -534,6 +676,16 @@ def test_evidence_reference_tamper_is_rejected(
         ("artifact", {"source_text": '//@version=6\nstrategy("tampered")\n'}),
         ("record", {"input_fingerprint": "sha256:" + "5" * 64}),
         ("record", {"status": PineIntakeStatus.REJECTED}),
+        (
+            "record",
+            {
+                "authority_ref": TraceabilityRef(
+                    AuthorityBindingId("tampered-pine-authority"),
+                    V1,
+                    "sha256:" + "6" * 64,
+                )
+            },
+        ),
     ),
 )
 def test_persisted_artifact_and_record_tamper_fail_lineage(
@@ -620,6 +772,10 @@ def test_pine_intake_golden_is_pinned(pine_bundle: tuple[Any, ...]) -> None:
         "repaint_assessment": artifact.repaint_assessment.value,
         "intake_status": record.status.value,
         "reason_codes": [item.value for item in record.reason_codes],
+        "record_requested_artifact_id": str(record.requested_artifact_id),
+        "record_raw_sha256": record.source_sha256,
+        "record_normalized_sha256": record.normalized_source_sha256,
+        "record_source_byte_size": record.source_byte_size,
         "artifact_fingerprint": fingerprint_record(artifact),
         "intake_record_fingerprint": fingerprint_record(record),
         "input_fingerprint": record.input_fingerprint,
