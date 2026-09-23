@@ -57,6 +57,7 @@ class PineIntakeFailure(PineStrategyIntakeError):
         super().__init__(message)
         self.status = status
         self.reason_codes = (reason,)
+        self.record: PineStrategyIntakeRecord | None = None
 
 
 class PineLineageMismatch(PineStrategyIntakeError):
@@ -669,7 +670,9 @@ def intake_pine_strategy(
         artifact, record = _build(request, context=context)
     except PineIntakeFailure as failure:
         _verify_context(request, context)
-        repository.store(_failed_record(request, failure))
+        record = _failed_record(request, failure)
+        repository.store(record)
+        failure.record = record
         raise
     writes = (repository.store(artifact), repository.store(record))
     return PineStrategyIntakeExecutionResult(artifact, record, writes)
