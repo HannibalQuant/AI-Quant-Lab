@@ -550,7 +550,9 @@ def test_rejected_intake_is_deterministic_and_idempotent(
             rejected.requested_artifact_id,
             None,
             pine_sha256(rejected.source_bytes),
-            pine_sha256(normalize_pine_source(rejected.source_bytes.decode("utf-8")).encode("utf-8")),
+            pine_sha256(
+                normalize_pine_source(rejected.source_bytes.decode("utf-8")).encode("utf-8")
+            ),
             len(rejected.source_bytes),
             "sha256:" + "0" * 64,
             PineIntakeStatus.UNSUPPORTED,
