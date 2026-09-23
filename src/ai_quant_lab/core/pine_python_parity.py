@@ -554,9 +554,7 @@ def _build(
     reason = {
         PinePythonParityDecision.MATCH: (PineParityReasonCode.EXACT_EVENT_PARITY,),
         PinePythonParityDecision.MISMATCH: (PineParityReasonCode.EVENT_MISMATCH,),
-        PinePythonParityDecision.INCONCLUSIVE: (
-            PineParityReasonCode.INCOMPLETE_EXTERNAL_EVIDENCE,
-        ),
+        PinePythonParityDecision.INCONCLUSIVE: (PineParityReasonCode.INCOMPLETE_EXTERNAL_EVIDENCE,),
     }[decision]
     result = PinePythonParityResult(
         request.result_id,
