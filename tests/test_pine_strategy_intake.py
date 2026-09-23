@@ -490,35 +490,14 @@ def test_failed_static_intake_is_persisted_for_audit(
 ) -> None:
     request, context, *_ = _selected_context(selection_bundle)
     repository = selection_bundle[-1]
-    with pytest.raises(PineIntakeFailure):
+    with pytest.raises(PineIntakeFailure) as captured:
         intake_pine_strategy(
             replace(request, source_bytes=source),
             context=context,
             repository=repository,
         )
-    key = repository_key(
-        PineStrategyIntakeRecord(
-            request.intake_run_id,
-            V1,
-            request.requested_artifact_id,
-            None,
-            pine_sha256(source),
-            (
-                pine_sha256(normalize_pine_source(source.decode("utf-8")).encode("utf-8"))
-                if normalized_expected
-                else None
-            ),
-            len(source),
-            "sha256:" + "0" * 64,
-            status,
-            (reason,),
-            AUTHORITY_REF,
-            PROVENANCE_REF,
-            DeploymentAuthorizationStatus.NOT_AUTHORIZED,
-            ExecutionState.PLANNED_CLOSED,
-            V1,
-        )
-    )
+    assert captured.value.record is not None
+    key = repository_key(captured.value.record)
     loaded = repository.load(key, PineStrategyIntakeRecord).record
     assert loaded.status is status
     assert loaded.reason_codes == (reason,)
@@ -541,33 +520,15 @@ def test_rejected_intake_is_deterministic_and_idempotent(
         request,
         source_bytes=b'//@version=5\nstrategy("x")\n',
     )
-    with pytest.raises(PineIntakeFailure):
+    with pytest.raises(PineIntakeFailure) as first_failure:
         intake_pine_strategy(rejected, context=context, repository=repository)
-    key = repository_key(
-        PineStrategyIntakeRecord(
-            rejected.intake_run_id,
-            V1,
-            rejected.requested_artifact_id,
-            None,
-            pine_sha256(rejected.source_bytes),
-            pine_sha256(
-                normalize_pine_source(rejected.source_bytes.decode("utf-8")).encode("utf-8")
-            ),
-            len(rejected.source_bytes),
-            "sha256:" + "0" * 64,
-            PineIntakeStatus.UNSUPPORTED,
-            (PineIntakeReasonCode.UNSUPPORTED_VERSION,),
-            AUTHORITY_REF,
-            PROVENANCE_REF,
-            DeploymentAuthorizationStatus.NOT_AUTHORIZED,
-            ExecutionState.PLANNED_CLOSED,
-            V1,
-        )
-    )
+    assert first_failure.value.record is not None
+    key = repository_key(first_failure.value.record)
     first = repository.load(key, PineStrategyIntakeRecord).record
     first_bytes = encode(first)
-    with pytest.raises(PineIntakeFailure):
+    with pytest.raises(PineIntakeFailure) as second_failure:
         intake_pine_strategy(rejected, context=context, repository=repository)
+    assert second_failure.value.record is not None
     second = repository.load(key, PineStrategyIntakeRecord).record
     assert encode(second) == first_bytes
     assert second.input_fingerprint == first.input_fingerprint
