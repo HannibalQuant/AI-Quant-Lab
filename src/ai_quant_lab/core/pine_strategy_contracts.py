@@ -43,6 +43,7 @@ class PineIntakeStatus(StrEnum):
 
 class PineIntakeReasonCode(StrEnum):
     ACCEPTED_BOUNDED_STATIC_INTAKE = "ACCEPTED_BOUNDED_STATIC_INTAKE"
+    AUTHORITY_REF_MISMATCH = "AUTHORITY_REF_MISMATCH"
     BINARY_CONTENT = "BINARY_CONTENT"
     EMPTY_SOURCE = "EMPTY_SOURCE"
     EVIDENCE_REF_MISMATCH = "EVIDENCE_REF_MISMATCH"
@@ -275,8 +276,11 @@ class PineStrategyIntakeRequest:
 class PineStrategyIntakeRecord:
     intake_run_id: RunId
     version: ObjectVersion
-    source_artifact_ref: TraceabilityRef
-    normalized_source_sha256: str
+    requested_artifact_id: ArtifactId
+    source_artifact_ref: TraceabilityRef | None
+    source_sha256: str
+    normalized_source_sha256: str | None
+    source_byte_size: int
     input_fingerprint: str
     status: PineIntakeStatus
     reason_codes: tuple[PineIntakeReasonCode, ...]
@@ -290,14 +294,37 @@ class PineStrategyIntakeRecord:
         if (
             not isinstance(self.intake_run_id, RunId)
             or self.version != _V1
+            or not isinstance(self.requested_artifact_id, ArtifactId)
             or self.contract_version != _V1
-            or self.status is not PineIntakeStatus.ACCEPTED
-            or self.reason_codes != (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,)
-            or not _SHA256.fullmatch(self.normalized_source_sha256)
+            or not _SHA256.fullmatch(self.source_sha256)
+            or (
+                self.normalized_source_sha256 is not None
+                and not _SHA256.fullmatch(self.normalized_source_sha256)
+            )
+            or isinstance(self.source_byte_size, bool)
+            or not isinstance(self.source_byte_size, int)
+            or self.source_byte_size < 0
             or not _SHA256.fullmatch(self.input_fingerprint)
+            or not isinstance(self.status, PineIntakeStatus)
+            or not self.reason_codes
+            or tuple(sorted(self.reason_codes, key=lambda item: item.value)) != self.reason_codes
+            or len(set(self.reason_codes)) != len(self.reason_codes)
         ):
             raise PineStrategyContractError("unsupported Pine intake record")
-        _exact(self.source_artifact_ref, ArtifactId, "source_artifact_ref")
+        if self.status is PineIntakeStatus.ACCEPTED:
+            if (
+                self.source_artifact_ref is None
+                or self.normalized_source_sha256 is None
+                or self.reason_codes
+                != (PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE,)
+            ):
+                raise PineStrategyContractError("accepted Pine intake record is inconsistent")
+            _exact(self.source_artifact_ref, ArtifactId, "source_artifact_ref")
+        else:
+            if self.source_artifact_ref is not None:
+                raise PineStrategyContractError("failed Pine intake cannot reference a source artifact")
+            if PineIntakeReasonCode.ACCEPTED_BOUNDED_STATIC_INTAKE in self.reason_codes:
+                raise PineStrategyContractError("failed Pine intake cannot carry accepted reason")
         _exact(self.authority_ref, AuthorityBindingId, "authority_ref")
         _exact(self.provenance_ref, ProvenanceId, "provenance_ref")
         if (
