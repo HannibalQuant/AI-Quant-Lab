@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -188,6 +189,7 @@ class PineExecutionEvidence:
     observation_start: datetime
     observation_end: datetime
     source_format: PineEvidenceSourceFormat
+    source_text: str
     source_sha256: str
     source_byte_size: int
     events: tuple[PineExecutionEvent, ...]
@@ -201,6 +203,8 @@ class PineExecutionEvidence:
             or self.version != _V1
             or self.contract_version != _V1
             or self.source_format is not PineEvidenceSourceFormat.CSV_V1
+            or not isinstance(self.source_text, str)
+            or not self.source_text
             or not isinstance(self.source_sha256, str)
             or _SHA256.fullmatch(self.source_sha256) is None
             or isinstance(self.source_byte_size, bool)
@@ -208,6 +212,12 @@ class PineExecutionEvidence:
             or self.source_byte_size <= 0
         ):
             raise PinePythonParityContractError("invalid Pine execution evidence")
+        raw = self.source_text.encode("utf-8")
+        if (
+            self.source_byte_size != len(raw)
+            or self.source_sha256 != "sha256:" + hashlib.sha256(raw).hexdigest()
+        ):
+            raise PinePythonParityContractError("Pine execution source identity is inconsistent")
         for field in (
             "pine_artifact_ref",
             "strategy_ref",
