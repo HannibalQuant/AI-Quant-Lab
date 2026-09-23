@@ -103,6 +103,21 @@ Every accepted artifact records `RepaintAssessmentStatus.NOT_EVALUATED`. Static 
 
 ## 17. Authority
 
+The intake request must bind the exact governed Pine-intake authority carried by
+`PineStrategyIntakeContext.pine_intake_authority_ref`. A merely well-formed
+`AuthorityBindingId` with a fingerprint is insufficient. Any mismatch fails closed before
+static source admission. This preserves the project invariant that identity is not authority.
+
+Bounded static source failures are audited separately from lineage corruption. Expected source
+outcomes such as `REJECTED`, `INCOMPLETE`, and `UNSUPPORTED` produce immutable
+`PineStrategyIntakeRecord` evidence with the requested artifact id, raw source hash, normalized
+hash when UTF-8 normalization is available, byte size, exact status/reason, authority and
+provenance. They do not create a `PineStrategySourceArtifact`. Governance/lineage failures such
+as wrong strategy/candidate/evidence or wrong governed authority remain hard failures rather than
+ordinary source rejections.
+
+
+
 The Pine-intake authority reference is exact and fingerprint-bearing. It authorizes only bounded
 local custody acceptance. It does not validate performance, authenticate a real actor or author,
 establish parity, approve deployment or open execution.
