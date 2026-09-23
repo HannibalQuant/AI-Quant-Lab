@@ -1563,8 +1563,15 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
         return {
             "intake_run_id": str(record.intake_run_id),
             "version": record.version.number,
-            "source_artifact_ref": _trace_ref_payload(record.source_artifact_ref),
+            "requested_artifact_id": str(record.requested_artifact_id),
+            "source_artifact_ref": (
+                None
+                if record.source_artifact_ref is None
+                else _trace_ref_payload(record.source_artifact_ref)
+            ),
+            "source_sha256": record.source_sha256,
             "normalized_source_sha256": record.normalized_source_sha256,
+            "source_byte_size": record.source_byte_size,
             "input_fingerprint": record.input_fingerprint,
             "status": record.status.value,
             "reason_codes": [item.value for item in record.reason_codes],
@@ -3818,8 +3825,11 @@ def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
     fields = {
         "intake_run_id",
         "version",
+        "requested_artifact_id",
         "source_artifact_ref",
+        "source_sha256",
         "normalized_source_sha256",
+        "source_byte_size",
         "input_fingerprint",
         "status",
         "reason_codes",
@@ -3833,8 +3843,22 @@ def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
     return PineStrategyIntakeRecord(
         cast(RunId, _typed_id(item["intake_run_id"], RunId, "intake_run_id")),
         _version(item["version"], "version"),
-        _trace_ref(item["source_artifact_ref"], "source_artifact_ref"),
-        _text(item["normalized_source_sha256"], "normalized_source_sha256"),
+        cast(
+            ArtifactId,
+            _typed_id(item["requested_artifact_id"], ArtifactId, "requested_artifact_id"),
+        ),
+        (
+            None
+            if item["source_artifact_ref"] is None
+            else _trace_ref(item["source_artifact_ref"], "source_artifact_ref")
+        ),
+        _text(item["source_sha256"], "source_sha256"),
+        (
+            None
+            if item["normalized_source_sha256"] is None
+            else _text(item["normalized_source_sha256"], "normalized_source_sha256")
+        ),
+        _integer(item["source_byte_size"], "source_byte_size"),
         _text(item["input_fingerprint"], "input_fingerprint"),
         PineIntakeStatus(_text(item["status"], "status")),
         tuple(
