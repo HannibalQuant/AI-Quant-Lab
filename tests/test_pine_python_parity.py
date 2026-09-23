@@ -7,7 +7,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-from dataclasses import replace
+import json
+from dataclasses import fields, replace
 from datetime import timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -15,7 +16,14 @@ from pathlib import Path
 import pytest
 from test_pine_strategy_intake import PROVENANCE_REF, _selected_context
 
-from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteStatus
+from ai_quant_lab.core.codec import decode, encode
+from ai_quant_lab.core.dataset_store import (
+    LocalDatasetRepository,
+    RepositoryIntegrityFailure,
+    RepositoryTypeMismatch,
+    RepositoryWriteStatus,
+    repository_key,
+)
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
@@ -28,6 +36,7 @@ from ai_quant_lab.core.pine_python_parity import (
     PineExecutionEvidenceError,
     PinePythonParityAuthorityInvalid,
     PinePythonParityContext,
+    PinePythonParityLineageMismatch,
     evaluate_pine_python_parity,
     import_pine_execution_csv,
     verify_pine_python_parity_lineage,
@@ -35,14 +44,19 @@ from ai_quant_lab.core.pine_python_parity import (
 from ai_quant_lab.core.pine_python_parity_contracts import (
     ParityMismatchType,
     ParityTolerancePolicy,
+    PineExecutionEvidence,
+    PinePythonParityContractError,
     PinePythonParityDecision,
     PinePythonParityRequest,
+    PinePythonParityResult,
+    PinePythonParityRunRecord,
 )
 from ai_quant_lab.core.pine_strategy_intake import intake_pine_strategy
 
 pytest_plugins = ("test_pine_strategy_intake",)
 
 V1 = ObjectVersion(1)
+GOLDEN = Path(__file__).parent / "golden" / "pine_python_parity_v1.json"
 PARITY_AUTHORITY_REF = TraceabilityRef(
     AuthorityBindingId("governed-pine-python-parity-authority"),
     V1,
@@ -354,6 +368,130 @@ def test_csv_hash_is_bound_to_exact_source(parity_bundle):
         evidence.source_sha256
         == "sha256:" + hashlib.sha256(evidence.source_text.encode("utf-8")).hexdigest()
     )
+
+
+def _unsafe(record, **changes):
+    values = {field.name: getattr(record, field.name) for field in fields(record)}
+    values.update(changes)
+    clone = object.__new__(type(record))
+    for name, value in values.items():
+        object.__setattr__(clone, name, value)
+    return clone
+
+
+def test_extra_event_is_structural_mismatch(parity_bundle):
+    rows = _event_rows(parity_bundle[0].backtest_artifact)
+    assert rows
+    last_execution = parity_bundle[0].backtest_artifact.fills[-1].fill_time
+    observation_end = parity_bundle[0].specification.observation_end
+    assert last_execution + timedelta(microseconds=2) <= observation_end
+    final_long = rows[-1]["position_after"] == "LONG"
+    rows.append(
+        {
+            "event_index": str(len(rows)),
+            "signal_time": (last_execution + timedelta(microseconds=1)).isoformat(),
+            "execution_time": (last_execution + timedelta(microseconds=2)).isoformat(),
+            "action": "EXIT" if final_long else "ENTRY",
+            "side": "LONG",
+            "execution_price": rows[-1]["execution_price"],
+            "position_after": "FLAT" if final_long else "LONG",
+            "quantity": rows[-1]["quantity"],
+            "commission": rows[-1]["commission"],
+            "trade_id": "extra",
+        }
+    )
+    evidence = _import_variant(parity_bundle, rows, evidence_id="extra-event")
+    execution, _ = _run(parity_bundle, evidence=evidence)
+    assert execution.result.decision is PinePythonParityDecision.MISMATCH
+    assert ParityMismatchType.EXTRA_EVENT in {
+        item.mismatch_type for item in execution.result.mismatches
+    }
+
+
+def test_event_outside_declared_window_is_rejected(parity_bundle):
+    rows = _event_rows(parity_bundle[0].backtest_artifact)
+    assert rows
+    rows[0]["signal_time"] = (
+        parity_bundle[0].specification.observation_start - timedelta(microseconds=1)
+    ).isoformat()
+    with pytest.raises(PinePythonParityContractError, match="observation window"):
+        _import_variant(parity_bundle, rows, evidence_id="outside-window")
+
+
+def test_unsupported_short_side_is_rejected_by_long_only_profile(parity_bundle):
+    rows = _event_rows(parity_bundle[0].backtest_artifact)
+    assert rows
+    rows[0]["side"] = "SHORT"
+    with pytest.raises(PineExecutionEvidenceError, match="enum"):
+        _import_variant(parity_bundle, rows, evidence_id="short-side")
+
+
+def test_codec_roundtrip_and_repository_idempotency(parity_bundle):
+    execution, _ = _run(parity_bundle)
+    policy = parity_bundle[1]
+    evidence = parity_bundle[2]
+    repository = parity_bundle[5]
+    records = (policy, evidence, execution.result, execution.record)
+    for record in records:
+        assert decode(encode(record), type(record)) == record
+        assert repository.store(record).status is RepositoryWriteStatus.ALREADY_PRESENT_IDENTICAL
+        loaded = repository.load(repository_key(record), type(record))
+        assert loaded.record == record
+
+
+def test_persisted_parity_result_tamper_fails_lineage(parity_bundle):
+    execution, request = _run(parity_bundle)
+    tampered = _unsafe(
+        execution.result,
+        input_fingerprint="sha256:" + "9" * 64,
+    )
+    with pytest.raises(PinePythonParityLineageMismatch):
+        verify_pine_python_parity_lineage(
+            result=tampered,
+            record=execution.record,
+            request=request,
+            evidence=parity_bundle[2],
+            policy=parity_bundle[1],
+            context=parity_bundle[4],
+        )
+
+
+def test_repository_corruption_and_wrong_type_fail(parity_bundle):
+    execution, _ = _run(parity_bundle)
+    repository = parity_bundle[5]
+    key = repository_key(execution.result)
+    path = repository.path_for(key)
+    original = path.read_bytes()
+    payload = json.loads(original)
+    payload["payload"]["mismatch_count"] = 999
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(RepositoryIntegrityFailure):
+        repository.load(key, PinePythonParityResult)
+    path.write_bytes(original)
+    with pytest.raises(RepositoryTypeMismatch):
+        repository.load(key, PineExecutionEvidence)
+
+
+def test_pine_python_parity_golden_is_pinned(parity_bundle):
+    execution, _ = _run(parity_bundle)
+    expected = {
+        "format": "pine-python-parity-v1",
+        "pine_artifact_ref": str(execution.result.pine_artifact_ref.object_id),
+        "python_backtest_ref": str(execution.result.python_backtest_ref.object_id),
+        "evidence_sha256": parity_bundle[2].source_sha256,
+        "expected_event_count": execution.result.expected_event_count,
+        "observed_event_count": execution.result.observed_event_count,
+        "mismatch_count": execution.result.mismatch_count,
+        "decision": execution.result.decision.value,
+        "semantic_parity": execution.result.semantic_parity.value,
+        "repaint_assessment": execution.result.repaint_assessment.value,
+        "input_fingerprint": execution.result.input_fingerprint,
+        "result_fingerprint": fingerprint_record(execution.result),
+        "run_fingerprint": fingerprint_record(execution.record),
+        "policy_fingerprint": fingerprint_record(parity_bundle[1]),
+        "evidence_fingerprint": fingerprint_record(parity_bundle[2]),
+    }
+    assert json.loads(GOLDEN.read_text(encoding="utf-8")) == expected
 
 
 def test_strict_csv_columns_reject_unknown_field(parity_bundle):
