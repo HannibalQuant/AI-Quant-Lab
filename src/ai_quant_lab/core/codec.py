@@ -1630,6 +1630,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "observation_start": _timestamp_payload(record.observation_start),
             "observation_end": _timestamp_payload(record.observation_end),
             "source_format": record.source_format.value,
+            "source_text": record.source_text,
             "source_sha256": record.source_sha256,
             "source_byte_size": record.source_byte_size,
             "events": [
@@ -4049,7 +4050,7 @@ def _decode_pine_execution_evidence(payload: Any) -> PineExecutionEvidence:
     fields = {
         "evidence_id", "version", "pine_artifact_ref", "strategy_ref", "instrument_ref",
         "normalized_manifest_ref", "normalized_lock_ref", "observation_start",
-        "observation_end", "source_format", "source_sha256", "source_byte_size",
+        "observation_end", "source_format", "source_text", "source_sha256", "source_byte_size",
         "events", "provenance_ref", "authority_ref", "contract_version",
     }
     item = _strict_object(payload, fields, "PineExecutionEvidence.payload")
@@ -4066,6 +4067,7 @@ def _decode_pine_execution_evidence(payload: Any) -> PineExecutionEvidence:
         _timestamp(item["observation_start"], "observation_start"),
         _timestamp(item["observation_end"], "observation_end"),
         PineEvidenceSourceFormat(_text(item["source_format"], "source_format")),
+        _text(item["source_text"], "source_text"),
         _text(item["source_sha256"], "source_sha256"),
         _integer(item["source_byte_size"], "source_byte_size"),
         tuple(_decode_pine_event(value) for value in item["events"]),
