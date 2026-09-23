@@ -161,8 +161,8 @@ class PineExecutionEvent:
             raise PinePythonParityContractError("invalid Pine execution event")
         require_utc(self.signal_time, "signal_time")
         require_utc(self.execution_time, "execution_time")
-        if self.execution_time <= self.signal_time:
-            raise PinePythonParityContractError("execution must follow signal time")
+        if self.execution_time < self.signal_time:
+            raise PinePythonParityContractError("execution cannot precede signal time")
         for field in ("execution_price", "quantity", "commission"):
             _decimal(getattr(self, field), field)
         if Decimal(self.execution_price) <= 0 or Decimal(self.quantity) <= 0:
