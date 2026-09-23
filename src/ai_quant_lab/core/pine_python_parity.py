@@ -10,7 +10,13 @@ from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
 from ai_quant_lab.core.integrity import fingerprint_record
-from ai_quant_lab.core.model import ExecutionState, ObjectVersion, TraceabilityRef, fingerprint
+from ai_quant_lab.core.model import (
+    ArtifactId,
+    ExecutionState,
+    ObjectVersion,
+    TraceabilityRef,
+    fingerprint,
+)
 from ai_quant_lab.core.pine_python_parity_contracts import (
     ParityMismatch,
     ParityMismatchType,
@@ -30,15 +36,20 @@ from ai_quant_lab.core.pine_python_parity_contracts import (
 from ai_quant_lab.core.pine_strategy_contracts import (
     PineIntakeStatus,
     PineSemanticParityStatus,
+    PineStrategyIntakeRecord,
+    PineStrategyIntakeRequest,
+    PineStrategySourceArtifact,
     RepaintAssessmentStatus,
 )
 from ai_quant_lab.core.pine_strategy_intake import (
     PineStrategyIntakeContext,
     verify_pine_strategy_intake_lineage,
 )
+from ai_quant_lab.core.optimization_selection import OptimizationEvidence
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
 from ai_quant_lab.core.strategy_backtest import verify_strategy_backtest_lineage
 from ai_quant_lab.core.strategy_backtest_contracts import (
+    BacktestResultArtifact,
     SimulatedOrderSide,
     SimulatedPositionState,
 )
@@ -77,9 +88,9 @@ class PinePythonParityAuthorityInvalid(PinePythonParityError):
 
 @dataclass(frozen=True, slots=True)
 class PinePythonParityContext:
-    pine_artifact: object
-    pine_intake_record: object
-    pine_intake_request: object
+    pine_artifact: PineStrategySourceArtifact
+    pine_intake_record: PineStrategyIntakeRecord
+    pine_intake_request: PineStrategyIntakeRequest
     pine_intake_context: PineStrategyIntakeContext
     parity_authority_ref: TraceabilityRef
 
@@ -127,7 +138,7 @@ def _canonical_decimal(value: str, field: str, *, positive: bool = False) -> str
 def import_pine_execution_csv(
     source_bytes: bytes,
     *,
-    evidence_id,
+    evidence_id: ArtifactId,
     pine_artifact_ref: TraceabilityRef,
     strategy_ref: TraceabilityRef,
     instrument_ref: TraceabilityRef,
@@ -206,7 +217,7 @@ def _verify_context(
     evidence: PineExecutionEvidence,
     policy: ParityTolerancePolicy,
     context: PinePythonParityContext,
-) -> object:
+) -> OptimizationEvidence:
     if request.authority_ref != context.parity_authority_ref:
         raise PinePythonParityAuthorityInvalid("parity request lacks exact governed authority")
     if evidence.authority_ref != context.parity_authority_ref:
@@ -228,9 +239,9 @@ def _verify_context(
         raise PinePythonParityLineageMismatch("Sprint 17 Pine intake state is not admissible")
     try:
         verify_pine_strategy_intake_lineage(
-            artifact=pine_artifact,  # type: ignore[arg-type]
-            record=pine_record,  # type: ignore[arg-type]
-            request=context.pine_intake_request,  # type: ignore[arg-type]
+            artifact=pine_artifact,
+            record=pine_record,
+            request=context.pine_intake_request,
             context=context.pine_intake_context,
         )
     except ValueError as exc:
@@ -260,12 +271,12 @@ def _verify_context(
         "pine_artifact_ref": _exact(
             pine_artifact,
             pine_artifact.pine_artifact_id,
-            pine_artifact.version,  # type: ignore[attr-defined]
+            pine_artifact.version,
         ),
         "pine_intake_record_ref": _exact(
             pine_record,
             pine_record.intake_run_id,
-            pine_record.version,  # type: ignore[attr-defined]
+            pine_record.version,
         ),
         "python_backtest_ref": _exact(
             source.backtest_artifact,
@@ -298,12 +309,14 @@ def _verify_context(
         or evidence.observation_end != request.observation_end
     ):
         raise PinePythonParityLineageMismatch("parity identity/window binding is inconsistent")
-    if pine_artifact.source_backtest_result_ref != expected_refs["python_backtest_ref"]:  # type: ignore[attr-defined]
+    if pine_artifact.source_backtest_result_ref != expected_refs["python_backtest_ref"]:
         raise PinePythonParityLineageMismatch("Pine source is not bound to this Python backtest")
     return source
 
 
-def _expected_events(backtest_artifact) -> tuple[PineExecutionEvent, ...]:
+def _expected_events(
+    backtest_artifact: BacktestResultArtifact,
+) -> tuple[PineExecutionEvent, ...]:
     trade_by_fill: dict[object, str] = {}
     for trade in backtest_artifact.trades:
         trade_by_fill[trade.entry_fill_id] = str(trade.trade_id)
@@ -373,7 +386,7 @@ def _compare(
     expected: tuple[PineExecutionEvent, ...],
     observed: tuple[PineExecutionEvent, ...],
     *,
-    backtest_artifact,
+    backtest_artifact: BacktestResultArtifact,
     policy: ParityTolerancePolicy,
 ) -> tuple[PinePythonParityDecision, tuple[ParityMismatch, ...]]:
     if expected and not observed:
