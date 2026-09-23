@@ -1,0 +1,19 @@
+{
+  "candidate_count": 2,
+  "candidate_ids": [
+    "artifact:optimization-candidate-6c6043438f48ae15fb61",
+    "artifact:optimization-candidate-06f1434dd8b04c45a49c"
+  ],
+  "corrected_alpha": "0.025",
+  "format": "optimization-selection-v1",
+  "multiplicity_policy": "BONFERRONI",
+  "optimization_plan_fingerprint": "sha256:b663a9c8e28578efc6e6053f96ff30f599c101912754b266f18921fa982c0218",
+  "reason_codes": [
+    "SELECTED_BY_DECLARED_ORDER"
+  ],
+  "search_space_fingerprint": "sha256:44b32b139873f1b17052b38a80a732800aaba6c5a1d30e6dbda565689f9c8b0e",
+  "selected_candidate_ref": "artifact:optimization-candidate-6c6043438f48ae15fb61",
+  "selection_decision": "SELECTED",
+  "selection_result_fingerprint": "sha256:9ad42b4098066dc2d57b4824a8d6dc9644975922c2e4cdbeaa6c3a5c810d3468",
+  "trial_count": 2
+}

@@ -95,6 +95,26 @@ from ai_quant_lab.core.model import (
     VersionedRef,
     canonical_json,
 )
+from ai_quant_lab.core.optimization_contracts import (
+    CandidateEligibility,
+    OptimizationCandidateDefinition,
+    OptimizationCandidateResult,
+    OptimizationMultiplicityPolicy,
+    OptimizationObjective,
+    OptimizationParameter,
+    OptimizationParameterName,
+    OptimizationParameterType,
+    OptimizationPlan,
+    OptimizationReasonCode,
+    OptimizationRunRecord,
+    OptimizationRunStatus,
+    OptimizationSearchMethod,
+    OptimizationSearchSpace,
+    OptimizationSelectionResult,
+    OptimizationTrialRecord,
+    OptimizationTrialStatus,
+    SelectionDecision,
+)
 from ai_quant_lab.core.real_csv_contracts import (
     AcquisitionMethod,
     AvailabilitySemantics,
@@ -215,6 +235,13 @@ type GovernedRecord = (
     | RobustnessValidationPlan
     | RobustnessValidationResult
     | RobustnessValidationRunRecord
+    | OptimizationSearchSpace
+    | OptimizationPlan
+    | OptimizationCandidateDefinition
+    | OptimizationCandidateResult
+    | OptimizationTrialRecord
+    | OptimizationSelectionResult
+    | OptimizationRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -275,6 +302,13 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     RobustnessValidationPlan: "RobustnessValidationPlan",
     RobustnessValidationResult: "RobustnessValidationResult",
     RobustnessValidationRunRecord: "RobustnessValidationRunRecord",
+    OptimizationSearchSpace: "OptimizationSearchSpace",
+    OptimizationPlan: "OptimizationPlan",
+    OptimizationCandidateDefinition: "OptimizationCandidateDefinition",
+    OptimizationCandidateResult: "OptimizationCandidateResult",
+    OptimizationTrialRecord: "OptimizationTrialRecord",
+    OptimizationSelectionResult: "OptimizationSelectionResult",
+    OptimizationRunRecord: "OptimizationRunRecord",
 }
 
 
@@ -1332,6 +1366,132 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "monte_carlo_seed": record.monte_carlo_seed,
             "robustness_result_ref": _trace_ref_payload(record.robustness_result_ref),
             "robustness_authority_ref": _trace_ref_payload(record.robustness_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "status": record.status.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationSearchSpace):
+        return {
+            "search_space_id": str(record.search_space_id),
+            "version": record.version.number,
+            "parameters": [
+                {
+                    "name": item.name.value,
+                    "parameter_type": item.parameter_type.value,
+                    "lower_bound": item.lower_bound,
+                    "upper_bound": item.upper_bound,
+                    "step": item.step,
+                    "default_value": item.default_value,
+                }
+                for item in record.parameters
+            ],
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationPlan):
+        return {
+            "optimization_plan_id": str(record.optimization_plan_id),
+            "version": record.version.number,
+            "search_space_ref": _trace_ref_payload(record.search_space_ref),
+            "parent_strategy_ref": _trace_ref_payload(record.parent_strategy_ref),
+            "source_experiment_ref": _trace_ref_payload(record.source_experiment_ref),
+            "source_robustness_result_ref": _trace_ref_payload(record.source_robustness_result_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "engine_contract_ref": _trace_ref_payload(record.engine_contract_ref),
+            "validation_plan_ref": _trace_ref_payload(record.validation_plan_ref),
+            "robustness_plan_ref": _trace_ref_payload(record.robustness_plan_ref),
+            "search_method": record.search_method.value,
+            "maximum_trials": record.maximum_trials,
+            "objective": record.objective.value,
+            "minimum_trade_count": record.minimum_trade_count,
+            "maximum_drawdown": record.maximum_drawdown,
+            "multiplicity_policy": record.multiplicity_policy.value,
+            "declared_alpha": record.declared_alpha,
+            "selection_authority_ref": _trace_ref_payload(record.selection_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationCandidateDefinition):
+        return {
+            "candidate_id": str(record.candidate_id),
+            "version": record.version.number,
+            "optimization_plan_ref": _trace_ref_payload(record.optimization_plan_ref),
+            "parent_strategy_ref": _trace_ref_payload(record.parent_strategy_ref),
+            "parameter_values": [[name, value] for name, value in record.parameter_values],
+            "candidate_strategy_ref": _trace_ref_payload(record.candidate_strategy_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationCandidateResult):
+        return {
+            "candidate_id": str(record.candidate_id),
+            "version": record.version.number,
+            "candidate_definition_ref": _trace_ref_payload(record.candidate_definition_ref),
+            "candidate_strategy_ref": _trace_ref_payload(record.candidate_strategy_ref),
+            "backtest_result_ref": _trace_ref_payload(record.backtest_result_ref),
+            "scientific_validation_result_ref": _trace_ref_payload(
+                record.scientific_validation_result_ref
+            ),
+            "robustness_result_ref": _trace_ref_payload(record.robustness_result_ref),
+            "total_return": record.total_return,
+            "max_drawdown": record.max_drawdown,
+            "trade_count": record.trade_count,
+            "eligibility": record.eligibility.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationTrialRecord):
+        return {
+            "trial_id": str(record.trial_id),
+            "version": record.version.number,
+            "optimization_plan_ref": _trace_ref_payload(record.optimization_plan_ref),
+            "trial_index": record.trial_index,
+            "candidate_definition_ref": _trace_ref_payload(record.candidate_definition_ref),
+            "candidate_result_ref": _trace_ref_payload(record.candidate_result_ref),
+            "status": record.status.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationSelectionResult):
+        return {
+            "selection_result_id": str(record.selection_result_id),
+            "version": record.version.number,
+            "optimization_plan_ref": _trace_ref_payload(record.optimization_plan_ref),
+            "candidate_result_refs": [
+                _trace_ref_payload(item) for item in record.candidate_result_refs
+            ],
+            "trial_refs": [_trace_ref_payload(item) for item in record.trial_refs],
+            "attempted_trials": record.attempted_trials,
+            "completed_trials": record.completed_trials,
+            "eligible_candidates": record.eligible_candidates,
+            "selected_candidate_ref": (
+                None
+                if record.selected_candidate_ref is None
+                else _trace_ref_payload(record.selected_candidate_ref)
+            ),
+            "decision": record.decision.value,
+            "multiplicity_policy": record.multiplicity_policy.value,
+            "corrected_alpha": record.corrected_alpha,
+            "tie_break_order": list(record.tie_break_order),
+            "reason_codes": [item.value for item in record.reason_codes],
+            "selection_authority_ref": _trace_ref_payload(record.selection_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, OptimizationRunRecord):
+        return {
+            "optimization_run_id": str(record.optimization_run_id),
+            "version": record.version.number,
+            "optimization_plan_ref": _trace_ref_payload(record.optimization_plan_ref),
+            "optimization_input_fingerprint": record.optimization_input_fingerprint,
+            "declared_trials": record.declared_trials,
+            "attempted_trials": record.attempted_trials,
+            "completed_trials": record.completed_trials,
+            "selection_result_ref": _trace_ref_payload(record.selection_result_ref),
+            "selection_authority_ref": _trace_ref_payload(record.selection_authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "status": record.status.value,
             "deployment_authorization": record.deployment_authorization.value,
@@ -3225,6 +3385,285 @@ def _decode_robustness_run(payload: Any) -> RobustnessValidationRunRecord:
     )
 
 
+def _decode_optimization_parameter(payload: Any) -> OptimizationParameter:
+    item = _strict_object(
+        payload,
+        {"name", "parameter_type", "lower_bound", "upper_bound", "step", "default_value"},
+        "OptimizationParameter",
+    )
+    return OptimizationParameter(
+        OptimizationParameterName(_text(item["name"], "name")),
+        OptimizationParameterType(_text(item["parameter_type"], "parameter_type")),
+        _integer(item["lower_bound"], "lower_bound"),
+        _integer(item["upper_bound"], "upper_bound"),
+        _integer(item["step"], "step"),
+        _integer(item["default_value"], "default_value"),
+    )
+
+
+def _decode_search_space(payload: Any) -> OptimizationSearchSpace:
+    item = _strict_object(
+        payload,
+        {"search_space_id", "version", "parameters", "contract_version"},
+        "OptimizationSearchSpace.payload",
+    )
+    values = item["parameters"]
+    if not isinstance(values, list):
+        raise InvalidSerialization("parameters must be an array")
+    return OptimizationSearchSpace(
+        cast(ArtifactId, _typed_id(item["search_space_id"], ArtifactId, "search_space_id")),
+        _version(item["version"], "version"),
+        tuple(_decode_optimization_parameter(value) for value in values),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_optimization_plan(payload: Any) -> OptimizationPlan:
+    fields = {
+        "optimization_plan_id",
+        "version",
+        "search_space_ref",
+        "parent_strategy_ref",
+        "source_experiment_ref",
+        "source_robustness_result_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "engine_contract_ref",
+        "validation_plan_ref",
+        "robustness_plan_ref",
+        "search_method",
+        "maximum_trials",
+        "objective",
+        "minimum_trade_count",
+        "maximum_drawdown",
+        "multiplicity_policy",
+        "declared_alpha",
+        "selection_authority_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "OptimizationPlan.payload")
+    return OptimizationPlan(
+        cast(
+            ArtifactId, _typed_id(item["optimization_plan_id"], ArtifactId, "optimization_plan_id")
+        ),
+        _version(item["version"], "version"),
+        _trace_ref(item["search_space_ref"], "search_space_ref"),
+        _trace_ref(item["parent_strategy_ref"], "parent_strategy_ref"),
+        _trace_ref(item["source_experiment_ref"], "source_experiment_ref"),
+        _trace_ref(item["source_robustness_result_ref"], "source_robustness_result_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
+        _trace_ref(item["validation_plan_ref"], "validation_plan_ref"),
+        _trace_ref(item["robustness_plan_ref"], "robustness_plan_ref"),
+        OptimizationSearchMethod(_text(item["search_method"], "search_method")),
+        _integer(item["maximum_trials"], "maximum_trials"),
+        OptimizationObjective(_text(item["objective"], "objective")),
+        _integer(item["minimum_trade_count"], "minimum_trade_count"),
+        _text(item["maximum_drawdown"], "maximum_drawdown"),
+        OptimizationMultiplicityPolicy(_text(item["multiplicity_policy"], "multiplicity_policy")),
+        _text(item["declared_alpha"], "declared_alpha"),
+        _trace_ref(item["selection_authority_ref"], "selection_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_parameter_values(value: Any) -> tuple[tuple[str, int], ...]:
+    if not isinstance(value, list):
+        raise InvalidSerialization("parameter_values must be an array")
+    result: list[tuple[str, int]] = []
+    for entry in value:
+        if not isinstance(entry, list) or len(entry) != 2:
+            raise InvalidSerialization("parameter_values entries must be pairs")
+        result.append((_text(entry[0], "parameter name"), _integer(entry[1], "parameter value")))
+    return tuple(result)
+
+
+def _decode_candidate_definition(payload: Any) -> OptimizationCandidateDefinition:
+    item = _strict_object(
+        payload,
+        {
+            "candidate_id",
+            "version",
+            "optimization_plan_ref",
+            "parent_strategy_ref",
+            "parameter_values",
+            "candidate_strategy_ref",
+            "contract_version",
+        },
+        "OptimizationCandidateDefinition.payload",
+    )
+    return OptimizationCandidateDefinition(
+        cast(ArtifactId, _typed_id(item["candidate_id"], ArtifactId, "candidate_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["optimization_plan_ref"], "optimization_plan_ref"),
+        _trace_ref(item["parent_strategy_ref"], "parent_strategy_ref"),
+        _decode_parameter_values(item["parameter_values"]),
+        _trace_ref(item["candidate_strategy_ref"], "candidate_strategy_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_candidate_result(payload: Any) -> OptimizationCandidateResult:
+    fields = {
+        "candidate_id",
+        "version",
+        "candidate_definition_ref",
+        "candidate_strategy_ref",
+        "backtest_result_ref",
+        "scientific_validation_result_ref",
+        "robustness_result_ref",
+        "total_return",
+        "max_drawdown",
+        "trade_count",
+        "eligibility",
+        "reason_codes",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "OptimizationCandidateResult.payload")
+    return OptimizationCandidateResult(
+        cast(ArtifactId, _typed_id(item["candidate_id"], ArtifactId, "candidate_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["candidate_definition_ref"], "candidate_definition_ref"),
+        _trace_ref(item["candidate_strategy_ref"], "candidate_strategy_ref"),
+        _trace_ref(item["backtest_result_ref"], "backtest_result_ref"),
+        _trace_ref(item["scientific_validation_result_ref"], "scientific_validation_result_ref"),
+        _trace_ref(item["robustness_result_ref"], "robustness_result_ref"),
+        _text(item["total_return"], "total_return"),
+        _text(item["max_drawdown"], "max_drawdown"),
+        _integer(item["trade_count"], "trade_count"),
+        CandidateEligibility(_text(item["eligibility"], "eligibility")),
+        tuple(
+            OptimizationReasonCode(value)
+            for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_optimization_trial(payload: Any) -> OptimizationTrialRecord:
+    item = _strict_object(
+        payload,
+        {
+            "trial_id",
+            "version",
+            "optimization_plan_ref",
+            "trial_index",
+            "candidate_definition_ref",
+            "candidate_result_ref",
+            "status",
+            "reason_codes",
+            "contract_version",
+        },
+        "OptimizationTrialRecord.payload",
+    )
+    return OptimizationTrialRecord(
+        cast(TrialId, _typed_id(item["trial_id"], TrialId, "trial_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["optimization_plan_ref"], "optimization_plan_ref"),
+        _integer(item["trial_index"], "trial_index"),
+        _trace_ref(item["candidate_definition_ref"], "candidate_definition_ref"),
+        _trace_ref(item["candidate_result_ref"], "candidate_result_ref"),
+        OptimizationTrialStatus(_text(item["status"], "status")),
+        tuple(
+            OptimizationReasonCode(value)
+            for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_selection_result(payload: Any) -> OptimizationSelectionResult:
+    fields = {
+        "selection_result_id",
+        "version",
+        "optimization_plan_ref",
+        "candidate_result_refs",
+        "trial_refs",
+        "attempted_trials",
+        "completed_trials",
+        "eligible_candidates",
+        "selected_candidate_ref",
+        "decision",
+        "multiplicity_policy",
+        "corrected_alpha",
+        "tie_break_order",
+        "reason_codes",
+        "selection_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "OptimizationSelectionResult.payload")
+    return OptimizationSelectionResult(
+        cast(ArtifactId, _typed_id(item["selection_result_id"], ArtifactId, "selection_result_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["optimization_plan_ref"], "optimization_plan_ref"),
+        _trace_refs(item["candidate_result_refs"], "candidate_result_refs"),
+        _trace_refs(item["trial_refs"], "trial_refs"),
+        _integer(item["attempted_trials"], "attempted_trials"),
+        _integer(item["completed_trials"], "completed_trials"),
+        _integer(item["eligible_candidates"], "eligible_candidates"),
+        _optional_trace_ref(item["selected_candidate_ref"], "selected_candidate_ref"),
+        SelectionDecision(_text(item["decision"], "decision")),
+        OptimizationMultiplicityPolicy(_text(item["multiplicity_policy"], "multiplicity_policy")),
+        _optional_text(item["corrected_alpha"], "corrected_alpha"),
+        _strings(item["tie_break_order"], "tie_break_order"),
+        tuple(
+            OptimizationReasonCode(value)
+            for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _trace_ref(item["selection_authority_ref"], "selection_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_optimization_run(payload: Any) -> OptimizationRunRecord:
+    fields = {
+        "optimization_run_id",
+        "version",
+        "optimization_plan_ref",
+        "optimization_input_fingerprint",
+        "declared_trials",
+        "attempted_trials",
+        "completed_trials",
+        "selection_result_ref",
+        "selection_authority_ref",
+        "provenance_ref",
+        "status",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "OptimizationRunRecord.payload")
+    return OptimizationRunRecord(
+        cast(RunId, _typed_id(item["optimization_run_id"], RunId, "optimization_run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["optimization_plan_ref"], "optimization_plan_ref"),
+        _text(item["optimization_input_fingerprint"], "optimization_input_fingerprint"),
+        _integer(item["declared_trials"], "declared_trials"),
+        _integer(item["attempted_trials"], "attempted_trials"),
+        _integer(item["completed_trials"], "completed_trials"),
+        _trace_ref(item["selection_result_ref"], "selection_result_ref"),
+        _trace_ref(item["selection_authority_ref"], "selection_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        OptimizationRunStatus(_text(item["status"], "status")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -3259,6 +3698,13 @@ _DECODERS = {
     "RobustnessValidationPlan": _decode_robustness_plan,
     "RobustnessValidationResult": _decode_robustness_result,
     "RobustnessValidationRunRecord": _decode_robustness_run,
+    "OptimizationSearchSpace": _decode_search_space,
+    "OptimizationPlan": _decode_optimization_plan,
+    "OptimizationCandidateDefinition": _decode_candidate_definition,
+    "OptimizationCandidateResult": _decode_candidate_result,
+    "OptimizationTrialRecord": _decode_optimization_trial,
+    "OptimizationSelectionResult": _decode_selection_result,
+    "OptimizationRunRecord": _decode_optimization_run,
 }
 
 
@@ -3297,6 +3743,13 @@ def decode[
         RobustnessValidationPlan,
         RobustnessValidationResult,
         RobustnessValidationRunRecord,
+        OptimizationSearchSpace,
+        OptimizationPlan,
+        OptimizationCandidateDefinition,
+        OptimizationCandidateResult,
+        OptimizationTrialRecord,
+        OptimizationSelectionResult,
+        OptimizationRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

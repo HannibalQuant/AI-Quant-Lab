@@ -34,6 +34,15 @@ from ai_quant_lab.core.model import (
     ObjectVersion,
     TraceabilityRef,
 )
+from ai_quant_lab.core.optimization_contracts import (
+    OptimizationCandidateDefinition,
+    OptimizationCandidateResult,
+    OptimizationPlan,
+    OptimizationRunRecord,
+    OptimizationSearchSpace,
+    OptimizationSelectionResult,
+    OptimizationTrialRecord,
+)
 from ai_quant_lab.core.real_csv_contracts import (
     RealCsvAdmissionRecord,
     RealCsvSourceDeclaration,
@@ -87,6 +96,13 @@ type StoredDatasetObject = (
     | RobustnessValidationPlan
     | RobustnessValidationResult
     | RobustnessValidationRunRecord
+    | OptimizationSearchSpace
+    | OptimizationPlan
+    | OptimizationCandidateDefinition
+    | OptimizationCandidateResult
+    | OptimizationTrialRecord
+    | OptimizationSelectionResult
+    | OptimizationRunRecord
 )
 
 
@@ -153,6 +169,13 @@ class StoredObjectType(StrEnum):
     ROBUSTNESS_VALIDATION_PLAN = "robustness-validation-plan"
     ROBUSTNESS_VALIDATION_RESULT = "robustness-validation-result"
     ROBUSTNESS_VALIDATION_RUN_RECORD = "robustness-validation-run-record"
+    OPTIMIZATION_SEARCH_SPACE = "optimization-search-space"
+    OPTIMIZATION_PLAN = "optimization-plan"
+    OPTIMIZATION_CANDIDATE_DEFINITION = "optimization-candidate-definition"
+    OPTIMIZATION_CANDIDATE_RESULT = "optimization-candidate-result"
+    OPTIMIZATION_TRIAL_RECORD = "optimization-trial-record"
+    OPTIMIZATION_SELECTION_RESULT = "optimization-selection-result"
+    OPTIMIZATION_RUN_RECORD = "optimization-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -249,6 +272,13 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     RobustnessValidationPlan: StoredObjectType.ROBUSTNESS_VALIDATION_PLAN,
     RobustnessValidationResult: StoredObjectType.ROBUSTNESS_VALIDATION_RESULT,
     RobustnessValidationRunRecord: StoredObjectType.ROBUSTNESS_VALIDATION_RUN_RECORD,
+    OptimizationSearchSpace: StoredObjectType.OPTIMIZATION_SEARCH_SPACE,
+    OptimizationPlan: StoredObjectType.OPTIMIZATION_PLAN,
+    OptimizationCandidateDefinition: StoredObjectType.OPTIMIZATION_CANDIDATE_DEFINITION,
+    OptimizationCandidateResult: StoredObjectType.OPTIMIZATION_CANDIDATE_RESULT,
+    OptimizationTrialRecord: StoredObjectType.OPTIMIZATION_TRIAL_RECORD,
+    OptimizationSelectionResult: StoredObjectType.OPTIMIZATION_SELECTION_RESULT,
+    OptimizationRunRecord: StoredObjectType.OPTIMIZATION_RUN_RECORD,
 }
 
 
@@ -306,6 +336,20 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.robustness_result_id)
     if isinstance(record, RobustnessValidationRunRecord):
         return str(record.robustness_run_id)
+    if isinstance(record, OptimizationSearchSpace):
+        return str(record.search_space_id)
+    if isinstance(record, OptimizationPlan):
+        return str(record.optimization_plan_id)
+    if isinstance(record, OptimizationCandidateDefinition):
+        return str(record.candidate_id)
+    if isinstance(record, OptimizationCandidateResult):
+        return str(record.candidate_id)
+    if isinstance(record, OptimizationTrialRecord):
+        return str(record.trial_id)
+    if isinstance(record, OptimizationSelectionResult):
+        return str(record.selection_result_id)
+    if isinstance(record, OptimizationRunRecord):
+        return str(record.optimization_run_id)
     return str(record.dataset_id)
 
 
