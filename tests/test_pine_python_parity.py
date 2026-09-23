@@ -9,13 +9,9 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from test_pine_strategy_intake import (
-    AUTHORITY_REF as PINE_AUTHORITY_REF,
-    PROVENANCE_REF,
-    _selected_context,
-    selection_bundle,
-)
-from test_pine_strategy_intake import valid_source
+from test_pine_strategy_intake import PROVENANCE_REF, _selected_context
+
+pytest_plugins = ("test_pine_strategy_intake",)
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteStatus
 from ai_quant_lab.core.integrity import fingerprint_record
@@ -175,7 +171,7 @@ def parity_bundle(selection_bundle, tmp_path: Path):
 
 
 def _run(bundle, *, evidence=None, policy=None):
-    source, base_policy, base_evidence, request, context, repository = bundle
+    _source, base_policy, base_evidence, request, context, repository = bundle
     chosen_evidence = evidence or base_evidence
     chosen_policy = policy or base_policy
     if chosen_evidence is not base_evidence:
