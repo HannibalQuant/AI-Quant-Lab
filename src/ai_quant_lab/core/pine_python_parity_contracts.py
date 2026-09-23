@@ -11,10 +11,8 @@ from enum import StrEnum
 
 from ai_quant_lab.core.model import (
     ArtifactId,
-    AuthorityBindingId,
     ExecutionState,
     ObjectVersion,
-    ProvenanceId,
     RunId,
     TraceabilityRef,
     require_utc,
