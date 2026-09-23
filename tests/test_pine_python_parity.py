@@ -108,9 +108,7 @@ def _csv_bytes(rows):
 def parity_bundle(selection_bundle, tmp_path: Path):
     pine_request, pine_context, *_ = _selected_context(selection_bundle)
     pine_repository = LocalDatasetRepository(root=tmp_path / "pine", allowed_root=tmp_path)
-    pine_exec = intake_pine_strategy(
-        pine_request, context=pine_context, repository=pine_repository
-    )
+    pine_exec = intake_pine_strategy(pine_request, context=pine_context, repository=pine_repository)
     source = pine_context.evidence
     policy = ParityTolerancePolicy(
         ArtifactId("pine-python-parity-tolerance-v1"),
@@ -232,9 +230,7 @@ def test_exact_trace_matches_and_lineage_rebuilds(parity_bundle):
         policy=parity_bundle[1],
         context=parity_bundle[4],
     )
-    assert all(
-        item.status is RepositoryWriteStatus.STORED for item in execution.writes
-    )
+    assert all(item.status is RepositoryWriteStatus.STORED for item in execution.writes)
 
 
 def test_one_bar_execution_shift_is_mismatch(parity_bundle):
@@ -296,7 +292,9 @@ def test_price_tolerance_is_decimal_and_bounded(parity_bundle):
     rows = _event_rows(parity_bundle[0].backtest_artifact)
     assert rows
     price = rows[0]["execution_price"]
-    rows[0]["execution_price"] = str(__import__("decimal").Decimal(price) + __import__("decimal").Decimal("0.0001"))
+    rows[0]["execution_price"] = str(
+        __import__("decimal").Decimal(price) + __import__("decimal").Decimal("0.0001")
+    )
     evidence = _import_variant(parity_bundle, rows, evidence_id="price-tolerance")
     relaxed = replace(
         parity_bundle[1],
@@ -357,9 +355,10 @@ def test_csv_hash_is_bound_to_exact_source(parity_bundle):
     evidence = parity_bundle[2]
     assert evidence.source_byte_size == len(evidence.source_text.encode("utf-8"))
     import hashlib
-    assert evidence.source_sha256 == "sha256:" + hashlib.sha256(
-        evidence.source_text.encode("utf-8")
-    ).hexdigest()
+    assert (
+        evidence.source_sha256
+        == "sha256:" + hashlib.sha256(evidence.source_text.encode("utf-8")).hexdigest()
+    )
 
 
 def test_strict_csv_columns_reject_unknown_field(parity_bundle):
