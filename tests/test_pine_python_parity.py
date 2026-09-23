@@ -355,6 +355,7 @@ def test_csv_hash_is_bound_to_exact_source(parity_bundle):
     evidence = parity_bundle[2]
     assert evidence.source_byte_size == len(evidence.source_text.encode("utf-8"))
     import hashlib
+
     assert (
         evidence.source_sha256
         == "sha256:" + hashlib.sha256(evidence.source_text.encode("utf-8")).hexdigest()
