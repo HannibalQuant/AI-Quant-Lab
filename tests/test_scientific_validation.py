@@ -381,6 +381,19 @@ def test_governance_context_blocks_pass(
     assert reason in validation.result.reason_codes
 
 
+def test_corrected_multiple_testing_uses_normal_validation_decision(tmp_path: Path) -> None:
+    plan = replace(
+        validation_plan(multiplicity=MultiplicityPolicy.MULTIPLE_TESTS_CORRECTED),
+        confidence_level="0.975",
+    )
+    _, _, _, validation, _ = _run(
+        _context(tmp_path, "corrected-multiple-tests", ((100, 120),) * 4),
+        plan,
+    )
+    assert validation.result.decision is ScientificValidationDecision.PASS
+    assert validation.result.reason_codes == (ValidationReasonCode.PASSED_CONFIDENCE_BOUND,)
+
+
 def test_open_long_is_inconclusive_without_synthetic_exit(tmp_path: Path) -> None:
     values = tuple((100 + index, 101 + index) for index in range(6))
     start = datetime(2025, 2, 1, tzinfo=UTC)

@@ -318,7 +318,15 @@ def _candidate_evidence_with_repository(
         source.validation_plan,
         validation_plan_id=ArtifactId(f"opt-validation-plan-{suffix}"),
         confidence_level=confidence,
-        multiplicity_policy=MultiplicityPolicy.SINGLE_PREDECLARED_TEST,
+        multiplicity_policy=(
+            MultiplicityPolicy.SINGLE_PREDECLARED_TEST
+            if candidate_count == 1
+            else (
+                MultiplicityPolicy.MULTIPLE_TESTS_CORRECTED
+                if plan.multiplicity_policy is OptimizationMultiplicityPolicy.BONFERRONI
+                else MultiplicityPolicy.MULTIPLE_TESTS_UNCORRECTED
+            )
+        ),
     )
     validation_request = ValidationRequest(
         RunId(f"opt-validation-run-{suffix}"),
@@ -530,6 +538,10 @@ def test_selection_uses_independent_candidate_evidence_and_bonferroni(
     _, _, plan, candidates, execution, _ = selection_bundle
     assert corrected_alpha(plan, 2) == "0.025"
     assert all(item.validation_plan.confidence_level == "0.975" for item in candidates)
+    assert all(
+        item.validation_plan.multiplicity_policy is MultiplicityPolicy.MULTIPLE_TESTS_CORRECTED
+        for item in candidates
+    )
     assert execution.result.decision is SelectionDecision.SELECTED
     assert execution.result.eligible_candidates == 1
     assert execution.result.corrected_alpha == "0.025"
@@ -557,11 +569,16 @@ def test_single_candidate_policy_allows_exactly_one_candidate(tmp_path: Path) ->
         ),
         V1,
     )
-    *_, execution, _ = _selection_case(
+    *_, candidates, execution, _ = _selection_case(
         tmp_path,
         space,
         multiplicity=OptimizationMultiplicityPolicy.SINGLE_CANDIDATE,
     )
+    assert (
+        candidates[0].validation_plan.multiplicity_policy
+        is MultiplicityPolicy.SINGLE_PREDECLARED_TEST
+    )
+    assert candidates[0].validation_plan.confidence_level == "0.95"
     assert execution.result.decision is SelectionDecision.SELECTED
     assert execution.result.corrected_alpha == "0.05"
     assert execution.result.attempted_trials == 1
@@ -774,6 +791,33 @@ def test_tampered_candidate_robustness_evidence_fails_before_selection(
             source=source,
             candidates=(changed, candidates[1]),
             repository=repository,
+        )
+
+
+def test_bonferroni_candidate_cannot_claim_single_test_semantics(
+    selection_bundle: tuple[Any, ...],
+) -> None:
+    source, space, plan, candidates, execution, _ = selection_bundle
+    changed_plan = replace(
+        candidates[0].validation_plan,
+        multiplicity_policy=MultiplicityPolicy.SINGLE_PREDECLARED_TEST,
+    )
+    changed = replace(candidates[0], validation_plan=changed_plan)
+    with pytest.raises(
+        OptimizationLineageMismatch,
+        match="candidate validation plan changed undeclared policy",
+    ):
+        verify_optimization_selection_lineage(
+            record=execution.record,
+            result=execution.result,
+            candidate_definitions=execution.candidate_definitions,
+            candidate_results=execution.candidate_results,
+            trials=execution.trials,
+            request=_request(plan),
+            plan=plan,
+            search_space=space,
+            source=source,
+            candidates=(changed, candidates[1]),
         )
 
 

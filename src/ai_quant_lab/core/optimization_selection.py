@@ -56,6 +56,7 @@ from ai_quant_lab.core.robustness_validation_contracts import (
     RobustnessValidationRunRecord,
 )
 from ai_quant_lab.core.scientific_validation_contracts import (
+    MultiplicityPolicy,
     ScientificValidationDecision,
     ScientificValidationResult,
     ValidationPlan,
@@ -189,6 +190,14 @@ def corrected_alpha(plan: OptimizationPlan, candidate_count: int) -> str | None:
 def corrected_confidence(alpha: str) -> str:
     with localcontext(_DECIMAL_CONTEXT):
         return _decimal(Decimal(1) - Decimal(alpha))
+
+
+def _candidate_multiplicity(plan: OptimizationPlan, candidate_count: int) -> MultiplicityPolicy:
+    if candidate_count == 1:
+        return MultiplicityPolicy.SINGLE_PREDECLARED_TEST
+    if plan.multiplicity_policy is OptimizationMultiplicityPolicy.BONFERRONI:
+        return MultiplicityPolicy.MULTIPLE_TESTS_CORRECTED
+    return MultiplicityPolicy.MULTIPLE_TESTS_UNCORRECTED
 
 
 def _candidate_suffix(
@@ -371,6 +380,7 @@ def _verify_candidate_invariants(
     expected_strategy: StrategyDefinition,
     evidence: OptimizationEvidence,
     corrected: str | None,
+    candidate_count: int,
 ) -> None:
     if evidence.strategy != expected_strategy:
         raise OptimizationLineageMismatch("candidate strategy is not the exact governed derivation")
@@ -396,6 +406,7 @@ def _verify_candidate_invariants(
             if corrected is not None
             else source.validation_plan.confidence_level
         ),
+        multiplicity_policy=_candidate_multiplicity(plan, candidate_count),
     )
     if evidence.validation_plan != expected_validation:
         raise OptimizationLineageMismatch("candidate validation plan changed undeclared policy")
@@ -539,6 +550,7 @@ def _build(
             expected_strategy=expected_strategy,
             evidence=evidence,
             corrected=corrected,
+            candidate_count=len(parameter_sets),
         )
         result = _candidate_result(plan=plan, definition=definition, evidence=evidence)
         trial = OptimizationTrialRecord(

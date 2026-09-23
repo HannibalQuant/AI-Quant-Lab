@@ -67,6 +67,13 @@ For `n` tested candidates, `corrected_alpha = declared_alpha / n` under Decimal 
 ROUND_HALF_EVEN. Candidate validation plans must use confidence `1 - corrected_alpha`. With two
 candidates and alpha `0.05`, the exact corrected alpha is `0.025` and confidence is `0.975`.
 
+A one-candidate evaluation is encoded as `SINGLE_PREDECLARED_TEST`. A multi-candidate Bonferroni
+evaluation is encoded as `MULTIPLE_TESTS_CORRECTED`: it is a corrected member of a declared
+multiple-test family, never a single predeclared test. Optimization governance computes and supplies
+the corrected confidence; scientific validation consumes that declared confidence and does not
+recompute the family-wise correction. Multi-candidate evidence without a supported correction is
+encoded as `MULTIPLE_TESTS_UNCORRECTED` and cannot authorize selection.
+
 This is a bounded family-wise correction, not a general solution for adaptive search, PBO or
 selection bias across undocumented prior research.
 

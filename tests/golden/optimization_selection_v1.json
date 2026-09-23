@@ -14,6 +14,6 @@
   "search_space_fingerprint": "sha256:44b32b139873f1b17052b38a80a732800aaba6c5a1d30e6dbda565689f9c8b0e",
   "selected_candidate_ref": "artifact:optimization-candidate-6c6043438f48ae15fb61",
   "selection_decision": "SELECTED",
-  "selection_result_fingerprint": "sha256:c95191519cd59592653ffa7061d854ede02685d05fe06b4848df0b508c860d15",
+  "selection_result_fingerprint": "sha256:9ad42b4098066dc2d57b4824a8d6dc9644975922c2e4cdbeaa6c3a5c810d3468",
   "trial_count": 2
 }
