@@ -49,7 +49,6 @@ from ai_quant_lab.core.pine_python_parity_contracts import (
     PinePythonParityDecision,
     PinePythonParityRequest,
     PinePythonParityResult,
-    PinePythonParityRunRecord,
 )
 from ai_quant_lab.core.pine_strategy_intake import intake_pine_strategy
 
