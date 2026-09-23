@@ -1,5 +1,7 @@
 """Sprint 18 governed Pine ↔ Python parity tests."""
 
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
+
 from __future__ import annotations
 
 import csv
@@ -228,7 +230,7 @@ def test_exact_trace_matches_and_lineage_rebuilds(parity_bundle):
         policy=parity_bundle[1],
         context=parity_bundle[4],
     )
-    assert all(item.status is RepositoryWriteStatus.STORED for item in execution.writes)
+    assert all(item.status is RepositoryWriteStatus.STORED_NEW for item in execution.writes)
 
 
 def test_one_bar_execution_shift_is_mismatch(parity_bundle):
