@@ -210,14 +210,17 @@ def _verify_context(
     if request.authority_ref != context.parity_authority_ref:
         raise PinePythonParityAuthorityInvalid("parity request lacks exact governed authority")
     if evidence.authority_ref != context.parity_authority_ref:
-        raise PinePythonParityAuthorityInvalid("Pine execution evidence lacks exact governed authority")
+        raise PinePythonParityAuthorityInvalid(
+            "Pine execution evidence lacks exact governed authority"
+        )
     if policy.authority_ref != context.parity_authority_ref:
         raise PinePythonParityAuthorityInvalid("tolerance policy lacks exact governed authority")
 
     pine_artifact = context.pine_artifact
     pine_record = context.pine_intake_record
     if (
-        getattr(pine_artifact, "semantic_parity", None) is not PineSemanticParityStatus.NOT_EVALUATED
+        getattr(pine_artifact, "semantic_parity", None)
+        is not PineSemanticParityStatus.NOT_EVALUATED
         or getattr(pine_artifact, "repaint_assessment", None)
         is not RepaintAssessmentStatus.NOT_EVALUATED
         or getattr(pine_record, "status", None) is not PineIntakeStatus.ACCEPTED
@@ -249,24 +252,30 @@ def _verify_context(
             report=source.report,
         )
     except ValueError as exc:
-        raise PinePythonParityLineageMismatch("Python backtest lineage failed verification") from exc
+        raise PinePythonParityLineageMismatch(
+            "Python backtest lineage failed verification"
+        ) from exc
 
     expected_refs = {
         "pine_artifact_ref": _exact(
-            pine_artifact, pine_artifact.pine_artifact_id, pine_artifact.version  # type: ignore[attr-defined]
+            pine_artifact,
+            pine_artifact.pine_artifact_id,
+            pine_artifact.version,  # type: ignore[attr-defined]
         ),
         "pine_intake_record_ref": _exact(
-            pine_record, pine_record.intake_run_id, pine_record.version  # type: ignore[attr-defined]
+            pine_record,
+            pine_record.intake_run_id,
+            pine_record.version,  # type: ignore[attr-defined]
         ),
         "python_backtest_ref": _exact(
             source.backtest_artifact,
             source.backtest_artifact.artifact_id,
             source.backtest_artifact.version,
         ),
-        "pine_execution_evidence_ref": _exact(
-            evidence, evidence.evidence_id, evidence.version
+        "pine_execution_evidence_ref": _exact(evidence, evidence.evidence_id, evidence.version),
+        "strategy_ref": _exact(
+            source.strategy, source.strategy.strategy_id, source.strategy.version
         ),
-        "strategy_ref": _exact(source.strategy, source.strategy.strategy_id, source.strategy.version),
         "instrument_ref": _exact(
             source.instrument, source.instrument.instrument_id, source.instrument.version
         ),
@@ -374,9 +383,23 @@ def _compare(
     for index in range(overlap):
         exp, obs = expected[index], observed[index]
         if exp.action is not obs.action:
-            _mismatch(mismatches, ParityMismatchType.ACTION_MISMATCH, exp.action, obs.action, index, index)
+            _mismatch(
+                mismatches,
+                ParityMismatchType.ACTION_MISMATCH,
+                exp.action,
+                obs.action,
+                index,
+                index,
+            )
         if exp.side is not obs.side:
-            _mismatch(mismatches, ParityMismatchType.SIDE_MISMATCH, exp.side, obs.side, index, index)
+            _mismatch(
+                mismatches,
+                ParityMismatchType.SIDE_MISMATCH,
+                exp.side,
+                obs.side,
+                index,
+                index,
+            )
         if exp.signal_time != obs.signal_time:
             _mismatch(
                 mismatches,
@@ -456,12 +479,8 @@ def _compare(
             index,
         )
 
-    expected_completed = sum(
-        event.action is PineExecutionAction.EXIT for event in expected
-    )
-    observed_completed = sum(
-        event.action is PineExecutionAction.EXIT for event in observed
-    )
+    expected_completed = sum(event.action is PineExecutionAction.EXIT for event in expected)
+    observed_completed = sum(event.action is PineExecutionAction.EXIT for event in observed)
     if (
         expected_completed != backtest_artifact.trade_count
         or observed_completed != backtest_artifact.trade_count
@@ -475,12 +494,8 @@ def _compare(
             None,
         )
 
-    expected_final = (
-        expected[-1].position_after if expected else SimulatedPositionState.FLAT
-    )
-    observed_final = (
-        observed[-1].position_after if observed else SimulatedPositionState.FLAT
-    )
+    expected_final = expected[-1].position_after if expected else SimulatedPositionState.FLAT
+    observed_final = observed[-1].position_after if observed else SimulatedPositionState.FLAT
     if (
         expected_final is not backtest_artifact.open_position
         or observed_final is not backtest_artifact.open_position
