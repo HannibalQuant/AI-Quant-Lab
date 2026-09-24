@@ -43,6 +43,12 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationSelectionResult,
     OptimizationTrialRecord,
 )
+from ai_quant_lab.core.pine_python_parity_contracts import (
+    ParityTolerancePolicy,
+    PineExecutionEvidence,
+    PinePythonParityResult,
+    PinePythonParityRunRecord,
+)
 from ai_quant_lab.core.pine_strategy_contracts import (
     PineStrategyIntakeRecord,
     PineStrategySourceArtifact,
@@ -109,6 +115,10 @@ type StoredDatasetObject = (
     | OptimizationRunRecord
     | PineStrategySourceArtifact
     | PineStrategyIntakeRecord
+    | ParityTolerancePolicy
+    | PineExecutionEvidence
+    | PinePythonParityResult
+    | PinePythonParityRunRecord
 )
 
 
@@ -184,6 +194,10 @@ class StoredObjectType(StrEnum):
     OPTIMIZATION_RUN_RECORD = "optimization-run-record"
     PINE_STRATEGY_SOURCE_ARTIFACT = "pine-strategy-source-artifact"
     PINE_STRATEGY_INTAKE_RECORD = "pine-strategy-intake-record"
+    PARITY_TOLERANCE_POLICY = "parity-tolerance-policy"
+    PINE_EXECUTION_EVIDENCE = "pine-execution-evidence"
+    PINE_PYTHON_PARITY_RESULT = "pine-python-parity-result"
+    PINE_PYTHON_PARITY_RUN_RECORD = "pine-python-parity-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -289,6 +303,10 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     OptimizationRunRecord: StoredObjectType.OPTIMIZATION_RUN_RECORD,
     PineStrategySourceArtifact: StoredObjectType.PINE_STRATEGY_SOURCE_ARTIFACT,
     PineStrategyIntakeRecord: StoredObjectType.PINE_STRATEGY_INTAKE_RECORD,
+    ParityTolerancePolicy: StoredObjectType.PARITY_TOLERANCE_POLICY,
+    PineExecutionEvidence: StoredObjectType.PINE_EXECUTION_EVIDENCE,
+    PinePythonParityResult: StoredObjectType.PINE_PYTHON_PARITY_RESULT,
+    PinePythonParityRunRecord: StoredObjectType.PINE_PYTHON_PARITY_RUN_RECORD,
 }
 
 
@@ -364,6 +382,14 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.pine_artifact_id)
     if isinstance(record, PineStrategyIntakeRecord):
         return str(record.intake_run_id)
+    if isinstance(record, ParityTolerancePolicy):
+        return str(record.policy_id)
+    if isinstance(record, PineExecutionEvidence):
+        return str(record.evidence_id)
+    if isinstance(record, PinePythonParityResult):
+        return str(record.parity_result_id)
+    if isinstance(record, PinePythonParityRunRecord):
+        return str(record.parity_run_id)
     return str(record.dataset_id)
 
 

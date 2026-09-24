@@ -115,6 +115,21 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationTrialStatus,
     SelectionDecision,
 )
+from ai_quant_lab.core.pine_python_parity_contracts import (
+    ParityMismatch,
+    ParityMismatchType,
+    ParityTolerancePolicy,
+    PineEvidenceSourceFormat,
+    PineExecutionAction,
+    PineExecutionEvent,
+    PineExecutionEvidence,
+    PineExecutionSide,
+    PineParityReasonCode,
+    PineParitySemanticStatus,
+    PinePythonParityDecision,
+    PinePythonParityResult,
+    PinePythonParityRunRecord,
+)
 from ai_quant_lab.core.pine_strategy_contracts import (
     PineDefaultQuantityType,
     PineIntakeReasonCode,
@@ -255,6 +270,10 @@ type GovernedRecord = (
     | OptimizationRunRecord
     | PineStrategySourceArtifact
     | PineStrategyIntakeRecord
+    | ParityTolerancePolicy
+    | PineExecutionEvidence
+    | PinePythonParityResult
+    | PinePythonParityRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -324,6 +343,10 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     OptimizationRunRecord: "OptimizationRunRecord",
     PineStrategySourceArtifact: "PineStrategySourceArtifact",
     PineStrategyIntakeRecord: "PineStrategyIntakeRecord",
+    ParityTolerancePolicy: "ParityTolerancePolicy",
+    PineExecutionEvidence: "PineExecutionEvidence",
+    PinePythonParityResult: "PinePythonParityResult",
+    PinePythonParityRunRecord: "PinePythonParityRunRecord",
 }
 
 
@@ -1575,6 +1598,110 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "input_fingerprint": record.input_fingerprint,
             "status": record.status.value,
             "reason_codes": [item.value for item in record.reason_codes],
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ParityTolerancePolicy):
+        return {
+            "policy_id": str(record.policy_id),
+            "version": record.version.number,
+            "timestamp_exact": record.timestamp_exact,
+            "absolute_price_tolerance": record.absolute_price_tolerance,
+            "relative_price_tolerance": record.relative_price_tolerance,
+            "quantity_tolerance": record.quantity_tolerance,
+            "commission_tolerance": record.commission_tolerance,
+            "pnl_tolerance": record.pnl_tolerance,
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, PineExecutionEvidence):
+        return {
+            "evidence_id": str(record.evidence_id),
+            "version": record.version.number,
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "observation_start": _timestamp_payload(record.observation_start),
+            "observation_end": _timestamp_payload(record.observation_end),
+            "source_format": record.source_format.value,
+            "source_text": record.source_text,
+            "source_sha256": record.source_sha256,
+            "source_byte_size": record.source_byte_size,
+            "events": [
+                {
+                    "event_index": item.event_index,
+                    "signal_time": _timestamp_payload(item.signal_time),
+                    "execution_time": _timestamp_payload(item.execution_time),
+                    "action": item.action.value,
+                    "side": item.side.value,
+                    "execution_price": item.execution_price,
+                    "position_after": item.position_after.value,
+                    "quantity": item.quantity,
+                    "commission": item.commission,
+                    "trade_id": item.trade_id,
+                    "source_row": item.source_row,
+                }
+                for item in record.events
+            ],
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, PinePythonParityResult):
+        return {
+            "parity_result_id": str(record.parity_result_id),
+            "version": record.version.number,
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "pine_execution_evidence_ref": _trace_ref_payload(record.pine_execution_evidence_ref),
+            "python_backtest_ref": _trace_ref_payload(record.python_backtest_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "tolerance_policy_ref": _trace_ref_payload(record.tolerance_policy_ref),
+            "expected_event_count": record.expected_event_count,
+            "observed_event_count": record.observed_event_count,
+            "mismatch_count": record.mismatch_count,
+            "mismatches": [
+                {
+                    "mismatch_index": item.mismatch_index,
+                    "mismatch_type": item.mismatch_type.value,
+                    "expected_value": item.expected_value,
+                    "observed_value": item.observed_value,
+                    "expected_event_index": item.expected_event_index,
+                    "observed_event_index": item.observed_event_index,
+                    "explanation_code": item.explanation_code,
+                }
+                for item in record.mismatches
+            ],
+            "decision": record.decision.value,
+            "reason_codes": [item.value for item in record.reason_codes],
+            "input_fingerprint": record.input_fingerprint,
+            "semantic_parity": record.semantic_parity.value,
+            "repaint_assessment": record.repaint_assessment.value,
+            "authority_ref": _trace_ref_payload(record.authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, PinePythonParityRunRecord):
+        return {
+            "parity_run_id": str(record.parity_run_id),
+            "version": record.version.number,
+            "request_fingerprint": record.request_fingerprint,
+            "result_ref": _trace_ref_payload(record.result_ref),
+            "input_fingerprint": record.input_fingerprint,
+            "expected_event_count": record.expected_event_count,
+            "observed_event_count": record.observed_event_count,
+            "mismatch_count": record.mismatch_count,
+            "decision": record.decision.value,
             "authority_ref": _trace_ref_payload(record.authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "deployment_authorization": record.deployment_authorization.value,
@@ -3874,6 +4001,236 @@ def _decode_pine_intake_record(payload: Any) -> PineStrategyIntakeRecord:
     )
 
 
+def _decode_parity_tolerance_policy(payload: Any) -> ParityTolerancePolicy:
+    fields = {
+        "policy_id",
+        "version",
+        "timestamp_exact",
+        "absolute_price_tolerance",
+        "relative_price_tolerance",
+        "quantity_tolerance",
+        "commission_tolerance",
+        "pnl_tolerance",
+        "authority_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ParityTolerancePolicy.payload")
+    return ParityTolerancePolicy(
+        cast(ArtifactId, _typed_id(item["policy_id"], ArtifactId, "policy_id")),
+        _version(item["version"], "version"),
+        _boolean(item["timestamp_exact"], "timestamp_exact"),
+        _text(item["absolute_price_tolerance"], "absolute_price_tolerance"),
+        _text(item["relative_price_tolerance"], "relative_price_tolerance"),
+        _text(item["quantity_tolerance"], "quantity_tolerance"),
+        _text(item["commission_tolerance"], "commission_tolerance"),
+        _text(item["pnl_tolerance"], "pnl_tolerance"),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_pine_event(payload: Any) -> PineExecutionEvent:
+    fields = {
+        "event_index",
+        "signal_time",
+        "execution_time",
+        "action",
+        "side",
+        "execution_price",
+        "position_after",
+        "quantity",
+        "commission",
+        "trade_id",
+        "source_row",
+    }
+    item = _strict_object(payload, fields, "PineExecutionEvent")
+    return PineExecutionEvent(
+        _integer(item["event_index"], "event_index"),
+        _timestamp(item["signal_time"], "signal_time"),
+        _timestamp(item["execution_time"], "execution_time"),
+        PineExecutionAction(_text(item["action"], "action")),
+        PineExecutionSide(_text(item["side"], "side")),
+        _text(item["execution_price"], "execution_price"),
+        SimulatedPositionState(_text(item["position_after"], "position_after")),
+        _text(item["quantity"], "quantity"),
+        _text(item["commission"], "commission"),
+        _text(item["trade_id"], "trade_id"),
+        _integer(item["source_row"], "source_row"),
+    )
+
+
+def _decode_pine_execution_evidence(payload: Any) -> PineExecutionEvidence:
+    fields = {
+        "evidence_id",
+        "version",
+        "pine_artifact_ref",
+        "strategy_ref",
+        "instrument_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "observation_start",
+        "observation_end",
+        "source_format",
+        "source_text",
+        "source_sha256",
+        "source_byte_size",
+        "events",
+        "provenance_ref",
+        "authority_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "PineExecutionEvidence.payload")
+    if not isinstance(item["events"], list):
+        raise InvalidSerialization("events must be an array")
+    return PineExecutionEvidence(
+        cast(ArtifactId, _typed_id(item["evidence_id"], ArtifactId, "evidence_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _timestamp(item["observation_start"], "observation_start"),
+        _timestamp(item["observation_end"], "observation_end"),
+        PineEvidenceSourceFormat(_text(item["source_format"], "source_format")),
+        _text(item["source_text"], "source_text"),
+        _text(item["source_sha256"], "source_sha256"),
+        _integer(item["source_byte_size"], "source_byte_size"),
+        tuple(_decode_pine_event(value) for value in item["events"]),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_parity_mismatch(payload: Any) -> ParityMismatch:
+    fields = {
+        "mismatch_index",
+        "mismatch_type",
+        "expected_value",
+        "observed_value",
+        "expected_event_index",
+        "observed_event_index",
+        "explanation_code",
+    }
+    item = _strict_object(payload, fields, "ParityMismatch")
+    return ParityMismatch(
+        _integer(item["mismatch_index"], "mismatch_index"),
+        ParityMismatchType(_text(item["mismatch_type"], "mismatch_type")),
+        _text(item["expected_value"], "expected_value"),
+        _text(item["observed_value"], "observed_value"),
+        None
+        if item["expected_event_index"] is None
+        else _integer(item["expected_event_index"], "expected_event_index"),
+        None
+        if item["observed_event_index"] is None
+        else _integer(item["observed_event_index"], "observed_event_index"),
+        _text(item["explanation_code"], "explanation_code"),
+    )
+
+
+def _decode_pine_python_parity_result(payload: Any) -> PinePythonParityResult:
+    fields = {
+        "parity_result_id",
+        "version",
+        "pine_artifact_ref",
+        "pine_execution_evidence_ref",
+        "python_backtest_ref",
+        "strategy_ref",
+        "instrument_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "tolerance_policy_ref",
+        "expected_event_count",
+        "observed_event_count",
+        "mismatch_count",
+        "mismatches",
+        "decision",
+        "reason_codes",
+        "input_fingerprint",
+        "semantic_parity",
+        "repaint_assessment",
+        "authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "PinePythonParityResult.payload")
+    if not isinstance(item["mismatches"], list):
+        raise InvalidSerialization("mismatches must be an array")
+    return PinePythonParityResult(
+        cast(ArtifactId, _typed_id(item["parity_result_id"], ArtifactId, "parity_result_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        _trace_ref(item["pine_execution_evidence_ref"], "pine_execution_evidence_ref"),
+        _trace_ref(item["python_backtest_ref"], "python_backtest_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["tolerance_policy_ref"], "tolerance_policy_ref"),
+        _integer(item["expected_event_count"], "expected_event_count"),
+        _integer(item["observed_event_count"], "observed_event_count"),
+        _integer(item["mismatch_count"], "mismatch_count"),
+        tuple(_decode_parity_mismatch(value) for value in item["mismatches"]),
+        PinePythonParityDecision(_text(item["decision"], "decision")),
+        tuple(
+            PineParityReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _text(item["input_fingerprint"], "input_fingerprint"),
+        PineParitySemanticStatus(_text(item["semantic_parity"], "semantic_parity")),
+        RepaintAssessmentStatus(_text(item["repaint_assessment"], "repaint_assessment")),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_pine_python_parity_run(payload: Any) -> PinePythonParityRunRecord:
+    fields = {
+        "parity_run_id",
+        "version",
+        "request_fingerprint",
+        "result_ref",
+        "input_fingerprint",
+        "expected_event_count",
+        "observed_event_count",
+        "mismatch_count",
+        "decision",
+        "authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "PinePythonParityRunRecord.payload")
+    return PinePythonParityRunRecord(
+        cast(RunId, _typed_id(item["parity_run_id"], RunId, "parity_run_id")),
+        _version(item["version"], "version"),
+        _text(item["request_fingerprint"], "request_fingerprint"),
+        _trace_ref(item["result_ref"], "result_ref"),
+        _text(item["input_fingerprint"], "input_fingerprint"),
+        _integer(item["expected_event_count"], "expected_event_count"),
+        _integer(item["observed_event_count"], "observed_event_count"),
+        _integer(item["mismatch_count"], "mismatch_count"),
+        PinePythonParityDecision(_text(item["decision"], "decision")),
+        _trace_ref(item["authority_ref"], "authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -3917,6 +4274,10 @@ _DECODERS = {
     "OptimizationRunRecord": _decode_optimization_run,
     "PineStrategySourceArtifact": _decode_pine_source_artifact,
     "PineStrategyIntakeRecord": _decode_pine_intake_record,
+    "ParityTolerancePolicy": _decode_parity_tolerance_policy,
+    "PineExecutionEvidence": _decode_pine_execution_evidence,
+    "PinePythonParityResult": _decode_pine_python_parity_result,
+    "PinePythonParityRunRecord": _decode_pine_python_parity_run,
 }
 
 
@@ -3964,6 +4325,10 @@ def decode[
         OptimizationRunRecord,
         PineStrategySourceArtifact,
         PineStrategyIntakeRecord,
+        ParityTolerancePolicy,
+        PineExecutionEvidence,
+        PinePythonParityResult,
+        PinePythonParityRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""
