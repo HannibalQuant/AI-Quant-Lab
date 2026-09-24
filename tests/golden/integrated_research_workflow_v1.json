@@ -1,0 +1,18 @@
+{
+  "format": "integrated-research-workflow-v1",
+  "proposal_ref": "placeholder",
+  "final_strategy_ref": "placeholder",
+  "backtest_ref": "placeholder",
+  "scientific_validation_ref": "placeholder",
+  "robustness_ref": "placeholder",
+  "optimization_selection_ref": "placeholder",
+  "pine_artifact_ref": "placeholder",
+  "parity_ref": "placeholder",
+  "final_state": "PLACEHOLDER",
+  "handoff_readiness": "PLACEHOLDER",
+  "input_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "result_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "handoff_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "manifest_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "run_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}
