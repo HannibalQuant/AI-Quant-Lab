@@ -146,9 +146,7 @@ class AIStrategyProposal:
             names != tuple(sorted(names))
             or len(set(names)) != len(names)
             or any(
-                not isinstance(name, str)
-                or not name
-                or not isinstance(value, str)
+                not isinstance(name, str) or not name or not isinstance(value, str)
                 for name, value in self.parameter_declarations
             )
         ):
@@ -384,9 +382,7 @@ class TradingViewResearchHandoffManifest:
             or _FP.fullmatch(self.pine_source_sha256) is None
             or self.repaint_assessment is not RepaintAssessmentStatus.NOT_EVALUATED
         ):
-            raise IntegratedResearchWorkflowContractError(
-                "invalid TradingView research manifest"
-            )
+            raise IntegratedResearchWorkflowContractError("invalid TradingView research manifest")
         for field in (
             "pine_artifact_ref",
             "parity_result_ref",
@@ -435,8 +431,7 @@ class IntegratedResearchWorkflowResult:
             or not self.stages
             or tuple(stage.stage for stage in self.stages)
             != tuple(dict.fromkeys(stage.stage for stage in self.stages))
-            or tuple(sorted(self.reason_codes, key=lambda item: item.value))
-            != self.reason_codes
+            or tuple(sorted(self.reason_codes, key=lambda item: item.value)) != self.reason_codes
             or len(set(self.reason_codes)) != len(self.reason_codes)
         ):
             raise IntegratedResearchWorkflowContractError("invalid workflow result")
@@ -506,6 +501,4 @@ class IntegratedResearchWorkflowRunRecord:
             self.deployment_authorization is not DeploymentAuthorizationStatus.NOT_AUTHORIZED
             or self.execution_state is not ExecutionState.PLANNED_CLOSED
         ):
-            raise IntegratedResearchWorkflowContractError(
-                "workflow run cannot grant authority"
-            )
+            raise IntegratedResearchWorkflowContractError("workflow run cannot grant authority")
