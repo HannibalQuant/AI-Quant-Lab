@@ -467,7 +467,7 @@ def _build(
     )
     final_state, reasons = derive_final_workflow_state(
         proposal_status=proposal.status,
-        authorization=final.authorization.decision,
+        authorization=final.authorization.status,
         scientific=final.scientific_result.decision,
         robustness=final.robustness_result.decision,
         optimization=optimization_decision,
