@@ -254,7 +254,9 @@ def _verify_authoritative_chain(
 
     proposal_ref = _exact(proposal, proposal.proposal_id, proposal.version)
     final_strategy_ref = _exact(final.strategy, final.strategy.strategy_id, final.strategy.version)
-    instrument_ref = _exact(final.instrument, final.instrument.instrument_id, final.instrument.version)
+    instrument_ref = _exact(
+        final.instrument, final.instrument.instrument_id, final.instrument.version
+    )
     auth_ref = _exact(
         final.authorization,
         final.authorization.authorization_id,
@@ -401,8 +403,7 @@ def _verify_authoritative_chain(
         or context.parity_result.instrument_ref != instrument_ref
         or context.parity_result.normalized_manifest_ref
         != final.backtest_artifact.normalized_manifest_ref
-        or context.parity_result.normalized_lock_ref
-        != final.backtest_artifact.normalized_lock_ref
+        or context.parity_result.normalized_lock_ref != final.backtest_artifact.normalized_lock_ref
         or context.parity_result.python_backtest_ref
         != _exact(
             final.backtest_artifact,
