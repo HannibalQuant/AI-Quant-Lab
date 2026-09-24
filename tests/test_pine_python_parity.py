@@ -311,6 +311,7 @@ def test_price_tolerance_is_decimal_and_bounded(parity_bundle):
         parity_bundle[1],
         policy_id=ArtifactId("relaxed-price-tolerance"),
         absolute_price_tolerance="0.0001",
+        pnl_tolerance="1",
     )
     execution, _ = _run(parity_bundle, evidence=evidence, policy=relaxed)
     assert execution.result.decision is PinePythonParityDecision.MATCH
