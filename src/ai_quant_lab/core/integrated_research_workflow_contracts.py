@@ -118,9 +118,7 @@ def _optional_exact(ref: TraceabilityRef | None, field: str) -> None:
 def _authority(ref: TraceabilityRef, field: str) -> None:
     _exact(ref, field)
     if not isinstance(ref.object_id, AuthorityBindingId):
-        raise IntegratedResearchWorkflowContractError(
-            f"{field} must identify AuthorityBindingId"
-        )
+        raise IntegratedResearchWorkflowContractError(f"{field} must identify AuthorityBindingId")
 
 
 @dataclass(frozen=True, slots=True)
