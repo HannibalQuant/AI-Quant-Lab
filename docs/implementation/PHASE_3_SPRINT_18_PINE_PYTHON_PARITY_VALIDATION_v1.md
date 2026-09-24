@@ -70,8 +70,10 @@ be hidden by numeric tolerance.
 
 ## 13. Numeric parity
 
-Execution price, quantity and commission are compared with Decimal arithmetic. PnL tolerance is
-contracted for later evidence that exposes comparable PnL; aggregate PnL does not override any
+Execution price, quantity and commission are compared with Decimal arithmetic. Once event
+structure is aligned, realized Pine net PnL is deterministically reconstructed from paired
+ENTRY/EXIT execution prices, entry quantity and commissions, then compared with the authoritative
+Python completed-trade net PnL using the declared PnL tolerance. Aggregate PnL never overrides an
 event-level mismatch.
 
 ## 14. Open-position handling
@@ -132,8 +134,9 @@ bound. Rebuilding the lineage rejects persisted substitutions.
 ## 24. Tests
 
 Focused coverage includes exact match, no-lookahead/same-time execution, execution shift,
-missing events, final-state mismatch, incomplete trace, Decimal price tolerance, timezone
-normalization, naive timestamp rejection, authority mismatch and strict CSV columns.
+missing/extra events, final-state mismatch, incomplete trace, Decimal price tolerance, realized
+PnL parity, timezone normalization, naive timestamp rejection, authority mismatch, persistence,
+tamper detection and strict CSV columns.
 
 ## 25. Governance BEFORE -> AFTER
 
@@ -165,8 +168,9 @@ without resolving provider authentication, repaint guarantees, deployment or exe
 ## 27. Limitations
 
 This sprint validates supplied historical execution evidence only. It does not establish a general
-no-repaint guarantee or prove TradingView compilation. The v1 CSV does not carry an independent
-aggregate PnL field, so PnL cannot be used to establish MATCH.
+no-repaint guarantee or prove TradingView compilation. The v1 CSV does not carry a separately
+reported aggregate PnL field; realized PnL is reconstructed only after structural event alignment
+from the supplied execution prices, quantities and commissions.
 
 ## 28. Sprint 19 recommendation only
 
