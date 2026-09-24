@@ -1762,9 +1762,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
             "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
             "instrument_ref": _trace_ref_payload(record.instrument_ref),
-            "experiment_authorization_ref": _trace_ref_payload(
-                record.experiment_authorization_ref
-            ),
+            "experiment_authorization_ref": _trace_ref_payload(record.experiment_authorization_ref),
             "validation_plan_ref": _trace_ref_payload(record.validation_plan_ref),
             "robustness_plan_ref": _trace_ref_payload(record.robustness_plan_ref),
             "optimization_selection_ref": (
@@ -4632,7 +4630,9 @@ def _decode_integrated_workflow_result(payload: Any) -> IntegratedResearchWorkfl
         IntegratedResearchWorkflowState(_text(item["final_state"], "final_state")),
         _optional_trace_ref(item["handoff_ref"], "handoff_ref"),
         _optional_trace_ref(item["tradingview_manifest_ref"], "tradingview_manifest_ref"),
-        tuple(WorkflowReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")),
+        tuple(
+            WorkflowReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
         _text(item["input_fingerprint"], "input_fingerprint"),
         _trace_ref(item["workflow_authority_ref"], "workflow_authority_ref"),
         _trace_ref(item["provenance_ref"], "provenance_ref"),
