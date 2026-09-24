@@ -326,6 +326,24 @@ def test_price_tolerance_is_decimal_and_bounded(parity_bundle):
     }
 
 
+def test_realized_pnl_is_compared_after_event_alignment(parity_bundle):
+    rows = _event_rows(parity_bundle[0].backtest_artifact)
+    assert len(rows) >= 2
+    rows[0]["commission"] = str(Decimal(rows[0]["commission"]) + Decimal("0.001"))
+    evidence = _import_variant(parity_bundle, rows, evidence_id="pnl-mismatch")
+    policy = replace(
+        parity_bundle[1],
+        policy_id=ArtifactId("pnl-sensitive-tolerance"),
+        commission_tolerance="0.001",
+        pnl_tolerance="0",
+    )
+    execution, _ = _run(parity_bundle, evidence=evidence, policy=policy)
+    assert execution.result.decision is PinePythonParityDecision.MISMATCH
+    assert ParityMismatchType.PNL_MISMATCH in {
+        item.mismatch_type for item in execution.result.mismatches
+    }
+
+
 def test_equivalent_timezone_representation_normalizes_to_utc(parity_bundle):
     rows = _event_rows(parity_bundle[0].backtest_artifact)
     assert rows
