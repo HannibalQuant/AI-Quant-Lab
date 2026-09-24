@@ -9,6 +9,7 @@ from enum import StrEnum
 from ai_quant_lab.core.model import (
     AgentId,
     ArtifactId,
+    AuthorityBindingId,
     ExecutionState,
     ObjectVersion,
     RunId,
@@ -114,6 +115,14 @@ def _optional_exact(ref: TraceabilityRef | None, field: str) -> None:
         _exact(ref, field)
 
 
+def _authority(ref: TraceabilityRef, field: str) -> None:
+    _exact(ref, field)
+    if not isinstance(ref.object_id, AuthorityBindingId):
+        raise IntegratedResearchWorkflowContractError(
+            f"{field} must identify AuthorityBindingId"
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class AIStrategyProposal:
     proposal_id: ArtifactId
@@ -208,6 +217,12 @@ class IntegratedResearchWorkflowPlan:
         ):
             _exact(getattr(self, field), field)
         _optional_exact(self.optimization_selection_ref, "optimization_selection_ref")
+        for field in (
+            "pine_intake_authority_ref",
+            "parity_authority_ref",
+            "workflow_authority_ref",
+        ):
+            _authority(getattr(self, field), field)
         if (
             self.mode is IntegratedResearchWorkflowMode.DIRECT_STRATEGY
             and self.optimization_selection_ref is not None
@@ -254,10 +269,10 @@ class IntegratedResearchWorkflowRequest:
             "pine_artifact_ref",
             "pine_intake_record_ref",
             "parity_result_ref",
-            "workflow_authority_ref",
             "provenance_ref",
         ):
             _exact(getattr(self, field), field)
+        _authority(self.workflow_authority_ref, "workflow_authority_ref")
 
 
 @dataclass(frozen=True, slots=True)
@@ -439,10 +454,10 @@ class IntegratedResearchWorkflowResult:
             "workflow_plan_ref",
             "proposal_ref",
             "final_strategy_ref",
-            "workflow_authority_ref",
             "provenance_ref",
         ):
             _exact(getattr(self, field), field)
+        _authority(self.workflow_authority_ref, "workflow_authority_ref")
         _optional_exact(self.handoff_ref, "handoff_ref")
         _optional_exact(self.tradingview_manifest_ref, "tradingview_manifest_ref")
         if (
@@ -492,10 +507,10 @@ class IntegratedResearchWorkflowRunRecord:
             "workflow_plan_ref",
             "proposal_ref",
             "result_ref",
-            "workflow_authority_ref",
             "provenance_ref",
         ):
             _exact(getattr(self, field), field)
+        _authority(self.workflow_authority_ref, "workflow_authority_ref")
         _optional_exact(self.handoff_ref, "handoff_ref")
         if (
             self.deployment_authorization is not DeploymentAuthorizationStatus.NOT_AUTHORIZED
