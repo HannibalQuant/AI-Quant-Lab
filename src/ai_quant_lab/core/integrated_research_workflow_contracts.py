@@ -291,7 +291,8 @@ class WorkflowStageResult:
 class ResearchHandoffPackage:
     handoff_id: ArtifactId
     version: ObjectVersion
-    workflow_run_ref: TraceabilityRef
+    workflow_run_id: RunId
+    workflow_input_fingerprint: str
     proposal_ref: TraceabilityRef
     final_strategy_ref: TraceabilityRef
     selected_candidate_ref: TraceabilityRef | None
@@ -320,7 +321,6 @@ class ResearchHandoffPackage:
         ):
             raise IntegratedResearchWorkflowContractError("invalid research handoff")
         for field in (
-            "workflow_run_ref",
             "proposal_ref",
             "final_strategy_ref",
             "backtest_ref",
@@ -334,6 +334,12 @@ class ResearchHandoffPackage:
             "provenance_ref",
         ):
             _exact(getattr(self, field), field)
+        if (
+            not isinstance(self.workflow_run_id, RunId)
+            or not isinstance(self.workflow_input_fingerprint, str)
+            or _FP.fullmatch(self.workflow_input_fingerprint) is None
+        ):
+            raise IntegratedResearchWorkflowContractError("invalid handoff workflow binding")
         _optional_exact(self.selected_candidate_ref, "selected_candidate_ref")
         _optional_exact(self.optimization_selection_ref, "optimization_selection_ref")
         if (
