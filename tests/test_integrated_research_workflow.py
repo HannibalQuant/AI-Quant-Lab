@@ -212,14 +212,13 @@ def test_full_optimized_pipeline_reaches_research_handoff(workflow_bundle):
     assert execution.result.final_state is IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY
     assert execution.handoff is not None
     assert execution.tradingview_manifest is not None
-    assert (
-        execution.handoff.readiness
-        is ResearchHandoffReadiness.READY_FOR_HUMAN_RESEARCH_USE
-    )
+    assert execution.handoff.readiness is ResearchHandoffReadiness.READY_FOR_HUMAN_RESEARCH_USE
     assert execution.handoff.parity_decision is PinePythonParityDecision.MATCH
     assert execution.result.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert execution.result.execution_state is ExecutionState.PLANNED_CLOSED
-    assert execution.handoff.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    assert (
+        execution.handoff.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    )
     assert execution.handoff.execution_state is ExecutionState.PLANNED_CLOSED
     assert all(item.status is RepositoryWriteStatus.STORED_NEW for item in execution.writes)
     verify_integrated_research_workflow_lineage(
@@ -274,9 +273,7 @@ def test_fail_and_inconclusive_mapping_remains_distinct():
     assert inconclusive is IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE
     assert reasons == (WorkflowReasonCode.PARITY_INCONCLUSIVE,)
 
-    direct, reasons = derive_final_workflow_state(
-        **{**common, "optimization": None}
-    )
+    direct, reasons = derive_final_workflow_state(**{**common, "optimization": None})
     assert direct is IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY
     assert reasons == (WorkflowReasonCode.RESEARCH_HANDOFF_READY,)
 
@@ -411,13 +408,9 @@ def test_integrated_workflow_golden_is_pinned(workflow_bundle):
         "proposal_ref": str(execution.result.proposal_ref.object_id),
         "final_strategy_ref": str(execution.result.final_strategy_ref.object_id),
         "backtest_ref": str(execution.handoff.backtest_ref.object_id),
-        "scientific_validation_ref": str(
-            execution.handoff.scientific_validation_ref.object_id
-        ),
+        "scientific_validation_ref": str(execution.handoff.scientific_validation_ref.object_id),
         "robustness_ref": str(execution.handoff.robustness_ref.object_id),
-        "optimization_selection_ref": str(
-            execution.handoff.optimization_selection_ref.object_id
-        ),
+        "optimization_selection_ref": str(execution.handoff.optimization_selection_ref.object_id),
         "pine_artifact_ref": str(execution.handoff.pine_artifact_ref.object_id),
         "parity_ref": str(execution.handoff.parity_result_ref.object_id),
         "final_state": execution.result.final_state.value,
