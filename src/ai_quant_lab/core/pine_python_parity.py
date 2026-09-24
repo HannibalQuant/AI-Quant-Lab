@@ -507,6 +507,38 @@ def _compare(
             None,
         )
 
+    if not mismatches and observed:
+        with localcontext(_DECIMAL_CONTEXT):
+            observed_net_pnl = Decimal(0)
+            for entry_index in range(0, len(observed) - 1, 2):
+                entry = observed[entry_index]
+                exit_event = observed[entry_index + 1]
+                if (
+                    entry.action is not PineExecutionAction.ENTRY
+                    or exit_event.action is not PineExecutionAction.EXIT
+                ):
+                    break
+                quantity = Decimal(entry.quantity)
+                observed_net_pnl += (
+                    (Decimal(exit_event.execution_price) - Decimal(entry.execution_price))
+                    * quantity
+                    - Decimal(entry.commission)
+                    - Decimal(exit_event.commission)
+                )
+            if not _within(
+                str(observed_net_pnl),
+                backtest_artifact.net_pnl,
+                policy.pnl_tolerance,
+            ):
+                _mismatch(
+                    mismatches,
+                    ParityMismatchType.PNL_MISMATCH,
+                    backtest_artifact.net_pnl,
+                    str(observed_net_pnl),
+                    None,
+                    None,
+                )
+
     expected_final = expected[-1].position_after if expected else SimulatedPositionState.FLAT
     observed_final = observed[-1].position_after if observed else SimulatedPositionState.FLAT
     if (
