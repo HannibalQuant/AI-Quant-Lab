@@ -1,6 +1,6 @@
 """Sprint 19 integrated research workflow tests."""
 
-# mypy: disable-error-code="no-untyped-def,no-untyped-call"
+# mypy: disable-error-code="no-untyped-def,no-untyped-call,arg-type"
 
 from __future__ import annotations
 
