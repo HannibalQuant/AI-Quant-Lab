@@ -26,6 +26,14 @@ from ai_quant_lab.core.experiment_runner_contracts import (
     ExperimentResultArtifact,
     ExperimentRunRecord,
 )
+from ai_quant_lab.core.integrated_research_workflow_contracts import (
+    AIStrategyProposal,
+    IntegratedResearchWorkflowPlan,
+    IntegratedResearchWorkflowResult,
+    IntegratedResearchWorkflowRunRecord,
+    ResearchHandoffPackage,
+    TradingViewResearchHandoffManifest,
+)
 from ai_quant_lab.core.integrity import IntegrityError, fingerprint_record, verify_integrity
 from ai_quant_lab.core.market_data import MarketBar, NormalizedBarManifest
 from ai_quant_lab.core.model import (
@@ -119,6 +127,12 @@ type StoredDatasetObject = (
     | PineExecutionEvidence
     | PinePythonParityResult
     | PinePythonParityRunRecord
+    | AIStrategyProposal
+    | IntegratedResearchWorkflowPlan
+    | IntegratedResearchWorkflowResult
+    | ResearchHandoffPackage
+    | TradingViewResearchHandoffManifest
+    | IntegratedResearchWorkflowRunRecord
 )
 
 
@@ -198,6 +212,12 @@ class StoredObjectType(StrEnum):
     PINE_EXECUTION_EVIDENCE = "pine-execution-evidence"
     PINE_PYTHON_PARITY_RESULT = "pine-python-parity-result"
     PINE_PYTHON_PARITY_RUN_RECORD = "pine-python-parity-run-record"
+    AI_STRATEGY_PROPOSAL = "ai-strategy-proposal"
+    INTEGRATED_RESEARCH_WORKFLOW_PLAN = "integrated-research-workflow-plan"
+    INTEGRATED_RESEARCH_WORKFLOW_RESULT = "integrated-research-workflow-result"
+    RESEARCH_HANDOFF_PACKAGE = "research-handoff-package"
+    TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST = "tradingview-research-handoff-manifest"
+    INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD = "integrated-research-workflow-run-record"
 
 
 class RepositoryWriteStatus(StrEnum):
@@ -307,6 +327,12 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     PineExecutionEvidence: StoredObjectType.PINE_EXECUTION_EVIDENCE,
     PinePythonParityResult: StoredObjectType.PINE_PYTHON_PARITY_RESULT,
     PinePythonParityRunRecord: StoredObjectType.PINE_PYTHON_PARITY_RUN_RECORD,
+    AIStrategyProposal: StoredObjectType.AI_STRATEGY_PROPOSAL,
+    IntegratedResearchWorkflowPlan: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_PLAN,
+    IntegratedResearchWorkflowResult: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_RESULT,
+    ResearchHandoffPackage: StoredObjectType.RESEARCH_HANDOFF_PACKAGE,
+    TradingViewResearchHandoffManifest: StoredObjectType.TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST,
+    IntegratedResearchWorkflowRunRecord: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD,
 }
 
 
@@ -390,6 +416,18 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.parity_result_id)
     if isinstance(record, PinePythonParityRunRecord):
         return str(record.parity_run_id)
+    if isinstance(record, AIStrategyProposal):
+        return str(record.proposal_id)
+    if isinstance(record, IntegratedResearchWorkflowPlan):
+        return str(record.workflow_plan_id)
+    if isinstance(record, IntegratedResearchWorkflowResult):
+        return str(record.workflow_result_id)
+    if isinstance(record, ResearchHandoffPackage):
+        return str(record.handoff_id)
+    if isinstance(record, TradingViewResearchHandoffManifest):
+        return str(record.manifest_id)
+    if isinstance(record, IntegratedResearchWorkflowRunRecord):
+        return str(record.workflow_run_id)
     return str(record.dataset_id)
 
 
