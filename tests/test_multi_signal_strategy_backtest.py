@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from test_real_csv_onboarding import HEADER
 from test_strategy_backtest import (
     authorized_context,
     strategy_configuration,
@@ -60,7 +61,6 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     StrategyDefinition,
     StrategyModel,
 )
-from test_real_csv_onboarding import HEADER
 
 V1 = ObjectVersion(1)
 V2 = ObjectVersion(2)

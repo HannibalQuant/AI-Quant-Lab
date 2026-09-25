@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+from itertools import pairwise
 
 from ai_quant_lab.core.experiment_contracts import (
     CostSemantics,
@@ -200,7 +201,7 @@ def build_multi_signal_indicators(
 
         gains: list[Decimal | None] = [None]
         losses: list[Decimal | None] = [None]
-        for previous, current in zip(closes, closes[1:], strict=True):
+        for previous, current in pairwise(closes):
             change = current - previous
             gains.append(max(change, Decimal(0)))
             losses.append(max(-change, Decimal(0)))
