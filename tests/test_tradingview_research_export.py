@@ -188,6 +188,22 @@ def test_manual_manifest_is_deterministic_and_explicit_about_runtime(export_bund
     assert manifest["runtime_status"] == "NOT_VERIFIED_ON_TRADINGVIEW"
     assert manifest["static_repaint_status"] == "NO_STATIC_REPAINT_HAZARD_DETECTED"
     assert manifest["artifact_repaint_assessment"] == "NOT_EVALUATED"
+    assert manifest["backtest_ref"] == str(execution.package.backtest_ref.object_id)
+    assert manifest["scientific_validation_ref"] == str(
+        execution.package.scientific_validation_ref.object_id
+    )
+    assert manifest["robustness_ref"] == str(execution.package.robustness_ref.object_id)
+    assert manifest["normalized_manifest_ref"] == str(
+        execution.package.normalized_manifest_ref.object_id
+    )
+    assert manifest["normalized_lock_ref"] == str(
+        execution.package.normalized_lock_ref.object_id
+    )
+    assert (
+        manifest["generation_input_fingerprint"]
+        == execution.package.generation_input_fingerprint
+    )
+    assert manifest["safety_input_fingerprint"] == execution.package.safety_input_fingerprint
     assert manifest["deployment_authorization"] == "NOT_AUTHORIZED"
     assert manifest["execution_state"] == "PLANNED_CLOSED"
     assert manifest["export_package_fingerprint"] == fingerprint_record(execution.package)
