@@ -1,5 +1,7 @@
 """Sprint 20 governed Pine generator tests."""
 
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
+
 from __future__ import annotations
 
 import json
