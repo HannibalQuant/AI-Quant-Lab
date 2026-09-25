@@ -436,6 +436,62 @@ def verify_phase3_end_to_end_closure(
         )
     _verify_upstream_ready(context)
 
+    strategy_ref = _exact(
+        context.pine_context.strategy,
+        context.pine_context.strategy.strategy_id,
+        context.pine_context.strategy.version,
+    )
+    base = request.closure_id.value
+    expected_generation_request = GovernedPineGenerationRequest(
+        RunId(_token(base, "gen-run")),
+        RunId(_token(base, "intake-run")),
+        ArtifactId(_token(base, "pine")),
+        strategy_ref,
+        request.script_title,
+        request.generator_authority_ref,
+        context.pine_context.pine_intake_authority_ref,
+        request.provenance_ref,
+    )
+    if execution.generation_request != expected_generation_request:
+        raise Phase3EndToEndClosureLineageMismatch(
+            "closure execution carries a non-canonical generation request"
+        )
+
+    expected_artifact_ref = _exact(
+        execution.generation_result.artifact,
+        execution.generation_result.artifact.pine_artifact_id,
+        execution.generation_result.artifact.version,
+    )
+    expected_safety_request = PineSafetyAssessmentRequest(
+        RunId(_token(base, "safety-run")),
+        ArtifactId(_token(base, "safety")),
+        expected_artifact_ref,
+        strategy_ref,
+        execution.generation_result.generation_input_fingerprint,
+        request.safety_authority_ref,
+        request.provenance_ref,
+    )
+    if execution.safety_request != expected_safety_request:
+        raise Phase3EndToEndClosureLineageMismatch(
+            "closure execution carries a non-canonical safety request"
+        )
+
+    expected_export_request = TradingViewResearchExportRequest(
+        RunId(_token(base, "export-run")),
+        ArtifactId(_token(base, "export")),
+        expected_artifact_ref,
+        strategy_ref,
+        execution.safety_result.assessment_id,
+        execution.safety_result.input_fingerprint,
+        request.file_stem,
+        request.export_authority_ref,
+        request.provenance_ref,
+    )
+    if execution.export_request != expected_export_request:
+        raise Phase3EndToEndClosureLineageMismatch(
+            "closure execution carries a non-canonical export request"
+        )
+
     generator_context = GovernedPineGeneratorContext(
         context.pine_context,
         request.generator_authority_ref,
