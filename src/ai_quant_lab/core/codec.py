@@ -4728,9 +4728,7 @@ def _decode_tradingview_research_export(
         RepaintAssessmentStatus(
             _text(item["artifact_repaint_assessment"], "artifact_repaint_assessment")
         ),
-        TradingViewResearchExportRuntimeStatus(
-            _text(item["runtime_status"], "runtime_status")
-        ),
+        TradingViewResearchExportRuntimeStatus(_text(item["runtime_status"], "runtime_status")),
         _text(item["pine_source_sha256"], "pine_source_sha256"),
         _integer(item["pine_source_byte_size"], "pine_source_byte_size"),
         _text(item["pine_filename"], "pine_filename"),
