@@ -9,13 +9,8 @@ from dataclasses import fields, replace
 from pathlib import Path
 
 import pytest
-from test_pine_python_parity import (
-    PARITY_AUTHORITY_REF,
-    _csv_bytes,
-    _event_rows,
-    _run as run_parity,
-)
-from test_pine_strategy_intake import PROVENANCE_REF, _direct_context
+from test_pine_python_parity import _run as run_parity
+from test_pine_strategy_intake import PROVENANCE_REF
 
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.dataset_store import (
@@ -54,17 +49,7 @@ from ai_quant_lab.core.model import (
     TraceabilityRef,
 )
 from ai_quant_lab.core.optimization_contracts import SelectionDecision
-from ai_quant_lab.core.pine_python_parity import (
-    PinePythonParityContext,
-    evaluate_pine_python_parity,
-    import_pine_execution_csv,
-)
-from ai_quant_lab.core.pine_python_parity_contracts import (
-    ParityTolerancePolicy,
-    PinePythonParityDecision,
-    PinePythonParityRequest,
-)
-from ai_quant_lab.core.pine_strategy_intake import intake_pine_strategy
+from ai_quant_lab.core.pine_python_parity_contracts import PinePythonParityDecision
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
 from ai_quant_lab.core.robustness_validation_contracts import RobustnessDecision
 from ai_quant_lab.core.scientific_validation_contracts import ScientificValidationDecision
