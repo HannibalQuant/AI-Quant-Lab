@@ -636,8 +636,8 @@ def simulate_multi_signal_backtest(
         total_return = final_equity / initial - Decimal(1)
         peak = initial
         max_drawdown = Decimal(0)
-        for point in curve:
-            point_equity = Decimal(point.equity)
+        for equity_point in curve:
+            point_equity = Decimal(equity_point.equity)
             peak = max(peak, point_equity)
             if peak <= 0:
                 raise MultiSignalExecutionError("drawdown peak must remain positive")
@@ -722,50 +722,50 @@ def verify_multi_signal_backtest_accounting(
     fills_by_order: dict[ArtifactId, SimulatedFill] = {}
     fills_by_id: dict[ArtifactId, SimulatedFill] = {}
     fills_by_bar: dict[TraceabilityRef, SimulatedFill] = {}
-    for fill in artifact.fills:
-        if fill.order_id in fills_by_order or fill.bar_ref in fills_by_bar:
+    for stored_fill in artifact.fills:
+        if stored_fill.order_id in fills_by_order or stored_fill.bar_ref in fills_by_bar:
             raise MultiSignalAccountingError("multi-signal ledger contains duplicate fill binding")
-        fills_by_order[fill.order_id] = fill
-        fills_by_id[fill.fill_id] = fill
-        fills_by_bar[fill.bar_ref] = fill
+        fills_by_order[stored_fill.order_id] = stored_fill
+        fills_by_id[stored_fill.fill_id] = stored_fill
+        fills_by_bar[stored_fill.bar_ref] = stored_fill
 
     with localcontext(_DECIMAL_CONTEXT):
         prior_fill_time = None
         for order in artifact.orders:
-            fill = fills_by_order.get(order.order_id)
-            if fill is None:
+            matched_fill = fills_by_order.get(order.order_id)
+            if matched_fill is None:
                 raise MultiSignalAccountingError("simulated order has no matching fill")
             source_bar = bars_by_ref.get(order.source_bar_ref)
             fill_bar = bars_by_ref.get(order.fill_bar_ref)
             if source_bar is None or fill_bar is None:
                 raise MultiSignalAccountingError("order references a bar outside governed replay")
             if (
-                order.side is not fill.side
+                order.side is not matched_fill.side
                 or order.strategy_ref != strategy_ref
-                or order.fill_bar_ref != fill.bar_ref
+                or order.fill_bar_ref != matched_fill.bar_ref
                 or order.signal_time != source_bar.availability_time
                 or order.submitted_time != order.signal_time
-                or order.eligible_fill_time != fill.fill_time
-                or fill.fill_time != fill_bar.bar_open
+                or order.eligible_fill_time != matched_fill.fill_time
+                or matched_fill.fill_time != fill_bar.bar_open
                 or indexes[order.source_bar_ref] >= indexes[order.fill_bar_ref]
             ):
                 raise MultiSignalAccountingError(
                     "order/fill identity or temporal binding is inconsistent"
                 )
-            if prior_fill_time is not None and fill.fill_time <= prior_fill_time:
+            if prior_fill_time is not None and matched_fill.fill_time <= prior_fill_time:
                 raise MultiSignalAccountingError("fills must be strictly time ordered")
-            prior_fill_time = fill.fill_time
+            prior_fill_time = matched_fill.fill_time
 
-            reference = Decimal(fill.reference_price)
-            execution = Decimal(fill.execution_price)
-            quantity = Decimal(fill.quantity)
-            notional = Decimal(fill.fill_notional)
+            reference = Decimal(matched_fill.reference_price)
+            execution = Decimal(matched_fill.execution_price)
+            quantity = Decimal(matched_fill.quantity)
+            notional = Decimal(matched_fill.fill_notional)
             if reference != Decimal(fill_bar.open.text):
                 raise MultiSignalAccountingError(
                     "fill reference price does not match exact fill bar open"
                 )
             expected_execution = _execution_price(
-                fill.side,
+                matched_fill.side,
                 reference,
                 specification.slippage_semantics,
                 specification.slippage_bps,
@@ -783,12 +783,12 @@ def verify_multi_signal_backtest_accounting(
                 notional,
             )
             _match(
-                Decimal(fill.commission),
+                Decimal(matched_fill.commission),
                 expected_commission,
                 "fill commission is inconsistent",
             )
             _match(
-                Decimal(fill.slippage_cost),
+                Decimal(matched_fill.slippage_cost),
                 abs(execution - reference) * quantity,
                 "fill slippage cost is inconsistent",
             )
@@ -798,19 +798,19 @@ def verify_multi_signal_backtest_accounting(
 
         trade_by_pair: dict[tuple[ArtifactId, ArtifactId], SimulatedTrade] = {}
         participating: set[ArtifactId] = set()
-        for trade in artifact.trades:
-            entry = fills_by_id.get(trade.entry_fill_id)
-            exit_fill = fills_by_id.get(trade.exit_fill_id)
+        for stored_trade in artifact.trades:
+            entry = fills_by_id.get(stored_stored_trade.entry_fill_id)
+            exit_fill = fills_by_id.get(stored_stored_trade.exit_fill_id)
             if entry is None or exit_fill is None:
                 raise MultiSignalAccountingError("trade references an unknown fill")
-            if trade.entry_fill_id in participating or trade.exit_fill_id in participating:
+            if stored_trade.entry_fill_id in participating or stored_trade.exit_fill_id in participating:
                 raise MultiSignalAccountingError("a fill participates in multiple completed trades")
             if entry.side is exit_fill.side:
                 raise MultiSignalAccountingError(
                     "completed trade must use opposite entry and exit sides"
                 )
-            participating.update((trade.entry_fill_id, trade.exit_fill_id))
-            quantity = Decimal(trade.quantity)
+            participating.update((stored_trade.entry_fill_id, stored_trade.exit_fill_id))
+            quantity = Decimal(stored_trade.quantity)
             _match(quantity, Decimal(entry.quantity), "trade entry quantity is inconsistent")
             _match(
                 quantity,
@@ -818,12 +818,12 @@ def verify_multi_signal_backtest_accounting(
                 "trade exit quantity is inconsistent",
             )
             _match(
-                Decimal(trade.entry_price),
+                Decimal(stored_trade.entry_price),
                 Decimal(entry.execution_price),
                 "trade entry price is inconsistent",
             )
             _match(
-                Decimal(trade.exit_price),
+                Decimal(stored_trade.exit_price),
                 Decimal(exit_fill.execution_price),
                 "trade exit price is inconsistent",
             )
@@ -835,23 +835,23 @@ def verify_multi_signal_backtest_accounting(
             )
             commission = Decimal(entry.commission) + Decimal(exit_fill.commission)
             slippage = Decimal(entry.slippage_cost) + Decimal(exit_fill.slippage_cost)
-            _match(Decimal(trade.gross_pnl), gross, "trade gross PnL is inconsistent")
+            _match(Decimal(stored_trade.gross_pnl), gross, "trade gross PnL is inconsistent")
             _match(
-                Decimal(trade.commission),
+                Decimal(stored_trade.commission),
                 commission,
                 "trade commission is inconsistent",
             )
             _match(
-                Decimal(trade.slippage_cost),
+                Decimal(stored_trade.slippage_cost),
                 slippage,
                 "trade slippage cost is inconsistent",
             )
             _match(
-                Decimal(trade.net_pnl),
+                Decimal(stored_trade.net_pnl),
                 gross - commission,
                 "trade net PnL is inconsistent",
             )
-            trade_by_pair[(entry.fill_id, exit_fill.fill_id)] = trade
+            trade_by_pair[(entry.fill_id, exit_fill.fill_id)] = stored_trade
 
         initial = Decimal(specification.capital_notional_minor) / Decimal(
             strategy.capital_minor_unit_scale
@@ -871,38 +871,38 @@ def verify_multi_signal_backtest_accounting(
         used_trades: set[ArtifactId] = set()
 
         for bar, point in zip(bars, artifact.equity_curve, strict=True):
-            fill = fills_by_bar.get(_bar_ref(bar))
-            if fill is not None:
-                quantity = Decimal(fill.quantity)
-                notional = Decimal(fill.fill_notional)
-                commission = Decimal(fill.commission)
+            event_fill = fills_by_bar.get(_bar_ref(bar))
+            if event_fill is not None:
+                quantity = Decimal(event_fill.quantity)
+                notional = Decimal(event_fill.fill_notional)
+                commission = Decimal(event_fill.commission)
                 if signed_quantity == 0:
                     _match(
                         notional,
                         fixed_notional,
                         "entry fill does not match governed fixed notional",
                     )
-                    if fill.side is SimulatedOrderSide.BUY:
+                    if event_fill.side is SimulatedOrderSide.BUY:
                         cash -= notional + commission
                         signed_quantity = quantity
                     else:
                         cash += notional - commission
                         signed_quantity = -quantity
-                    entry_fill = fill
+                    entry_fill = event_fill
                 else:
                     if entry_fill is None:
                         raise MultiSignalAccountingError("open position has no exact entry fill")
                     if signed_quantity > 0:
-                        if fill.side is not SimulatedOrderSide.SELL:
+                        if event_fill.side is not SimulatedOrderSide.SELL:
                             raise MultiSignalAccountingError("long position must close with SELL")
-                    elif fill.side is not SimulatedOrderSide.BUY:
+                    elif event_fill.side is not SimulatedOrderSide.BUY:
                         raise MultiSignalAccountingError("short position must close with BUY")
                     _match(
                         quantity,
                         abs(signed_quantity),
                         "exit quantity does not close exact position quantity",
                     )
-                    trade = trade_by_pair.get((entry_fill.fill_id, fill.fill_id))
+                    trade = trade_by_pair.get((entry_event_fill.fill_id, event_fill.fill_id))
                     if trade is None:
                         raise MultiSignalAccountingError(
                             "completed position has no exact trade ledger entry"
@@ -911,8 +911,8 @@ def verify_multi_signal_backtest_accounting(
                         cash += notional - commission
                     else:
                         cash -= notional + commission
-                    realized += Decimal(trade.net_pnl)
-                    used_trades.add(trade.trade_id)
+                    realized += Decimal(matched_trade.net_pnl)
+                    used_trades.add(matched_trade.trade_id)
                     signed_quantity = Decimal(0)
                     entry_fill = None
 
