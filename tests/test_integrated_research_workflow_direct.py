@@ -24,7 +24,13 @@ from ai_quant_lab.core.integrated_research_workflow_contracts import (
     ProposalAuthorityState,
     ResearchHandoffReadiness,
 )
-from ai_quant_lab.core.model import ArtifactId, ExecutionState, ObjectVersion, RunId, TraceabilityRef
+from ai_quant_lab.core.model import (
+    ArtifactId,
+    ExecutionState,
+    ObjectVersion,
+    RunId,
+    TraceabilityRef,
+)
 from ai_quant_lab.core.pine_python_parity import (
     PinePythonParityContext,
     evaluate_pine_python_parity,
