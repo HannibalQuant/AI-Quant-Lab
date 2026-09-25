@@ -61,6 +61,7 @@ class SimulatedOrderStatus(StrEnum):
 class SimulatedPositionState(StrEnum):
     FLAT = "FLAT"
     LONG = "LONG"
+    SHORT = "SHORT"
 
 
 class BacktestRunStatus(StrEnum):

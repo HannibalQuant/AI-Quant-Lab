@@ -1,4 +1,4 @@
-"""Closed deterministic long-only strategy simulation for Sprint 12."""
+"""Closed deterministic governed strategy simulation for legacy and Sprint 25 profiles."""
 
 from __future__ import annotations
 
@@ -40,6 +40,13 @@ from ai_quant_lab.core.model import (
     ObjectVersion,
     TraceabilityRef,
     fingerprint,
+)
+from ai_quant_lab.core.multi_signal_runtime import (
+    MultiSignalAccountingError,
+    MultiSignalExecutionError,
+    MultiSignalMissingNextBar,
+    simulate_multi_signal_backtest,
+    verify_multi_signal_backtest_accounting,
 )
 from ai_quant_lab.core.real_csv_contracts import RealCsvAdmissionRecord, RealCsvSourceDeclaration
 from ai_quant_lab.core.research_eligibility_contracts import (
@@ -142,9 +149,37 @@ def strategy_backtest_replay_contract() -> ExperimentReplayContract:
     )
 
 
+def multi_signal_strategy_backtest_replay_contract() -> ExperimentReplayContract:
+    return ExperimentReplayContract(
+        ArtifactId("multi-signal-trend-long-short-backtest-engine-v1"),
+        _V1,
+        ExperimentFamily.STRATEGY_BACKTEST,
+        NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
+        ReplayOrdering.BAR_OPEN_CLOSE_SOURCE_OBSERVATION_ID,
+        NumericSemantics.DECIMAL128_HALF_EVEN,
+        34,
+        _METRICS,
+        _OUTPUTS,
+        _V1,
+    )
+
+
 def strategy_backtest_engine_ref() -> TraceabilityRef:
     contract = strategy_backtest_replay_contract()
     return _exact(contract, contract.engine_id, contract.version)
+
+
+def multi_signal_strategy_backtest_engine_ref() -> TraceabilityRef:
+    contract = multi_signal_strategy_backtest_replay_contract()
+    return _exact(contract, contract.engine_id, contract.version)
+
+
+def _expected_strategy_engine(strategy: StrategyDefinition) -> ExperimentReplayContract:
+    if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
+        return strategy_backtest_replay_contract()
+    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        return multi_signal_strategy_backtest_replay_contract()
+    raise UnsupportedStrategy("unsupported strategy model")
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,8 +276,8 @@ def _require_scope(
 ) -> None:
     if specification.family is not ExperimentFamily.STRATEGY_BACKTEST:
         raise UnsupportedExperimentRunner("strategy runner requires STRATEGY_BACKTEST")
-    if engine_contract != strategy_backtest_replay_contract():
-        raise UnsupportedExperimentRunner("unknown strategy backtest engine")
+    if engine_contract != _expected_strategy_engine(strategy):
+        raise UnsupportedExperimentRunner("unknown strategy backtest engine for strategy model")
     if strategy.engine_contract_ref != _exact(
         engine_contract, engine_contract.engine_id, engine_contract.version
     ):
@@ -253,17 +288,27 @@ def _require_scope(
         raise UnsupportedExperimentRunner("requested backtest result contract is unsupported")
     if specification.no_lookahead is not engine_contract.no_lookahead:
         raise LookaheadAttempt("strategy experiment has unsupported no-lookahead semantics")
+
+    legacy_profile = (
+        strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
+        and strategy.side_permission is SidePermission.LONG_ONLY
+        and strategy.multi_signal is None
+    )
+    multi_signal_profile = (
+        strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+        and strategy.side_permission is SidePermission.LONG_SHORT
+        and strategy.multi_signal is not None
+    )
     if (
-        strategy.model is not StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
-        or strategy.signal_timing is not SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
+        strategy.signal_timing is not SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
         or strategy.execution_timing is not SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
-        or strategy.side_permission is not SidePermission.LONG_ONLY
+        or not (legacy_profile or multi_signal_profile)
     ):
         raise UnsupportedStrategy("unsupported strategy semantics")
     if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
-        raise UnsupportedSizing("Sprint 12 supports FIXED_NOTIONAL only")
+        raise UnsupportedSizing("governed strategy backtest supports FIXED_NOTIONAL only")
     if specification.funding_semantics is not CostSemantics.NOT_APPLICABLE:
-        raise UnsupportedFunding("Sprint 12 does not model funding")
+        raise UnsupportedFunding("governed strategy backtest does not model funding")
     if specification.commission_semantics not in (
         CostSemantics.DECLARED_ZERO,
         CostSemantics.DECLARED_BPS,
@@ -273,7 +318,9 @@ def _require_scope(
     ):
         raise StrategyBacktestError("trading costs must be explicit")
     if specification.warmup_bars != 0:
-        raise UnsupportedStrategy("closed threshold strategy requires zero warmup")
+        raise UnsupportedStrategy(
+            "strategy indicators warm deterministically inside the authorized replay window"
+        )
     if specification.capital_notional_minor <= 0:
         raise InvalidCapital("initial capital must be positive")
     if strategy.fixed_notional_minor > specification.capital_notional_minor:
@@ -362,6 +409,21 @@ def _simulate(
     bars: tuple[MarketBar, ...],
     run_input: str,
 ) -> BacktestResultArtifact:
+    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        try:
+            return simulate_multi_signal_backtest(
+                request.experiment_run,
+                authorization,
+                specification,
+                strategy,
+                bars,
+                run_input,
+            )
+        except MultiSignalMissingNextBar as exc:
+            raise MissingNextBar(str(exc)) from exc
+        except MultiSignalExecutionError as exc:
+            raise StrategyBacktestError(str(exc)) from exc
+
     base = request.experiment_run
     scale = Decimal(strategy.capital_minor_unit_scale)
     initial = Decimal(specification.capital_notional_minor) / scale
@@ -578,6 +640,33 @@ def _accounting_match(actual: Decimal, expected: Decimal, message: str) -> None:
 
 
 def verify_backtest_accounting(
+    *,
+    artifact: BacktestResultArtifact,
+    specification: ExperimentSpecification,
+    strategy: StrategyDefinition,
+    bars: tuple[MarketBar, ...],
+) -> None:
+    """Independently reconstruct the exact ledger for the governed strategy model."""
+    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        try:
+            verify_multi_signal_backtest_accounting(
+                artifact=artifact,
+                specification=specification,
+                strategy=strategy,
+                bars=bars,
+            )
+        except MultiSignalAccountingError as exc:
+            raise AccountingMismatch(str(exc)) from exc
+        return
+    _verify_legacy_backtest_accounting(
+        artifact=artifact,
+        specification=specification,
+        strategy=strategy,
+        bars=bars,
+    )
+
+
+def _verify_legacy_backtest_accounting(
     *,
     artifact: BacktestResultArtifact,
     specification: ExperimentSpecification,

@@ -67,7 +67,10 @@ from ai_quant_lab.core.strategy_backtest import StrategyBacktestRunRequest
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
+    MultiSignalTrendParameters,
+    StrategyBacktestContractError,
     StrategyDefinition,
+    StrategyModel,
 )
 
 
@@ -222,6 +225,90 @@ def _candidate_suffix(
     return identity.removeprefix("sha256:")[:20]
 
 
+def _scaled_decimal(value: int, scale: int = 100) -> str:
+    whole, remainder = divmod(value, scale)
+    if remainder == 0:
+        return str(whole)
+    width = len(str(scale)) - 1
+    fraction = f"{remainder:0{width}d}".rstrip("0")
+    return f"{whole}.{fraction}"
+
+
+def _multi_signal_parameter_update(
+    parent: MultiSignalTrendParameters,
+    values: dict[str, int],
+) -> MultiSignalTrendParameters:
+    supported = {
+        "adx_length",
+        "adx_threshold_x100",
+        "atr_length",
+        "atr_stop_mult_x100",
+        "break_even_trigger_r_x100",
+        "fast_ema",
+        "macd_fast",
+        "macd_signal",
+        "macd_slow",
+        "medium_ema",
+        "rsi_length",
+        "rsi_long_min_x100",
+        "rsi_short_max_x100",
+        "slow_ema",
+        "take_profit_r_x100",
+        "time_stop_bars",
+    }
+    unknown = set(values) - supported
+    if unknown:
+        raise OptimizationInputInvalid(f"unsupported multi-signal parameters: {sorted(unknown)}")
+
+    try:
+        return MultiSignalTrendParameters(
+            values.get("fast_ema", parent.fast_ema),
+            values.get("medium_ema", parent.medium_ema),
+            values.get("slow_ema", parent.slow_ema),
+            values.get("rsi_length", parent.rsi_length),
+            (
+                _scaled_decimal(values["rsi_long_min_x100"])
+                if "rsi_long_min_x100" in values
+                else parent.rsi_long_min
+            ),
+            (
+                _scaled_decimal(values["rsi_short_max_x100"])
+                if "rsi_short_max_x100" in values
+                else parent.rsi_short_max
+            ),
+            values.get("macd_fast", parent.macd_fast),
+            values.get("macd_slow", parent.macd_slow),
+            values.get("macd_signal", parent.macd_signal),
+            values.get("adx_length", parent.adx_length),
+            (
+                _scaled_decimal(values["adx_threshold_x100"])
+                if "adx_threshold_x100" in values
+                else parent.adx_threshold
+            ),
+            values.get("atr_length", parent.atr_length),
+            (
+                _scaled_decimal(values["atr_stop_mult_x100"])
+                if "atr_stop_mult_x100" in values
+                else parent.atr_stop_mult
+            ),
+            (
+                _scaled_decimal(values["take_profit_r_x100"])
+                if "take_profit_r_x100" in values
+                else parent.take_profit_r
+            ),
+            (
+                _scaled_decimal(values["break_even_trigger_r_x100"])
+                if "break_even_trigger_r_x100" in values
+                else parent.break_even_trigger_r
+            ),
+            values.get("time_stop_bars", parent.time_stop_bars),
+        )
+    except StrategyBacktestContractError as exc:
+        raise OptimizationInputInvalid(
+            "multi-signal parameter set violates strategy invariants"
+        ) from exc
+
+
 def derive_candidate(
     *,
     plan: OptimizationPlan,
@@ -238,11 +325,30 @@ def derive_candidate(
         parameters=parameters,
     )
     values = dict(parameters)
-    strategy = replace(
-        parent_strategy,
-        strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
-        threshold_bps=values["threshold_bps"],
-    )
+    if parent_strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
+        if set(values) != {"threshold_bps"}:
+            raise OptimizationInputInvalid(
+                "legacy strategy optimization supports threshold_bps only"
+            )
+        strategy = replace(
+            parent_strategy,
+            strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
+            threshold_bps=values["threshold_bps"],
+        )
+    elif parent_strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        if parent_strategy.multi_signal is None:
+            raise OptimizationInputInvalid(
+                "multi-signal optimization requires exact strategy parameters"
+            )
+        updated = _multi_signal_parameter_update(parent_strategy.multi_signal, values)
+        strategy = replace(
+            parent_strategy,
+            strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
+            multi_signal=updated,
+        )
+    else:  # pragma: no cover - closed StrategyModel enum guard
+        raise OptimizationInputInvalid("unsupported strategy optimization model")
+
     definition = OptimizationCandidateDefinition(
         ArtifactId(f"optimization-candidate-{suffix}"),
         _V1,

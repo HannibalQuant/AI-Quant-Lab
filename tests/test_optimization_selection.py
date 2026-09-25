@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from test_multi_signal_strategy_backtest import (
+    _execute as execute_multi_signal_backtest,
+)
+from test_multi_signal_strategy_backtest import (
+    _multi_context as multi_signal_context,
+)
 from test_robustness_validation import (
     ROBUSTNESS_AUTHORITY_REF,
     ROBUSTNESS_PROVENANCE_REF,
@@ -106,6 +112,14 @@ from ai_quant_lab.core.strategy_backtest import (
     run_authorized_strategy_backtest,
     strategy_backtest_replay_contract,
 )
+from ai_quant_lab.core.strategy_backtest_contracts import (
+    MultiSignalTrendParameters,
+    SidePermission,
+    SignalTiming,
+    SimulatedExecutionTiming,
+    StrategyDefinition,
+    StrategyModel,
+)
 
 V1 = ObjectVersion(1)
 SELECTION_AUTHORITY_REF = TraceabilityRef(
@@ -164,6 +178,112 @@ def _source(tmp_path: Path) -> OptimizationEvidence:
         validation[3].result.version,
     )
     return _evidence(execute_robustness(validation, robustness_plan(scientific_ref)))
+
+
+def _multi_signal_source(tmp_path: Path) -> OptimizationEvidence:
+    context = multi_signal_context(tmp_path)
+    backtest = execute_multi_signal_backtest(context)
+    validation_policy = replace(
+        validation_plan(min_trades=1),
+        validation_plan_id=ArtifactId("multi-signal-scientific-validation-plan"),
+    )
+    validation_request = ValidationRequest(
+        RunId("multi-signal-scientific-validation-run"),
+        ValidationId("multi-signal-scientific-validation-result"),
+        exact(
+            validation_policy,
+            validation_policy.validation_plan_id,
+            validation_policy.version,
+        ),
+        exact(backtest.artifact, backtest.artifact.artifact_id, backtest.artifact.version),
+        exact(backtest.record, backtest.record.run_id, backtest.record.version),
+        VALIDATION_AUTHORITY_REF,
+        VALIDATION_COMPLETED_AT,
+        VALIDATION_PROVENANCE_REF,
+    )
+    scientific = run_scientific_validation(
+        validation_request,
+        plan=validation_policy,
+        backtest_record=backtest.record,
+        backtest_artifact=backtest.artifact,
+        backtest_request=context[12],
+        authorization=context[9].record,
+        specification=context[7],
+        policy=context[8],
+        eligibility=context[5],
+        engine_contract=context[11],
+        strategy=context[6],
+        instrument=context[10],
+        report=context[3],
+        repository=context[1],
+    )
+    scientific_ref = exact(
+        scientific.result,
+        scientific.result.validation_result_id,
+        scientific.result.version,
+    )
+    robust_policy = replace(
+        robustness_plan(scientific_ref, minimum_windows=3, minimum_trades=1),
+        robustness_plan_id=ArtifactId("multi-signal-robustness-plan"),
+    )
+    robust_request = RobustnessValidationRequest(
+        RunId("multi-signal-robustness-run"),
+        ArtifactId("multi-signal-robustness-result"),
+        exact(robust_policy, robust_policy.robustness_plan_id, robust_policy.version),
+        scientific_ref,
+        exact(scientific.record, scientific.record.validation_run_id, scientific.record.version),
+        exact(backtest.artifact, backtest.artifact.artifact_id, backtest.artifact.version),
+        exact(backtest.record, backtest.record.run_id, backtest.record.version),
+        ROBUSTNESS_AUTHORITY_REF,
+        ROBUSTNESS_PROVENANCE_REF,
+    )
+    robustness = run_robustness_validation(
+        robust_request,
+        plan=robust_policy,
+        scientific_result=scientific.result,
+        validation_record=scientific.record,
+        scientific_request=validation_request,
+        validation_plan=validation_policy,
+        backtest_artifact=backtest.artifact,
+        backtest_record=backtest.record,
+        backtest_request=context[12],
+        authorization=context[9].record,
+        specification=context[7],
+        policy=context[8],
+        eligibility=context[5],
+        eligibility_policy=context[4],
+        admission=context[2],
+        declaration=context[0],
+        engine_contract=context[11],
+        strategy=context[6],
+        instrument=context[10],
+        report=context[3],
+        repository=context[1],
+    )
+    return OptimizationEvidence(
+        robust_request,
+        robust_policy,
+        robustness.record,
+        robustness.result,
+        validation_request,
+        validation_policy,
+        scientific.record,
+        scientific.result,
+        context[12],
+        backtest.record,
+        backtest.artifact,
+        context[9].record,
+        context[7],
+        context[8],
+        context[5],
+        context[4],
+        context[2],
+        context[0],
+        context[11],
+        context[6],
+        context[10],
+        context[3],
+    )
 
 
 def search_space(*, upper: int = 200, step: int = 200) -> OptimizationSearchSpace:
@@ -958,3 +1078,298 @@ def test_capability_isolation_and_execution_remains_closed() -> None:
     assert not calls.intersection({"eval", "exec"})
     assert EXE_01.state is ExecutionState.PLANNED_CLOSED
     assert DeploymentAuthorizationStatus.NOT_AUTHORIZED.value == "NOT_AUTHORIZED"
+
+
+def test_multi_signal_grid_parameters_are_canonical_and_bounded() -> None:
+    parameters = tuple(
+        sorted(
+            (
+                OptimizationParameter(
+                    OptimizationParameterName.FAST_EMA,
+                    OptimizationParameterType.INTEGER,
+                    8,
+                    10,
+                    2,
+                    8,
+                ),
+                OptimizationParameter(
+                    OptimizationParameterName.ATR_STOP_MULT_X100,
+                    OptimizationParameterType.INTEGER,
+                    200,
+                    300,
+                    100,
+                    200,
+                ),
+                OptimizationParameter(
+                    OptimizationParameterName.RSI_LONG_MIN_X100,
+                    OptimizationParameterType.INTEGER,
+                    5500,
+                    6000,
+                    500,
+                    5500,
+                ),
+            ),
+            key=lambda item: item.name.value,
+        )
+    )
+    space = OptimizationSearchSpace(
+        ArtifactId("multi-signal-grid-search-space"),
+        V1,
+        parameters,
+        V1,
+    )
+    values = enumerate_parameter_sets(space, 8)
+    assert len(values) == 8
+    assert all(
+        tuple(name for name, _ in item) == tuple(sorted(name for name, _ in item))
+        for item in values
+    )
+
+
+def test_multi_signal_candidate_derivation_updates_only_declared_parameters(
+    tmp_path: Path,
+) -> None:
+    source = _source(tmp_path)
+    parent = StrategyDefinition(
+        ArtifactId("multi-signal-optimization-parent"),
+        ObjectVersion(2),
+        StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+        SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY,
+        SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN,
+        SidePermission.LONG_SHORT,
+        0,
+        source.strategy.fixed_notional_minor,
+        source.strategy.capital_currency,
+        source.strategy.capital_minor_unit_scale,
+        False,
+        False,
+        source.strategy.engine_contract_ref,
+        source.strategy.provenance_ref,
+        ObjectVersion(2),
+        MultiSignalTrendParameters(
+            10,
+            30,
+            60,
+            8,
+            "55",
+            "45",
+            7,
+            21,
+            9,
+            14,
+            "20",
+            14,
+            "2",
+            "2",
+            "1",
+            20,
+        ),
+    )
+    space = OptimizationSearchSpace(
+        ArtifactId("multi-signal-derivation-space"),
+        V1,
+        tuple(
+            sorted(
+                (
+                    OptimizationParameter(
+                        OptimizationParameterName.FAST_EMA,
+                        OptimizationParameterType.INTEGER,
+                        12,
+                        12,
+                        1,
+                        12,
+                    ),
+                    OptimizationParameter(
+                        OptimizationParameterName.ATR_STOP_MULT_X100,
+                        OptimizationParameterType.INTEGER,
+                        250,
+                        250,
+                        1,
+                        250,
+                    ),
+                    OptimizationParameter(
+                        OptimizationParameterName.RSI_LONG_MIN_X100,
+                        OptimizationParameterType.INTEGER,
+                        5800,
+                        5800,
+                        1,
+                        5800,
+                    ),
+                ),
+                key=lambda item: item.name.value,
+            )
+        ),
+        V1,
+    )
+    base_plan = optimization_plan(source, space, maximum_trials=1)
+    plan = replace(
+        base_plan,
+        parent_strategy_ref=exact(parent, parent.strategy_id, parent.version),
+    )
+    parameter_set = enumerate_parameter_sets(space, 1)[0]
+    definition, candidate = derive_candidate(
+        plan=plan,
+        search_space=space,
+        parent_strategy=parent,
+        source=source,
+        parameters=parameter_set,
+    )
+
+    assert definition.parameter_values == parameter_set
+    assert candidate.multi_signal is not None
+    assert candidate.multi_signal.fast_ema == 12
+    assert candidate.multi_signal.atr_stop_mult == "2.5"
+    assert candidate.multi_signal.rsi_long_min == "58"
+    restored = replace(
+        candidate,
+        strategy_id=parent.strategy_id,
+        multi_signal=parent.multi_signal,
+    )
+    assert restored == parent
+
+
+def test_multi_signal_optimization_runs_full_governed_e2e_pipeline(
+    tmp_path: Path,
+) -> None:
+    source = _multi_signal_source(tmp_path)
+    repository = LocalDatasetRepository(
+        root=tmp_path / "vault-multi-signal-optimization",
+        allowed_root=tmp_path,
+    )
+    space = OptimizationSearchSpace(
+        ArtifactId("multi-signal-e2e-search-space"),
+        V1,
+        (
+            OptimizationParameter(
+                OptimizationParameterName.ATR_STOP_MULT_X100,
+                OptimizationParameterType.INTEGER,
+                10_000,
+                10_000,
+                1,
+                10_000,
+            ),
+        ),
+        V1,
+    )
+    plan = replace(
+        optimization_plan(
+            source,
+            space,
+            multiplicity=OptimizationMultiplicityPolicy.SINGLE_CANDIDATE,
+            maximum_trials=1,
+        ),
+        optimization_plan_id=ArtifactId("multi-signal-e2e-optimization-plan"),
+        minimum_trade_count=1,
+    )
+    parameter_sets = enumerate_parameter_sets(space, plan.maximum_trials)
+    assert parameter_sets == ((("atr_stop_mult_x100", 10_000),),)
+    candidates = (
+        _candidate_evidence_with_repository(
+            source,
+            repository,
+            plan,
+            space,
+            parameter_sets[0],
+            1,
+        ),
+    )
+    execution = run_optimization_selection(
+        _request(plan),
+        plan=plan,
+        search_space=space,
+        source=source,
+        candidates=candidates,
+        repository=repository,
+    )
+
+    verify_optimization_selection_lineage(
+        record=execution.record,
+        result=execution.result,
+        candidate_definitions=execution.candidate_definitions,
+        candidate_results=execution.candidate_results,
+        trials=execution.trials,
+        request=_request(plan),
+        plan=plan,
+        search_space=space,
+        source=source,
+        candidates=candidates,
+    )
+
+    candidate = candidates[0]
+    assert source.strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+    assert candidate.strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+    assert candidate.engine_contract == source.engine_contract
+    assert candidate.specification.engine_contract_ref == source.specification.engine_contract_ref
+    assert candidate.backtest_artifact.strategy_ref == (
+        execution.candidate_definitions[0].candidate_strategy_ref
+    )
+    assert execution.result.attempted_trials == 1
+    assert execution.result.completed_trials == 1
+    assert execution.result.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    assert execution.result.execution_state is ExecutionState.PLANNED_CLOSED
+
+
+def test_invalid_multi_signal_grid_combination_fails_closed(tmp_path: Path) -> None:
+    source = _source(tmp_path)
+    parent = StrategyDefinition(
+        ArtifactId("invalid-multi-signal-optimization-parent"),
+        ObjectVersion(2),
+        StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+        SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY,
+        SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN,
+        SidePermission.LONG_SHORT,
+        0,
+        source.strategy.fixed_notional_minor,
+        source.strategy.capital_currency,
+        source.strategy.capital_minor_unit_scale,
+        False,
+        False,
+        source.strategy.engine_contract_ref,
+        source.strategy.provenance_ref,
+        ObjectVersion(2),
+        MultiSignalTrendParameters(
+            10,
+            30,
+            60,
+            8,
+            "55",
+            "45",
+            7,
+            21,
+            9,
+            14,
+            "20",
+            14,
+            "2",
+            "2",
+            "1",
+            20,
+        ),
+    )
+    space = OptimizationSearchSpace(
+        ArtifactId("invalid-multi-signal-grid"),
+        V1,
+        (
+            OptimizationParameter(
+                OptimizationParameterName.FAST_EMA,
+                OptimizationParameterType.INTEGER,
+                30,
+                30,
+                1,
+                30,
+            ),
+        ),
+        V1,
+    )
+    plan = replace(
+        optimization_plan(source, space, maximum_trials=1),
+        parent_strategy_ref=exact(parent, parent.strategy_id, parent.version),
+    )
+    with pytest.raises(OptimizationInputInvalid, match="violates strategy invariants"):
+        derive_candidate(
+            plan=plan,
+            search_space=space,
+            parent_strategy=parent,
+            source=source,
+            parameters=enumerate_parameter_sets(space, 1)[0],
+        )
