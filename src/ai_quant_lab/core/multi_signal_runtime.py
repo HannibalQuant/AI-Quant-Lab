@@ -799,8 +799,8 @@ def verify_multi_signal_backtest_accounting(
         trade_by_pair: dict[tuple[ArtifactId, ArtifactId], SimulatedTrade] = {}
         participating: set[ArtifactId] = set()
         for stored_trade in artifact.trades:
-            entry = fills_by_id.get(stored_stored_trade.entry_fill_id)
-            exit_fill = fills_by_id.get(stored_stored_trade.exit_fill_id)
+            entry = fills_by_id.get(stored_trade.entry_fill_id)
+            exit_fill = fills_by_id.get(stored_trade.exit_fill_id)
             if entry is None or exit_fill is None:
                 raise MultiSignalAccountingError("trade references an unknown fill")
             if (
@@ -905,8 +905,8 @@ def verify_multi_signal_backtest_accounting(
                         abs(signed_quantity),
                         "exit quantity does not close exact position quantity",
                     )
-                    trade = trade_by_pair.get((entry_event_fill.fill_id, event_fill.fill_id))
-                    if trade is None:
+                    matched_trade = trade_by_pair.get((entry_fill.fill_id, event_fill.fill_id))
+                    if matched_trade is None:
                         raise MultiSignalAccountingError(
                             "completed position has no exact trade ledger entry"
                         )
