@@ -1304,7 +1304,7 @@ def test_multi_signal_optimization_runs_full_governed_e2e_pipeline(
         execution.candidate_definitions[0].candidate_strategy_ref
     )
     assert execution.result.attempted_trials == 1
-    assert execution.result.evaluated_candidates == 1
+    assert execution.result.completed_trials == 1
     assert execution.result.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert execution.result.execution_state is ExecutionState.PLANNED_CLOSED
 
