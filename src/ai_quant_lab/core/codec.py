@@ -242,6 +242,7 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     SimulatedTrade,
     StrategyDefinition,
     StrategyModel,
+    MultiSignalTrendParameters,
 )
 from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportPackage,
@@ -1227,7 +1228,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "contract_version": record.contract_version.number,
         }
     if isinstance(record, StrategyDefinition):
-        return {
+        strategy_payload = {
             "strategy_id": str(record.strategy_id),
             "version": record.version.number,
             "model": record.model.value,
@@ -1244,6 +1245,26 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "contract_version": record.contract_version.number,
         }
+        if record.multi_signal is not None:
+            strategy_payload["multi_signal"] = {
+                "fast_ema": record.multi_signal.fast_ema,
+                "medium_ema": record.multi_signal.medium_ema,
+                "slow_ema": record.multi_signal.slow_ema,
+                "rsi_length": record.multi_signal.rsi_length,
+                "rsi_long_min": record.multi_signal.rsi_long_min,
+                "rsi_short_max": record.multi_signal.rsi_short_max,
+                "macd_fast": record.multi_signal.macd_fast,
+                "macd_slow": record.multi_signal.macd_slow,
+                "macd_signal": record.multi_signal.macd_signal,
+                "adx_length": record.multi_signal.adx_length,
+                "adx_threshold": record.multi_signal.adx_threshold,
+                "atr_length": record.multi_signal.atr_length,
+                "atr_stop_mult": record.multi_signal.atr_stop_mult,
+                "take_profit_r": record.multi_signal.take_profit_r,
+                "break_even_trigger_r": record.multi_signal.break_even_trigger_r,
+                "time_stop_bars": record.multi_signal.time_stop_bars,
+            }
+        return strategy_payload
     if isinstance(record, BacktestResultArtifact):
         return {
             "artifact_id": str(record.artifact_id),
@@ -3031,7 +3052,7 @@ def _decode_experiment_run_record(payload: Any) -> ExperimentRunRecord:
 
 
 def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
-    fields = {
+    legacy_fields = {
         "strategy_id",
         "version",
         "model",
@@ -3048,7 +3069,53 @@ def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
         "provenance_ref",
         "contract_version",
     }
+    if not isinstance(payload, dict):
+        raise InvalidSerialization("StrategyDefinition.payload must be an object")
+    has_multi_signal = "multi_signal" in payload
+    fields = legacy_fields | ({"multi_signal"} if has_multi_signal else set())
     item = _strict_object(payload, fields, "StrategyDefinition.payload")
+    multi_signal = None
+    if has_multi_signal:
+        raw = _strict_object(
+            item["multi_signal"],
+            {
+                "fast_ema",
+                "medium_ema",
+                "slow_ema",
+                "rsi_length",
+                "rsi_long_min",
+                "rsi_short_max",
+                "macd_fast",
+                "macd_slow",
+                "macd_signal",
+                "adx_length",
+                "adx_threshold",
+                "atr_length",
+                "atr_stop_mult",
+                "take_profit_r",
+                "break_even_trigger_r",
+                "time_stop_bars",
+            },
+            "StrategyDefinition.payload.multi_signal",
+        )
+        multi_signal = MultiSignalTrendParameters(
+            _integer(raw["fast_ema"], "multi_signal.fast_ema"),
+            _integer(raw["medium_ema"], "multi_signal.medium_ema"),
+            _integer(raw["slow_ema"], "multi_signal.slow_ema"),
+            _integer(raw["rsi_length"], "multi_signal.rsi_length"),
+            _text(raw["rsi_long_min"], "multi_signal.rsi_long_min"),
+            _text(raw["rsi_short_max"], "multi_signal.rsi_short_max"),
+            _integer(raw["macd_fast"], "multi_signal.macd_fast"),
+            _integer(raw["macd_slow"], "multi_signal.macd_slow"),
+            _integer(raw["macd_signal"], "multi_signal.macd_signal"),
+            _integer(raw["adx_length"], "multi_signal.adx_length"),
+            _text(raw["adx_threshold"], "multi_signal.adx_threshold"),
+            _integer(raw["atr_length"], "multi_signal.atr_length"),
+            _text(raw["atr_stop_mult"], "multi_signal.atr_stop_mult"),
+            _text(raw["take_profit_r"], "multi_signal.take_profit_r"),
+            _text(raw["break_even_trigger_r"], "multi_signal.break_even_trigger_r"),
+            _integer(raw["time_stop_bars"], "multi_signal.time_stop_bars"),
+        )
     return StrategyDefinition(
         cast(ArtifactId, _typed_id(item["strategy_id"], ArtifactId, "strategy_id")),
         _version(item["version"], "version"),
@@ -3065,6 +3132,7 @@ def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
         _trace_ref(item["engine_contract_ref"], "engine_contract_ref"),
         _trace_ref(item["provenance_ref"], "provenance_ref"),
         _version(item["contract_version"], "contract_version"),
+        multi_signal,
     )
 
 

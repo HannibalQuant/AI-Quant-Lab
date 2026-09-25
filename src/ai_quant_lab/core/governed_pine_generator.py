@@ -37,6 +37,7 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
 
 _V1 = ObjectVersion(1)
 _GENERATOR_PROFILE = "AIQL_GOVERNED_PINE_V6_CLOSE_VS_OPEN_LONG_ONLY_V1"
+_MULTI_SIGNAL_GENERATOR_PROFILE = "AIQL_GOVERNED_PINE_V6_MULTI_SIGNAL_TREND_LONG_SHORT_V1"
 
 
 def _valid_title(value: object) -> bool:
@@ -148,17 +149,35 @@ def _exact(record: object, object_id: object, version: ObjectVersion) -> Traceab
     return TraceabilityRef(object_id, version, fingerprint_record(record))  # type: ignore[arg-type]
 
 
+def _generator_profile(strategy: StrategyDefinition) -> str:
+    if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
+        return _GENERATOR_PROFILE
+    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        return _MULTI_SIGNAL_GENERATOR_PROFILE
+    raise GovernedPineGeneratorUnsupported("unsupported governed Pine generator profile")
+
+
 def _validate_strategy(strategy: StrategyDefinition) -> None:
-    if (
-        strategy.model is not StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
-        or strategy.signal_timing is not SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
-        or strategy.execution_timing is not SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
-        or strategy.side_permission is not SidePermission.LONG_ONLY
-        or strategy.allow_pyramiding
-        or strategy.force_close_at_window_end
-    ):
+    common_supported = (
+        strategy.signal_timing is SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
+        and strategy.execution_timing is SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
+        and not strategy.allow_pyramiding
+        and not strategy.force_close_at_window_end
+    )
+    legacy_supported = (
+        strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
+        and strategy.side_permission is SidePermission.LONG_ONLY
+        and strategy.multi_signal is None
+    )
+    multi_signal_supported = (
+        strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+        and strategy.side_permission is SidePermission.LONG_SHORT
+        and strategy.multi_signal is not None
+    )
+    if not common_supported or not (legacy_supported or multi_signal_supported):
         raise GovernedPineGeneratorUnsupported(
-            "generator supports only the governed close-vs-open long-only next-bar-open profile"
+            "generator supports only governed legacy long-only or Sprint 24 multi-signal long/short "
+            "next-bar-open profiles"
         )
 
 
@@ -182,7 +201,7 @@ def render_governed_pine_v6(
     *,
     script_title: str,
 ) -> str:
-    """Render canonical Pine source for the exact bounded StrategyDefinition."""
+    """Render canonical Pine source for the exact governed StrategyDefinition."""
     if not _valid_title(script_title):
         raise GovernedPineGeneratorError(
             "script title must be 1..96 characters without quotes, backslashes or newlines"
@@ -190,12 +209,49 @@ def render_governed_pine_v6(
     _validate_strategy(strategy)
     cash = _cash_literal(strategy)
     strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
+    profile = _generator_profile(strategy)
+
+    if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
+        lines = (
+            "//@version=6",
+            "// AI Quant Lab governed Pine generator v1",
+            f"// Generator profile: {profile}",
+            f"// Strategy: {strategy_ref.object_id}",
+            f"// Strategy fingerprint: {strategy_ref.expected_fingerprint}",
+            "strategy(",
+            f'    "{script_title}",',
+            "    pyramiding=0,",
+            "    process_orders_on_close=false,",
+            "    calc_on_every_tick=false,",
+            "    default_qty_type=strategy.cash,",
+            f"    default_qty_value={cash}",
+            ")",
+            "",
+            f"thresholdBps = {strategy.threshold_bps}.0",
+            "threshold = thresholdBps / 10000.0",
+            "confirmedBar = barstate.isconfirmed",
+            "desiredLong = confirmedBar and open > 0 and close > 0 "
+            "and (close / open - 1.0) > threshold",
+            "",
+            "if desiredLong and strategy.position_size <= 0",
+            '    strategy.entry("AIQL-L", strategy.long)',
+            "else if confirmedBar and not desiredLong and strategy.position_size > 0",
+            '    strategy.close("AIQL-L")',
+            "",
+        )
+        return "\n".join(lines)
+
+    parameters = strategy.multi_signal
+    if parameters is None:  # pragma: no cover - guarded by _validate_strategy
+        raise GovernedPineGeneratorUnsupported("multi-signal strategy parameters are missing")
+
     lines = (
         "//@version=6",
-        "// AI Quant Lab governed Pine generator v1",
-        f"// Generator profile: {_GENERATOR_PROFILE}",
+        "// AI Quant Lab governed Pine generator v2",
+        f"// Generator profile: {profile}",
         f"// Strategy: {strategy_ref.object_id}",
         f"// Strategy fingerprint: {strategy_ref.expected_fingerprint}",
+        "// Exit semantics: thresholds are evaluated on confirmed bars; closes execute next bar open.",
         "strategy(",
         f'    "{script_title}",',
         "    pyramiding=0,",
@@ -205,16 +261,92 @@ def render_governed_pine_v6(
         f"    default_qty_value={cash}",
         ")",
         "",
-        f"thresholdBps = {strategy.threshold_bps}.0",
-        "threshold = thresholdBps / 10000.0",
-        "confirmedBar = barstate.isconfirmed",
-        "desiredLong = confirmedBar and open > 0 and close > 0 "
-        "and (close / open - 1.0) > threshold",
+        f"fastEmaLength = {parameters.fast_ema}",
+        f"mediumEmaLength = {parameters.medium_ema}",
+        f"slowEmaLength = {parameters.slow_ema}",
+        f"rsiLength = {parameters.rsi_length}",
+        f"rsiLongMin = {parameters.rsi_long_min}",
+        f"rsiShortMax = {parameters.rsi_short_max}",
+        f"macdFastLength = {parameters.macd_fast}",
+        f"macdSlowLength = {parameters.macd_slow}",
+        f"macdSignalLength = {parameters.macd_signal}",
+        f"adxLength = {parameters.adx_length}",
+        f"adxThreshold = {parameters.adx_threshold}",
+        f"atrLength = {parameters.atr_length}",
+        f"atrStopMult = {parameters.atr_stop_mult}",
+        f"takeProfitR = {parameters.take_profit_r}",
+        f"breakEvenTriggerR = {parameters.break_even_trigger_r}",
+        f"timeStopBars = {parameters.time_stop_bars}",
         "",
-        "if desiredLong and strategy.position_size <= 0",
-        '    strategy.entry("AIQL-L", strategy.long)',
-        "else if confirmedBar and not desiredLong and strategy.position_size > 0",
-        '    strategy.close("AIQL-L")',
+        "fastEma = ta.ema(close, fastEmaLength)",
+        "mediumEma = ta.ema(close, mediumEmaLength)",
+        "slowEma = ta.ema(close, slowEmaLength)",
+        "rsiValue = ta.rsi(close, rsiLength)",
+        "[macdLine, macdSignalLine, _] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)",
+        "[plusDI, minusDI, adxValue] = ta.dmi(adxLength, adxLength)",
+        "atrValue = ta.atr(atrLength)",
+        "",
+        "confirmedBar = barstate.isconfirmed",
+        "signalsReady = not na(fastEma) and not na(mediumEma) and not na(slowEma) "
+        "and not na(rsiValue) and not na(macdLine) and not na(macdSignalLine) "
+        "and not na(adxValue) and not na(atrValue)",
+        "longSignal = confirmedBar and signalsReady and fastEma > mediumEma and mediumEma > slowEma "
+        "and close > slowEma and rsiValue >= rsiLongMin and macdLine > macdSignalLine "
+        "and adxValue >= adxThreshold and plusDI > minusDI",
+        "shortSignal = confirmedBar and signalsReady and fastEma < mediumEma and mediumEma < slowEma "
+        "and close < slowEma and rsiValue <= rsiShortMax and macdLine < macdSignalLine "
+        "and adxValue >= adxThreshold and minusDI > plusDI",
+        "",
+        "var float entryAtr = na",
+        "var int entryBarIndex = na",
+        "var bool breakEvenArmed = false",
+        "priorPosition = nz(strategy.position_size[1])",
+        "newLong = strategy.position_size > 0 and priorPosition <= 0",
+        "newShort = strategy.position_size < 0 and priorPosition >= 0",
+        "flatNow = strategy.position_size == 0",
+        "",
+        "if newLong or newShort",
+        "    entryAtr := nz(atrValue[1], atrValue)",
+        "    entryBarIndex := bar_index",
+        "    breakEvenArmed := false",
+        "else if flatNow",
+        "    entryAtr := na",
+        "    entryBarIndex := na",
+        "    breakEvenArmed := false",
+        "",
+        "if flatNow",
+        "    if longSignal",
+        '        strategy.entry("AIQL-L", strategy.long)',
+        "    else if shortSignal",
+        '        strategy.entry("AIQL-S", strategy.short)',
+        "else if strategy.position_size > 0",
+        "    entryPrice = strategy.position_avg_price",
+        "    riskDistance = nz(entryAtr, atrValue) * atrStopMult",
+        "    initialStop = entryPrice - riskDistance",
+        "    takeProfit = entryPrice + riskDistance * takeProfitR",
+        "    barsInTrade = na(entryBarIndex) ? 0 : bar_index - entryBarIndex",
+        "    stopTouched = confirmedBar and low <= initialStop",
+        "    targetTouched = confirmedBar and high >= takeProfit",
+        "    breakEvenTriggerTouched = confirmedBar and high >= entryPrice + riskDistance * breakEvenTriggerR",
+        "    breakEvenStopTouched = breakEvenArmed and confirmedBar and low <= entryPrice",
+        "    if stopTouched or targetTouched or breakEvenStopTouched or barsInTrade >= timeStopBars or shortSignal",
+        '        strategy.close("AIQL-L")',
+        "    else if breakEvenTriggerTouched",
+        "        breakEvenArmed := true",
+        "else if strategy.position_size < 0",
+        "    entryPrice = strategy.position_avg_price",
+        "    riskDistance = nz(entryAtr, atrValue) * atrStopMult",
+        "    initialStop = entryPrice + riskDistance",
+        "    takeProfit = entryPrice - riskDistance * takeProfitR",
+        "    barsInTrade = na(entryBarIndex) ? 0 : bar_index - entryBarIndex",
+        "    stopTouched = confirmedBar and high >= initialStop",
+        "    targetTouched = confirmedBar and low <= takeProfit",
+        "    breakEvenTriggerTouched = confirmedBar and low <= entryPrice - riskDistance * breakEvenTriggerR",
+        "    breakEvenStopTouched = breakEvenArmed and confirmedBar and high >= entryPrice",
+        "    if stopTouched or targetTouched or breakEvenStopTouched or barsInTrade >= timeStopBars or longSignal",
+        '        strategy.close("AIQL-S")',
+        "    else if breakEvenTriggerTouched",
+        "        breakEvenArmed := true",
         "",
     )
     return "\n".join(lines)
@@ -260,7 +392,7 @@ def _generation_input_fingerprint(
 ) -> str:
     return fingerprint(
         {
-            "generator_profile": _GENERATOR_PROFILE,
+            "generator_profile": _generator_profile(strategy),
             "generation_run_id": str(request.generation_run_id),
             "intake_run_id": str(request.intake_run_id),
             "requested_artifact_id": str(request.requested_artifact_id),
@@ -364,7 +496,7 @@ def generate_governed_pine_strategy(
     )
     return GovernedPineGenerationResult(
         request.generation_run_id,
-        _GENERATOR_PROFILE,
+        _generator_profile(strategy),
         input_fp,
         source_text,
         intake.artifact.source_sha256,
@@ -398,7 +530,7 @@ def verify_governed_pine_generation(
     )
     if (
         result.generation_run_id != request.generation_run_id
-        or result.generator_profile != _GENERATOR_PROFILE
+        or result.generator_profile != _generator_profile(strategy)
         or result.generation_input_fingerprint != expected_fp
         or result.source_text != expected_source
         or result.source_sha256 != result.artifact.source_sha256
