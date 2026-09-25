@@ -166,7 +166,7 @@ as a new `LocalDatasetRepository` stored type in this sprint. Durable packaging/
 safety result belongs to the next governed TradingView research-export package. This limitation is
 explicit and does not weaken the immutable custody of the Pine source itself.
 
-## 24. Deployment / execution closure
+## 15. Deployment / execution closure
 
 Every Sprint 21 result remains:
 
@@ -175,7 +175,7 @@ Every Sprint 21 result remains:
 
 The validator has no order-submission, webhook, broker or browser capability.
 
-## 15. Relationship to Sprint 17 and Sprint 20
+## 16. Relationship to Sprint 17 and Sprint 20
 
 Sprint 17 remains the authoritative Pine source intake and custody boundary.
 
@@ -184,21 +184,21 @@ Sprint 20 remains the authoritative deterministic Pine generator.
 Sprint 21 does not replace either layer. It consumes the exact verified Sprint 20 output that already
 passed Sprint 17 intake lineage and adds a separate bounded static safety decision.
 
-## 16. Relationship to Pine ↔ Python parity
+## 17. Relationship to Pine ↔ Python parity
 
 A Sprint 21 pass does not imply Pine ↔ Python runtime parity.
 
 Sprint 18 parity still requires actual governed Pine/TradingView execution evidence when runtime
 parity is being claimed.
 
-## 17. Relationship to TradingView
+## 18. Relationship to TradingView
 
 Sprint 21 never contacts TradingView.
 
 Compilation, chart behavior and runtime execution on TradingView remain external/manual evidence until
 a separately governed export/validation step is implemented.
 
-## 18. Golden evidence
+## 19. Golden evidence
 
 `tests/golden/pine_safety_validation_v1.json` pins the canonical optimized example including:
 
@@ -214,7 +214,7 @@ a separately governed export/validation step is implemented.
 - unchanged artifact repaint state;
 - deployment/execution closure.
 
-## 19. Tests
+## 20. Tests
 
 Focused Sprint 21 tests cover:
 
@@ -237,7 +237,7 @@ Focused Sprint 21 tests cover:
 
 The full repository suite must remain green on Python 3.12 and Python 3.13.
 
-## 20. Governance BEFORE → AFTER
+## 21. Governance BEFORE → AFTER
 
 Sprint 21 reduces the risk that generated Pine contains explicit lookahead, mixed-timeframe,
 realtime-only or intrabar constructs that contradict the current governed research semantics.
@@ -245,7 +245,7 @@ realtime-only or intrabar constructs that contradict the current governed resear
 It does not resolve platform authenticity, runtime Pine semantics, TradingView compilation,
 general no-repaint proof, deployment authority or execution governance.
 
-## 21. Readiness
+## 22. Readiness
 
 - `PINE_STATIC_SAFETY_GATE_READY`
 - `PINE_STATIC_REPAINT_HAZARD_SCAN_READY`
@@ -262,7 +262,7 @@ general no-repaint proof, deployment authority or execution governance.
 - `LIVE_EXECUTION_NOT_READY`
 - `EXECUTION_CLOSED`
 
-## 22. Limitations
+## 23. Limitations
 
 This validator is intentionally conservative and bounded to the generated strategy profile.
 
@@ -272,7 +272,7 @@ TradingView runtime equivalence and cannot prove semantic parity under all marke
 A broader Pine grammar or new generator profile requires a new governed safety profile or contract
 version.
 
-## 23. Next-step recommendation only
+## 24. Next-step recommendation only
 
 After Sprint 21, the next useful sprint for the current product goal is **TradingView Research Export
 v1.0**: package the exact generated Pine source together with strategy identity, parameters,
@@ -280,7 +280,7 @@ validation evidence, static-safety result and manual TradingView instructions.
 
 Broker and live-execution work remain outside scope.
 
-## 24. Disposition
+## 25. Disposition
 
 Target disposition after green CI and final governed review:
 
