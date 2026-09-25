@@ -208,7 +208,8 @@ def render_governed_pine_v6(
         f"thresholdBps = {strategy.threshold_bps}.0",
         "threshold = thresholdBps / 10000.0",
         "confirmedBar = barstate.isconfirmed",
-        "desiredLong = confirmedBar and open > 0 and close > 0 and (close / open - 1.0) > threshold",
+        "desiredLong = confirmedBar and open > 0 and close > 0 "
+        "and (close / open - 1.0) > threshold",
         "",
         "if desiredLong and strategy.position_size <= 0",
         '    strategy.entry("AIQL-L", strategy.long)',
