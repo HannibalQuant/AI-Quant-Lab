@@ -51,6 +51,9 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationSelectionResult,
     OptimizationTrialRecord,
 )
+from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
+    Phase3EndToEndClosureRecord,
+)
 from ai_quant_lab.core.pine_python_parity_contracts import (
     ParityTolerancePolicy,
     PineExecutionEvidence,
@@ -136,6 +139,7 @@ type StoredDatasetObject = (
     | ResearchHandoffPackage
     | TradingViewResearchHandoffManifest
     | TradingViewResearchExportPackage
+    | Phase3EndToEndClosureRecord
     | IntegratedResearchWorkflowRunRecord
 )
 
@@ -222,6 +226,7 @@ class StoredObjectType(StrEnum):
     RESEARCH_HANDOFF_PACKAGE = "research-handoff-package"
     TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST = "tradingview-research-handoff-manifest"
     TRADINGVIEW_RESEARCH_EXPORT_PACKAGE = "tradingview-research-export-package"
+    PHASE3_END_TO_END_CLOSURE_RECORD = "phase3-end-to-end-closure-record"
     INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD = "integrated-research-workflow-run-record"
 
 
@@ -338,6 +343,7 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     ResearchHandoffPackage: StoredObjectType.RESEARCH_HANDOFF_PACKAGE,
     TradingViewResearchHandoffManifest: StoredObjectType.TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST,
     TradingViewResearchExportPackage: StoredObjectType.TRADINGVIEW_RESEARCH_EXPORT_PACKAGE,
+    Phase3EndToEndClosureRecord: StoredObjectType.PHASE3_END_TO_END_CLOSURE_RECORD,
     IntegratedResearchWorkflowRunRecord: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD,
 }
 
@@ -434,6 +440,8 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.manifest_id)
     if isinstance(record, TradingViewResearchExportPackage):
         return str(record.export_id)
+    if isinstance(record, Phase3EndToEndClosureRecord):
+        return str(record.closure_id)
     if isinstance(record, IntegratedResearchWorkflowRunRecord):
         return str(record.workflow_run_id)
     return str(record.dataset_id)
