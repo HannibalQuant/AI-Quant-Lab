@@ -176,14 +176,13 @@ def _verify_upstream_ready(context: Phase3EndToEndClosureContext) -> None:
         raise Phase3EndToEndClosureNotReady("Phase 3 closure requires robustness PASS")
 
     optimization = pine.optimization
-    if optimization is not None:
-        if (
-            optimization.result.decision is not SelectionDecision.SELECTED
-            or optimization.result.selected_candidate_ref is None
-        ):
-            raise Phase3EndToEndClosureNotReady(
-                "optimized Phase 3 closure requires a selected candidate"
-            )
+    if optimization is not None and (
+        optimization.result.decision is not SelectionDecision.SELECTED
+        or optimization.result.selected_candidate_ref is None
+    ):
+        raise Phase3EndToEndClosureNotReady(
+            "optimized Phase 3 closure requires a selected candidate"
+        )
 
 
 def _stages(context: Phase3EndToEndClosureContext) -> tuple[Phase3EndToEndStage, ...]:
@@ -202,8 +201,8 @@ def _stages(context: Phase3EndToEndClosureContext) -> tuple[Phase3EndToEndStage,
         Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
     )
     if context.pine_context.optimization is not None:
-        return base + (Phase3EndToEndStage.OPTIMIZATION_SELECTED,) + tail
-    return base + tail
+        return (*base, Phase3EndToEndStage.OPTIMIZATION_SELECTED, *tail)
+    return (*base, *tail)
 
 
 def _build_record(
