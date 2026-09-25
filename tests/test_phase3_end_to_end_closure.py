@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from test_optimization_selection import _selection_case, search_space
 from test_pine_strategy_intake import (
     PROVENANCE_REF,
     _direct_context,
@@ -53,7 +54,6 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportRuntimeStatus,
 )
 
-pytest_plugins = ("test_pine_strategy_intake",)
 
 V1 = ObjectVersion(1)
 GOLDEN = Path(__file__).parent / "golden" / "phase3_end_to_end_closure_v1.json"
@@ -78,6 +78,14 @@ CLOSURE_AUTHORITY = TraceabilityRef(
     V1,
     "sha256:" + "6" * 64,
 )
+
+
+@pytest.fixture(scope="module")
+def selection_bundle(tmp_path_factory):
+    return _selection_case(
+        tmp_path_factory.mktemp("phase3-e2e"),
+        search_space(),
+    )
 
 
 def closure_request(*, suffix: str = "optimized"):
