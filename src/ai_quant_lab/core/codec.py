@@ -245,7 +245,6 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportSafetyStatus,
 )
 
-
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
 REPRESENTATION_VERSION: Final = 1
 _TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")
