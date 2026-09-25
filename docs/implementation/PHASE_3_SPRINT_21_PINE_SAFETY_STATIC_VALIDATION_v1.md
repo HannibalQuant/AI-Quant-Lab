@@ -46,8 +46,8 @@ Sprint 21 does not add:
 A governed safety assessment can only run after
 `verify_governed_pine_generation()` succeeds on the exact Sprint 20 request/result/context.
 
-A changed source string, substituted strategy fingerprint, changed generated artifact or mismatched
-generation fingerprint fails closed before a safety claim is issued.
+A changed source string, substituted strategy fingerprint, changed generated artifact, mismatched
+generation fingerprint or substituted provenance fails closed before a safety claim is issued.
 
 ## 6. Safety authority
 
@@ -156,7 +156,17 @@ exact equality.
 
 Stored summaries or external labels are not trusted by themselves.
 
-## 14. Deployment / execution closure
+## 14. Persistence boundary
+
+Sprint 21 does not introduce a second mutable Pine source or a new repository alias. The canonical
+Pine source remains the immutable Sprint 17 `PineStrategySourceArtifact`.
+
+The static safety result is deterministically reconstructable and golden-pinned, but it is not added
+as a new `LocalDatasetRepository` stored type in this sprint. Durable packaging/custody of the
+safety result belongs to the next governed TradingView research-export package. This limitation is
+explicit and does not weaken the immutable custody of the Pine source itself.
+
+## 24. Deployment / execution closure
 
 Every Sprint 21 result remains:
 
@@ -242,7 +252,7 @@ general no-repaint proof, deployment authority or execution governance.
 - `PINE_CONFIRMED_BAR_GUARD_READY`
 - `PINE_GENERATOR_LINEAGE_TO_SAFETY_READY`
 - `PINE_SAFETY_AUTHORITY_BOUNDARY_READY`
-- `PINE_SAFETY_GOLDEN_EVIDENCE_READY`
+- `PINE_SAFETY_GOLDEN_EVIDENCE_READY`\n- `PINE_SAFETY_DURABLE_PACKAGE_NOT_READY`
 - `PINE_RUNTIME_NO_REPAINT_NOT_READY`
 - `TRADINGVIEW_COMPILATION_NOT_READY`
 - `TRADINGVIEW_RUNTIME_VALIDATION_NOT_READY`
