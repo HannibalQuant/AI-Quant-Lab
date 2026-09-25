@@ -18,6 +18,7 @@ from ai_quant_lab.core.model import (
     ProvenanceId,
     RunId,
     TraceabilityRef,
+    ValidationId,
 )
 from ai_quant_lab.core.pine_strategy_contracts import RepaintAssessmentStatus
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
@@ -120,7 +121,7 @@ class TradingViewResearchExportPackage:
             (self.pine_artifact_ref, ArtifactId, "pine_artifact_ref"),
             (self.strategy_ref, ArtifactId, "strategy_ref"),
             (self.backtest_ref, ArtifactId, "backtest_ref"),
-            (self.scientific_validation_ref, ArtifactId, "scientific_validation_ref"),
+            (self.scientific_validation_ref, ValidationId, "scientific_validation_ref"),
             (self.robustness_ref, ArtifactId, "robustness_ref"),
             (self.instrument_ref, InstrumentId, "instrument_ref"),
             (self.timeframe_ref, TimeframeId, "timeframe_ref"),
