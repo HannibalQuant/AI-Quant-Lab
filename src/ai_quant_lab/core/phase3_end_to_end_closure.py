@@ -171,9 +171,7 @@ def _verify_upstream_ready(context: Phase3EndToEndClosureContext) -> None:
             "Phase 3 closure requires authorized experiment evidence"
         )
     if evidence.scientific_result.decision is not ScientificValidationDecision.PASS:
-        raise Phase3EndToEndClosureNotReady(
-            "Phase 3 closure requires scientific validation PASS"
-        )
+        raise Phase3EndToEndClosureNotReady("Phase 3 closure requires scientific validation PASS")
     if evidence.robustness_result.decision is not RobustnessDecision.PASS:
         raise Phase3EndToEndClosureNotReady("Phase 3 closure requires robustness PASS")
 
@@ -232,7 +230,9 @@ def _build_record(
         request.closure_id,
         _V1,
         request.closure_run_id,
-        _exact(evidence.declaration, evidence.declaration.provenance_id, evidence.declaration.version),
+        _exact(
+            evidence.declaration, evidence.declaration.provenance_id, evidence.declaration.version
+        ),
         _exact(evidence.admission, evidence.admission.admission_id, evidence.admission.version),
         _exact(
             evidence.eligibility,
