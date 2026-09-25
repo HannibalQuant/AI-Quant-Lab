@@ -1,1 +1,17 @@
-{}
+{
+  "format": "governed-pine-generator-v1",
+  "generator_profile": "AIQL_GOVERNED_PINE_V6_CLOSE_VS_OPEN_LONG_ONLY_V1",
+  "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
+  "threshold_bps": 0,
+  "source_sha256": "sha256:e24c9977b2b608976c9a5814ef5fc0f448e770f396f6d3088d5e38b4b669a936",
+  "normalized_source_sha256": "sha256:e24c9977b2b608976c9a5814ef5fc0f448e770f396f6d3088d5e38b4b669a936",
+  "source_byte_size": 848,
+  "generation_input_fingerprint": "sha256:a3129eaccba6abff790afee96e4b87547acc29aa622c8ffbc44c092ecf4170ab",
+  "artifact_fingerprint": "sha256:1ba29927b2ed4b3f0cae25caa16785d8fcc2afad1fccb5e1fd492b71678d7110",
+  "intake_record_fingerprint": "sha256:3f3a8d546e1430d2384d4e90e08a6332e27843484d7719fad8987f34b72c51b3",
+  "optimization_selection_ref": "artifact:controlled-optimization-selection-result",
+  "semantic_parity": "NOT_EVALUATED",
+  "repaint_assessment": "NOT_EVALUATED",
+  "deployment_authorization": "NOT_AUTHORIZED",
+  "execution_state": "PLANNED_CLOSED"
+}
