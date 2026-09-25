@@ -143,10 +143,7 @@ def test_real_csv_to_tradingview_export_golden_path_is_one_current_order_pipelin
         Phase3EndToEndStage.STATIC_SAFETY_PASSED,
         Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
     )
-    assert (
-        execution.record.final_state
-        is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
-    )
+    assert execution.record.final_state is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
     assert (
         package.readiness
         is TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
@@ -255,21 +252,17 @@ def test_closure_keeps_tradingview_runtime_and_execution_open_questions_explicit
     package = execution.export_execution.package
 
     assert (
-        record.runtime_status
-        is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
+        record.runtime_status is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
     )
     assert (
-        package.runtime_status
-        is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
+        package.runtime_status is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
     )
     assert record.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert record.execution_state is ExecutionState.PLANNED_CLOSED
 
 
 def test_sprint23_closure_has_no_broker_or_tradingview_automation_capability():
-    source = Path("src/ai_quant_lab/core/phase3_end_to_end_closure.py").read_text(
-        encoding="utf-8"
-    )
+    source = Path("src/ai_quant_lab/core/phase3_end_to_end_closure.py").read_text(encoding="utf-8")
     forbidden = (
         "import requests",
         "import httpx",
@@ -301,13 +294,9 @@ def test_phase3_end_to_end_closure_golden_is_pinned(closure_bundle):
         "eligibility_ref": str(execution.record.eligibility_ref.object_id),
         "strategy_ref": str(execution.record.strategy_ref.object_id),
         "backtest_ref": str(execution.record.backtest_ref.object_id),
-        "scientific_validation_ref": str(
-            execution.record.scientific_validation_ref.object_id
-        ),
+        "scientific_validation_ref": str(execution.record.scientific_validation_ref.object_id),
         "robustness_ref": str(execution.record.robustness_ref.object_id),
-        "optimization_selection_ref": str(
-            execution.record.optimization_selection_ref.object_id
-        ),
+        "optimization_selection_ref": str(execution.record.optimization_selection_ref.object_id),
         "pine_artifact_ref": str(execution.record.pine_artifact_ref.object_id),
         "export_ref": str(execution.record.export_ref.object_id),
         "source_file_sha256": evidence.admission.file_sha256,
