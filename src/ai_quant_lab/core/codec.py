@@ -132,6 +132,11 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationTrialStatus,
     SelectionDecision,
 )
+from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
+    Phase3EndToEndClosureRecord,
+    Phase3EndToEndStage,
+    Phase3EndToEndState,
+)
 from ai_quant_lab.core.pine_python_parity_contracts import (
     ParityMismatch,
     ParityMismatchType,
@@ -303,6 +308,7 @@ type GovernedRecord = (
     | ResearchHandoffPackage
     | TradingViewResearchHandoffManifest
     | TradingViewResearchExportPackage
+    | Phase3EndToEndClosureRecord
     | IntegratedResearchWorkflowRunRecord
 )
 
@@ -383,6 +389,7 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     ResearchHandoffPackage: "ResearchHandoffPackage",
     TradingViewResearchHandoffManifest: "TradingViewResearchHandoffManifest",
     TradingViewResearchExportPackage: "TradingViewResearchExportPackage",
+    Phase3EndToEndClosureRecord: "Phase3EndToEndClosureRecord",
     IntegratedResearchWorkflowRunRecord: "IntegratedResearchWorkflowRunRecord",
 }
 
@@ -1871,6 +1878,37 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "manual_steps": list(record.manual_steps),
             "readiness": record.readiness.value,
             "export_authority_ref": _trace_ref_payload(record.export_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, Phase3EndToEndClosureRecord):
+        return {
+            "closure_id": str(record.closure_id),
+            "version": record.version.number,
+            "closure_run_id": str(record.closure_run_id),
+            "source_declaration_ref": _trace_ref_payload(record.source_declaration_ref),
+            "admission_ref": _trace_ref_payload(record.admission_ref),
+            "eligibility_ref": _trace_ref_payload(record.eligibility_ref),
+            "authorization_ref": _trace_ref_payload(record.authorization_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "backtest_ref": _trace_ref_payload(record.backtest_ref),
+            "scientific_validation_ref": _trace_ref_payload(record.scientific_validation_ref),
+            "robustness_ref": _trace_ref_payload(record.robustness_ref),
+            "optimization_selection_ref": (
+                None
+                if record.optimization_selection_ref is None
+                else _trace_ref_payload(record.optimization_selection_ref)
+            ),
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "safety_assessment_id": str(record.safety_assessment_id),
+            "safety_input_fingerprint": record.safety_input_fingerprint,
+            "export_ref": _trace_ref_payload(record.export_ref),
+            "stages": [item.value for item in record.stages],
+            "final_state": record.final_state.value,
+            "runtime_status": record.runtime_status.value,
+            "closure_authority_ref": _trace_ref_payload(record.closure_authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
@@ -4748,6 +4786,69 @@ def _decode_tradingview_research_export(
     )
 
 
+def _decode_phase3_end_to_end_closure(
+    payload: Any,
+) -> Phase3EndToEndClosureRecord:
+    fields = {
+        "closure_id",
+        "version",
+        "closure_run_id",
+        "source_declaration_ref",
+        "admission_ref",
+        "eligibility_ref",
+        "authorization_ref",
+        "strategy_ref",
+        "backtest_ref",
+        "scientific_validation_ref",
+        "robustness_ref",
+        "optimization_selection_ref",
+        "pine_artifact_ref",
+        "safety_assessment_id",
+        "safety_input_fingerprint",
+        "export_ref",
+        "stages",
+        "final_state",
+        "runtime_status",
+        "closure_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "Phase3EndToEndClosureRecord.payload")
+    return Phase3EndToEndClosureRecord(
+        cast(ArtifactId, _typed_id(item["closure_id"], ArtifactId, "closure_id")),
+        _version(item["version"], "version"),
+        cast(RunId, _typed_id(item["closure_run_id"], RunId, "closure_run_id")),
+        _trace_ref(item["source_declaration_ref"], "source_declaration_ref"),
+        _trace_ref(item["admission_ref"], "admission_ref"),
+        _trace_ref(item["eligibility_ref"], "eligibility_ref"),
+        _trace_ref(item["authorization_ref"], "authorization_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["backtest_ref"], "backtest_ref"),
+        _trace_ref(item["scientific_validation_ref"], "scientific_validation_ref"),
+        _trace_ref(item["robustness_ref"], "robustness_ref"),
+        _optional_trace_ref(item["optimization_selection_ref"], "optimization_selection_ref"),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        cast(
+            ArtifactId,
+            _typed_id(item["safety_assessment_id"], ArtifactId, "safety_assessment_id"),
+        ),
+        _text(item["safety_input_fingerprint"], "safety_input_fingerprint"),
+        _trace_ref(item["export_ref"], "export_ref"),
+        tuple(Phase3EndToEndStage(value) for value in _strings(item["stages"], "stages")),
+        Phase3EndToEndState(_text(item["final_state"], "final_state")),
+        TradingViewResearchExportRuntimeStatus(_text(item["runtime_status"], "runtime_status")),
+        _trace_ref(item["closure_authority_ref"], "closure_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 def _decode_integrated_workflow_result(payload: Any) -> IntegratedResearchWorkflowResult:
     fields = {
         "workflow_result_id",
@@ -4885,6 +4986,7 @@ _DECODERS = {
     "ResearchHandoffPackage": _decode_research_handoff,
     "TradingViewResearchHandoffManifest": _decode_tradingview_handoff,
     "TradingViewResearchExportPackage": _decode_tradingview_research_export,
+    "Phase3EndToEndClosureRecord": _decode_phase3_end_to_end_closure,
     "IntegratedResearchWorkflowRunRecord": _decode_integrated_workflow_run,
 }
 
@@ -4943,6 +5045,7 @@ def decode[
         ResearchHandoffPackage,
         TradingViewResearchHandoffManifest,
         TradingViewResearchExportPackage,
+        Phase3EndToEndClosureRecord,
         IntegratedResearchWorkflowRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
