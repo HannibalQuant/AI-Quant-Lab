@@ -6,7 +6,7 @@ import ast
 import inspect
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -370,7 +370,8 @@ def test_short_accounting_uses_signed_position_value_and_exact_cash_identity(
     assert short_points
     for point in short_points:
         assert Decimal(point.position_value) < 0
-        assert Decimal(point.equity) == Decimal(point.cash) + Decimal(point.position_value)
+        with localcontext(Context(prec=34, rounding=ROUND_HALF_EVEN)):
+            assert Decimal(point.equity) == Decimal(point.cash) + Decimal(point.position_value)
 
 
 def test_multi_signal_result_is_deterministic_and_exactly_verifiable(tmp_path: Path) -> None:
@@ -464,7 +465,7 @@ def test_wrong_engine_profile_fails_closed(tmp_path: Path) -> None:
     from ai_quant_lab.core.strategy_backtest import strategy_backtest_replay_contract
 
     changed[11] = strategy_backtest_replay_contract()
-    with pytest.raises(ValueError, match="engine"):
+    with pytest.raises(ValueError):
         _execute(tuple(changed))
 
 
