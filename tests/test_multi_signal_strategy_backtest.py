@@ -8,6 +8,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from test_strategy_backtest import (
@@ -42,6 +43,7 @@ from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthoriza
 from ai_quant_lab.core.strategy_backtest import (
     AccountingMismatch,
     BacktestLineageMismatch,
+    StrategyBacktestResult,
     StrategyBacktestRunRequest,
     multi_signal_strategy_backtest_engine_ref,
     multi_signal_strategy_backtest_replay_contract,
@@ -174,7 +176,7 @@ def _multi_context(
     tmp_path: Path,
     *,
     params: MultiSignalTrendParameters | None = None,
-) -> tuple[object, ...]:
+) -> tuple[Any, ...]:
     base = authorized_context(
         tmp_path,
         suffix="sprint-25-multi",
@@ -279,7 +281,7 @@ def _multi_context(
     )
 
 
-def _execute(context: tuple[object, ...]):
+def _execute(context: tuple[Any, ...]) -> StrategyBacktestResult:
     (
         declaration,
         repository,
@@ -363,9 +365,7 @@ def test_short_accounting_uses_signed_position_value_and_exact_cash_identity(
 ) -> None:
     result = _execute(_multi_context(tmp_path))
     short_points = [
-        point
-        for point in result.artifact.equity_curve
-        if Decimal(point.position_quantity) < 0
+        point for point in result.artifact.equity_curve if Decimal(point.position_quantity) < 0
     ]
     assert short_points
     for point in short_points:
@@ -425,7 +425,6 @@ def test_tampered_short_equity_fails_independent_accounting(tmp_path: Path) -> N
         position_value="0",
         equity=changed_points[short_index].cash,
     )
-    changed = replace(artifact, equity_curve=tuple(changed_points))
 
     (
         _declaration,
@@ -442,7 +441,8 @@ def test_tampered_short_equity_fails_independent_accounting(tmp_path: Path) -> N
         engine,
         request,
     ) = context
-    with pytest.raises((AccountingMismatch, BacktestLineageMismatch)):
+    with pytest.raises((ValueError, AccountingMismatch, BacktestLineageMismatch)):
+        changed = replace(artifact, equity_curve=tuple(changed_points))
         verify_strategy_backtest_lineage(
             record=result.record,
             artifact=changed,

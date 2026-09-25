@@ -1008,7 +1008,10 @@ def test_multi_signal_grid_parameters_are_canonical_and_bounded() -> None:
     )
     values = enumerate_parameter_sets(space, 8)
     assert len(values) == 8
-    assert all(tuple(name for name, _ in item) == tuple(sorted(name for name, _ in item)) for item in values)
+    assert all(
+        tuple(name for name, _ in item) == tuple(sorted(name for name, _ in item))
+        for item in values
+    )
 
 
 def test_multi_signal_candidate_derivation_updates_only_declared_parameters(

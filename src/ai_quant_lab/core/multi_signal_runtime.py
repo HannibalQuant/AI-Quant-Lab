@@ -240,12 +240,8 @@ def build_multi_signal_indicators(
                 assert previous_high is not None and previous_low is not None
                 upward = high - previous_high
                 downward = previous_low - low
-                plus_dm.append(
-                    upward if upward > downward and upward > 0 else Decimal(0)
-                )
-                minus_dm.append(
-                    downward if downward > upward and downward > 0 else Decimal(0)
-                )
+                plus_dm.append(upward if upward > downward and upward > 0 else Decimal(0))
+                minus_dm.append(downward if downward > upward and downward > 0 else Decimal(0))
             previous_close = close
             previous_high = high
             previous_low = low
@@ -407,12 +403,8 @@ def simulate_multi_signal_backtest(
                     specification.slippage_bps,
                 )
                 order_number = len(orders) + 1
-                order_id = ArtifactId(
-                    f"{base.run_id.value}-simulated-order-{order_number:04d}"
-                )
-                fill_id = ArtifactId(
-                    f"{base.run_id.value}-simulated-fill-{order_number:04d}"
-                )
+                order_id = ArtifactId(f"{base.run_id.value}-simulated-order-{order_number:04d}")
+                fill_id = ArtifactId(f"{base.run_id.value}-simulated-fill-{order_number:04d}")
 
                 opening_position = position is SimulatedPositionState.FLAT
                 if opening_position:
@@ -482,9 +474,7 @@ def simulate_multi_signal_backtest(
                         cash += fill_notional - commission
                         quantity = -fill_quantity
                     else:
-                        raise MultiSignalExecutionError(
-                            "flat-to-flat transition is not supported"
-                        )
+                        raise MultiSignalExecutionError("flat-to-flat transition is not supported")
                     position = pending.target
                     entry_price = execution
                     entry_fill = fill
@@ -495,13 +485,9 @@ def simulate_multi_signal_backtest(
                     break_even_armed = False
                 else:
                     if pending.target is not SimulatedPositionState.FLAT:
-                        raise MultiSignalExecutionError(
-                            "open position can only transition to flat"
-                        )
+                        raise MultiSignalExecutionError("open position can only transition to flat")
                     if entry_price is None or entry_fill is None:
-                        raise MultiSignalExecutionError(
-                            "position close requires exact entry state"
-                        )
+                        raise MultiSignalExecutionError("position close requires exact entry state")
                     absolute_quantity = abs(quantity)
                     if position is SimulatedPositionState.LONG:
                         if side is not SimulatedOrderSide.SELL:
@@ -514,17 +500,14 @@ def simulate_multi_signal_backtest(
                         cash -= fill_notional + commission
                         gross = (entry_price - execution) * absolute_quantity
                     else:
-                        raise MultiSignalExecutionError(
-                            "flat position cannot execute a close"
-                        )
+                        raise MultiSignalExecutionError("flat position cannot execute a close")
                     total_commission = entry_commission + commission
                     net = gross - total_commission
                     realized += net
                     trades.append(
                         SimulatedTrade(
                             ArtifactId(
-                                f"{base.run_id.value}-simulated-trade-"
-                                f"{len(trades) + 1:04d}"
+                                f"{base.run_id.value}-simulated-trade-{len(trades) + 1:04d}"
                             ),
                             entry_fill.fill_id,
                             fill.fill_id,
@@ -557,11 +540,7 @@ def simulate_multi_signal_backtest(
             if mark <= 0:
                 raise MultiSignalExecutionError("equity mark price must be positive")
             position_value = quantity * mark
-            unrealized = (
-                Decimal(0)
-                if entry_price is None
-                else (mark - entry_price) * quantity
-            )
+            unrealized = Decimal(0) if entry_price is None else (mark - entry_price) * quantity
             equity = cash + position_value
             if equity < 0:
                 raise MultiSignalExecutionError("simulated equity cannot be negative")
@@ -595,11 +574,7 @@ def simulate_multi_signal_backtest(
                     )
                 continue
 
-            if (
-                entry_price is None
-                or entry_atr is None
-                or entry_bar_index is None
-            ):
+            if entry_price is None or entry_atr is None or entry_bar_index is None:
                 raise MultiSignalExecutionError("open position lacks exact risk state")
 
             risk_distance = entry_atr * Decimal(parameters.atr_stop_mult)
@@ -721,9 +696,7 @@ def verify_multi_signal_backtest_accounting(
 ) -> None:
     """Independently reconstruct long/short cash, positions, trades and equity."""
     if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
-        raise MultiSignalAccountingError(
-            "multi-signal accounting supports FIXED_NOTIONAL only"
-        )
+        raise MultiSignalAccountingError("multi-signal accounting supports FIXED_NOTIONAL only")
     if not bars or len(artifact.equity_curve) != len(bars):
         raise MultiSignalAccountingError(
             "equity curve must bind every governed replay bar exactly once"
@@ -750,9 +723,7 @@ def verify_multi_signal_backtest_accounting(
     fills_by_bar: dict[TraceabilityRef, SimulatedFill] = {}
     for fill in artifact.fills:
         if fill.order_id in fills_by_order or fill.bar_ref in fills_by_bar:
-            raise MultiSignalAccountingError(
-                "multi-signal ledger contains duplicate fill binding"
-            )
+            raise MultiSignalAccountingError("multi-signal ledger contains duplicate fill binding")
         fills_by_order[fill.order_id] = fill
         fills_by_id[fill.fill_id] = fill
         fills_by_bar[fill.bar_ref] = fill
@@ -766,9 +737,7 @@ def verify_multi_signal_backtest_accounting(
             source_bar = bars_by_ref.get(order.source_bar_ref)
             fill_bar = bars_by_ref.get(order.fill_bar_ref)
             if source_bar is None or fill_bar is None:
-                raise MultiSignalAccountingError(
-                    "order references a bar outside governed replay"
-                )
+                raise MultiSignalAccountingError("order references a bar outside governed replay")
             if (
                 order.side is not fill.side
                 or order.strategy_ref != strategy_ref
@@ -833,13 +802,8 @@ def verify_multi_signal_backtest_accounting(
             exit_fill = fills_by_id.get(trade.exit_fill_id)
             if entry is None or exit_fill is None:
                 raise MultiSignalAccountingError("trade references an unknown fill")
-            if (
-                trade.entry_fill_id in participating
-                or trade.exit_fill_id in participating
-            ):
-                raise MultiSignalAccountingError(
-                    "a fill participates in multiple completed trades"
-                )
+            if trade.entry_fill_id in participating or trade.exit_fill_id in participating:
+                raise MultiSignalAccountingError("a fill participates in multiple completed trades")
             if entry.side is exit_fill.side:
                 raise MultiSignalAccountingError(
                     "completed trade must use opposite entry and exit sides"
@@ -863,12 +827,9 @@ def verify_multi_signal_backtest_accounting(
                 "trade exit price is inconsistent",
             )
             gross = (
-                (Decimal(exit_fill.execution_price) - Decimal(entry.execution_price))
-                * quantity
+                (Decimal(exit_fill.execution_price) - Decimal(entry.execution_price)) * quantity
                 if entry.side is SimulatedOrderSide.BUY
-                else (
-                    Decimal(entry.execution_price) - Decimal(exit_fill.execution_price)
-                )
+                else (Decimal(entry.execution_price) - Decimal(exit_fill.execution_price))
                 * quantity
             )
             commission = Decimal(entry.commission) + Decimal(exit_fill.commission)
@@ -929,9 +890,7 @@ def verify_multi_signal_backtest_accounting(
                     entry_fill = fill
                 else:
                     if entry_fill is None:
-                        raise MultiSignalAccountingError(
-                            "open position has no exact entry fill"
-                        )
+                        raise MultiSignalAccountingError("open position has no exact entry fill")
                     if signed_quantity > 0:
                         if fill.side is not SimulatedOrderSide.SELL:
                             raise MultiSignalAccountingError("long position must close with SELL")
@@ -958,15 +917,9 @@ def verify_multi_signal_backtest_accounting(
 
             mark = Decimal(bar.close.text)
             position_value = signed_quantity * mark
-            entry_price = (
-                None
-                if entry_fill is None
-                else Decimal(entry_fill.execution_price)
-            )
+            entry_price = None if entry_fill is None else Decimal(entry_fill.execution_price)
             unrealized = (
-                Decimal(0)
-                if entry_price is None
-                else (mark - entry_price) * signed_quantity
+                Decimal(0) if entry_price is None else (mark - entry_price) * signed_quantity
             )
             equity = cash + position_value
             if point.event_time != bar.availability_time:
@@ -1010,15 +963,11 @@ def verify_multi_signal_backtest_accounting(
         else:
             expected_position = SimulatedPositionState.FLAT
         if artifact.open_position is not expected_position:
-            raise MultiSignalAccountingError(
-                "final open-position state is inconsistent"
-            )
+            raise MultiSignalAccountingError("final open-position state is inconsistent")
         unresolved = {fill.fill_id for fill in artifact.fills} - participating
         if expected_position is SimulatedPositionState.FLAT:
             if unresolved:
-                raise MultiSignalAccountingError(
-                    "flat result contains an unresolved position fill"
-                )
+                raise MultiSignalAccountingError("flat result contains an unresolved position fill")
         elif entry_fill is None or unresolved != {entry_fill.fill_id}:
             raise MultiSignalAccountingError(
                 "open position must have exactly one unresolved entry fill"
@@ -1054,9 +1003,7 @@ def verify_multi_signal_backtest_accounting(
             equity = Decimal(point.equity)
             peak = max(peak, equity)
             if peak <= 0:
-                raise MultiSignalAccountingError(
-                    "drawdown peak must remain positive"
-                )
+                raise MultiSignalAccountingError("drawdown peak must remain positive")
             drawdown = max(drawdown, Decimal(1) - equity / peak)
         _match(
             Decimal(artifact.max_drawdown),
