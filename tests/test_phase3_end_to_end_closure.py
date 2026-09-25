@@ -53,7 +53,7 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportRuntimeStatus,
 )
 
-pytest_plugins = ("test_optimization_selection", "test_pine_strategy_intake")
+pytest_plugins = ("test_pine_strategy_intake",)
 
 V1 = ObjectVersion(1)
 GOLDEN = Path(__file__).parent / "golden" / "phase3_end_to_end_closure_v1.json"
