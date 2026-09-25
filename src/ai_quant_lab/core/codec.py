@@ -221,13 +221,6 @@ from ai_quant_lab.core.scientific_validation_contracts import (
     ValidationRunRecord,
     ValidationRunStatus,
 )
-from ai_quant_lab.core.tradingview_research_export_contracts import (
-    TradingViewResearchExportPackage,
-    TradingViewResearchExportReadiness,
-    TradingViewResearchExportRuntimeStatus,
-    TradingViewResearchExportSafetyStatus,
-)
-
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
@@ -245,6 +238,13 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     StrategyDefinition,
     StrategyModel,
 )
+from ai_quant_lab.core.tradingview_research_export_contracts import (
+    TradingViewResearchExportPackage,
+    TradingViewResearchExportReadiness,
+    TradingViewResearchExportRuntimeStatus,
+    TradingViewResearchExportSafetyStatus,
+)
+
 
 REPRESENTATION_FORMAT: Final = "ai-quant-lab.canonical-json"
 REPRESENTATION_VERSION: Final = 1
