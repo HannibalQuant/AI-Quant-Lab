@@ -196,12 +196,9 @@ def test_manual_manifest_is_deterministic_and_explicit_about_runtime(export_bund
     assert manifest["normalized_manifest_ref"] == str(
         execution.package.normalized_manifest_ref.object_id
     )
-    assert manifest["normalized_lock_ref"] == str(
-        execution.package.normalized_lock_ref.object_id
-    )
+    assert manifest["normalized_lock_ref"] == str(execution.package.normalized_lock_ref.object_id)
     assert (
-        manifest["generation_input_fingerprint"]
-        == execution.package.generation_input_fingerprint
+        manifest["generation_input_fingerprint"] == execution.package.generation_input_fingerprint
     )
     assert manifest["safety_input_fingerprint"] == execution.package.safety_input_fingerprint
     assert manifest["deployment_authorization"] == "NOT_AUTHORIZED"
