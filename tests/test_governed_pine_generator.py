@@ -253,9 +253,7 @@ def test_generated_artifact_remains_research_only(generator_bundle):
 
 
 def test_generator_source_has_no_external_execution_capability():
-    source = Path(
-        "src/ai_quant_lab/core/governed_pine_generator.py"
-    ).read_text(encoding="utf-8")
+    source = Path("src/ai_quant_lab/core/governed_pine_generator.py").read_text(encoding="utf-8")
     forbidden = (
         "import requests",
         "import httpx",
