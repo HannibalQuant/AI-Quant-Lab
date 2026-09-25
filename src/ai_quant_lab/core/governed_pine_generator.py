@@ -176,8 +176,8 @@ def _validate_strategy(strategy: StrategyDefinition) -> None:
     )
     if not common_supported or not (legacy_supported or multi_signal_supported):
         raise GovernedPineGeneratorUnsupported(
-            "generator supports only governed legacy long-only or Sprint 24 multi-signal long/short "
-            "next-bar-open profiles"
+            "generator supports only governed legacy long-only or Sprint 24 "
+            "multi-signal long/short next-bar-open profiles"
         )
 
 
@@ -251,7 +251,8 @@ def render_governed_pine_v6(
         f"// Generator profile: {profile}",
         f"// Strategy: {strategy_ref.object_id}",
         f"// Strategy fingerprint: {strategy_ref.expected_fingerprint}",
-        "// Exit semantics: thresholds are evaluated on confirmed bars; closes execute next bar open.",
+        "// Exit semantics: thresholds are evaluated on confirmed bars; "
+        "closes execute next bar open.",
         "strategy(",
         f'    "{script_title}",',
         "    pyramiding=0,",
@@ -282,7 +283,8 @@ def render_governed_pine_v6(
         "mediumEma = ta.ema(close, mediumEmaLength)",
         "slowEma = ta.ema(close, slowEmaLength)",
         "rsiValue = ta.rsi(close, rsiLength)",
-        "[macdLine, macdSignalLine, _] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)",
+        "[macdLine, macdSignalLine, _] = "
+        "ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)",
         "[plusDI, minusDI, adxValue] = ta.dmi(adxLength, adxLength)",
         "atrValue = ta.atr(atrLength)",
         "",
@@ -290,11 +292,13 @@ def render_governed_pine_v6(
         "signalsReady = not na(fastEma) and not na(mediumEma) and not na(slowEma) "
         "and not na(rsiValue) and not na(macdLine) and not na(macdSignalLine) "
         "and not na(adxValue) and not na(atrValue)",
-        "longSignal = confirmedBar and signalsReady and fastEma > mediumEma and mediumEma > slowEma "
-        "and close > slowEma and rsiValue >= rsiLongMin and macdLine > macdSignalLine "
+        "longSignal = confirmedBar and signalsReady and fastEma > mediumEma "
+        "and mediumEma > slowEma and close > slowEma and rsiValue >= rsiLongMin "
+        "and macdLine > macdSignalLine "
         "and adxValue >= adxThreshold and plusDI > minusDI",
-        "shortSignal = confirmedBar and signalsReady and fastEma < mediumEma and mediumEma < slowEma "
-        "and close < slowEma and rsiValue <= rsiShortMax and macdLine < macdSignalLine "
+        "shortSignal = confirmedBar and signalsReady and fastEma < mediumEma "
+        "and mediumEma < slowEma and close < slowEma and rsiValue <= rsiShortMax "
+        "and macdLine < macdSignalLine "
         "and adxValue >= adxThreshold and minusDI > plusDI",
         "",
         "var float entryAtr = na",
@@ -327,9 +331,11 @@ def render_governed_pine_v6(
         "    barsInTrade = na(entryBarIndex) ? 0 : bar_index - entryBarIndex",
         "    stopTouched = confirmedBar and low <= initialStop",
         "    targetTouched = confirmedBar and high >= takeProfit",
-        "    breakEvenTriggerTouched = confirmedBar and high >= entryPrice + riskDistance * breakEvenTriggerR",
+        "    breakEvenTriggerTouched = confirmedBar and "
+        "high >= entryPrice + riskDistance * breakEvenTriggerR",
         "    breakEvenStopTouched = breakEvenArmed and confirmedBar and low <= entryPrice",
-        "    if stopTouched or targetTouched or breakEvenStopTouched or barsInTrade >= timeStopBars or shortSignal",
+        "    if stopTouched or targetTouched or breakEvenStopTouched "
+        "or barsInTrade >= timeStopBars or shortSignal",
         '        strategy.close("AIQL-L")',
         "    else if breakEvenTriggerTouched",
         "        breakEvenArmed := true",
@@ -341,9 +347,11 @@ def render_governed_pine_v6(
         "    barsInTrade = na(entryBarIndex) ? 0 : bar_index - entryBarIndex",
         "    stopTouched = confirmedBar and high >= initialStop",
         "    targetTouched = confirmedBar and low <= takeProfit",
-        "    breakEvenTriggerTouched = confirmedBar and low <= entryPrice - riskDistance * breakEvenTriggerR",
+        "    breakEvenTriggerTouched = confirmedBar and "
+        "low <= entryPrice - riskDistance * breakEvenTriggerR",
         "    breakEvenStopTouched = breakEvenArmed and confirmedBar and high >= entryPrice",
-        "    if stopTouched or targetTouched or breakEvenStopTouched or barsInTrade >= timeStopBars or longSignal",
+        "    if stopTouched or targetTouched or breakEvenStopTouched "
+        "or barsInTrade >= timeStopBars or longSignal",
         '        strategy.close("AIQL-S")',
         "    else if breakEvenTriggerTouched",
         "        breakEvenArmed := true",

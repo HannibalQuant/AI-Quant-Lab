@@ -231,6 +231,7 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestRunRecord,
     BacktestRunStatus,
     EquityPoint,
+    MultiSignalTrendParameters,
     SidePermission,
     SignalTiming,
     SimulatedExecutionTiming,
@@ -242,7 +243,6 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     SimulatedTrade,
     StrategyDefinition,
     StrategyModel,
-    MultiSignalTrendParameters,
 )
 from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportPackage,
