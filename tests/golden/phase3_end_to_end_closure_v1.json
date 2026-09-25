@@ -1,1 +1,37 @@
-{}
+{
+  "format": "phase3-end-to-end-closure-v1",
+  "closure_id": "artifact:phase3-e2e-closure-optimized",
+  "closure_fingerprint": "sha256:f39222150e8ae705e37276a5efac644cbb3c8e715e5efbfba93cfb7e7c61b541",
+  "source_declaration_ref": "provenance:real-csv-declaration-optimization-source",
+  "admission_ref": "artifact:real-csv-admission-optimization-source",
+  "eligibility_ref": "artifact:research-dataset-eligibility-optimization-source",
+  "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
+  "backtest_ref": "artifact:opt-bt-result-6c6043438f48ae15fb61",
+  "scientific_validation_ref": "validation:opt-validation-result-6c6043438f48ae15fb61",
+  "robustness_ref": "artifact:opt-robustness-result-6c6043438f48ae15fb61",
+  "optimization_selection_ref": "artifact:controlled-optimization-selection-result",
+  "pine_artifact_ref": "artifact:phase3-e2e-closure-optimized-pine",
+  "export_ref": "artifact:phase3-e2e-closure-optimized-export",
+  "source_file_sha256": "sha256:e124e70f0d301b7f4de14d6d8430aa134937d1a96ae36af4a2dc2b1a6a42a124",
+  "normalized_manifest_ref": "dataset:real-normalized-dataset-optimization-source",
+  "normalized_lock_ref": "dataset-lock:real-normalized-lock-optimization-source",
+  "pine_source_sha256": "sha256:acf3195e3e1f83af831963c5eb97b285e6fe756d64249faea8f42bfd880895ee",
+  "safety_input_fingerprint": "sha256:a024faa8a93e8078640305e40422d60a3783f837e4cfd0fbef82cef500a1d450",
+  "stages": [
+    "REAL_CSV_ADMITTED",
+    "DATASET_ELIGIBLE",
+    "EXPERIMENT_AUTHORIZED",
+    "BACKTEST_COMPLETED",
+    "SCIENTIFIC_VALIDATION_PASSED",
+    "ROBUSTNESS_PASSED",
+    "OPTIMIZATION_SELECTED",
+    "PINE_GENERATED",
+    "PINE_INTAKE_ACCEPTED",
+    "STATIC_SAFETY_PASSED",
+    "TRADINGVIEW_EXPORT_READY"
+  ],
+  "final_state": "READY_FOR_MANUAL_TRADINGVIEW_RESEARCH",
+  "runtime_status": "NOT_VERIFIED_ON_TRADINGVIEW",
+  "deployment_authorization": "NOT_AUTHORIZED",
+  "execution_state": "PLANNED_CLOSED"
+}
