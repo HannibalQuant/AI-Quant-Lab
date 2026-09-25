@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -106,6 +107,10 @@ class TradingViewResearchExportPackage:
             or not isinstance(self.pine_source_text, str)
             or not self.pine_source_text
             or len(self.pine_source_text.encode("utf-8")) != self.pine_source_byte_size
+            or (
+                "sha256:" + hashlib.sha256(self.pine_source_text.encode("utf-8")).hexdigest()
+                != self.pine_source_sha256
+            )
             or not isinstance(self.instrument_symbol, str)
             or not self.instrument_symbol
             or not isinstance(self.timeframe_token, str)
