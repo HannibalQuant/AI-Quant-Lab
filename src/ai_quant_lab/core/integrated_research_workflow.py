@@ -117,6 +117,93 @@ def _stage(
     return WorkflowStageResult(stage, state, evidence_ref, outcome, reason, stage_fp)
 
 
+def _derive_workflow_decision(
+    *,
+    proposal_status: AIStrategyProposalStatus,
+    authorization: ExperimentAuthorizationDecision,
+    scientific: ScientificValidationDecision,
+    robustness: RobustnessDecision,
+    optimization: SelectionDecision | None,
+    parity: PinePythonParityDecision,
+    pine_intake_accepted: bool,
+) -> tuple[
+    IntegratedResearchWorkflowState,
+    tuple[WorkflowReasonCode, ...],
+    WorkflowStage | None,
+]:
+    if proposal_status is not AIStrategyProposalStatus.ACCEPTED_FOR_RESEARCH:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.PROPOSAL_NOT_ACCEPTED,),
+            WorkflowStage.PROPOSAL,
+        )
+    if authorization is not ExperimentAuthorizationDecision.AUTHORIZED:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.EXPERIMENT_NOT_AUTHORIZED,),
+            WorkflowStage.AUTHORIZATION,
+        )
+    if scientific is ScientificValidationDecision.FAIL:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.SCIENTIFIC_VALIDATION_FAILED,),
+            WorkflowStage.SCIENTIFIC_VALIDATION,
+        )
+    if scientific is ScientificValidationDecision.INCONCLUSIVE:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            (WorkflowReasonCode.SCIENTIFIC_VALIDATION_INCONCLUSIVE,),
+            WorkflowStage.SCIENTIFIC_VALIDATION,
+        )
+    if robustness is RobustnessDecision.FAIL:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.ROBUSTNESS_FAILED,),
+            WorkflowStage.ROBUSTNESS,
+        )
+    if robustness is RobustnessDecision.INCONCLUSIVE:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            (WorkflowReasonCode.ROBUSTNESS_INCONCLUSIVE,),
+            WorkflowStage.ROBUSTNESS,
+        )
+    if optimization is SelectionDecision.REJECTED:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,),
+            WorkflowStage.OPTIMIZATION,
+        )
+    if optimization is SelectionDecision.INCONCLUSIVE:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            (WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,),
+            WorkflowStage.OPTIMIZATION,
+        )
+    if not pine_intake_accepted:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.PINE_INTAKE_FAILED,),
+            WorkflowStage.PINE_INTAKE,
+        )
+    if parity is PinePythonParityDecision.MISMATCH:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            (WorkflowReasonCode.PARITY_MISMATCH,),
+            WorkflowStage.PARITY,
+        )
+    if parity is PinePythonParityDecision.INCONCLUSIVE:
+        return (
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            (WorkflowReasonCode.PARITY_INCONCLUSIVE,),
+            WorkflowStage.PARITY,
+        )
+    return (
+        IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY,
+        (WorkflowReasonCode.RESEARCH_HANDOFF_READY,),
+        None,
+    )
+
+
 def derive_final_workflow_state(
     *,
     proposal_status: AIStrategyProposalStatus,
@@ -128,65 +215,143 @@ def derive_final_workflow_state(
     pine_intake_accepted: bool,
 ) -> tuple[IntegratedResearchWorkflowState, tuple[WorkflowReasonCode, ...]]:
     """Mechanical decision map. It creates no scientific or deployment authority."""
-    if proposal_status is not AIStrategyProposalStatus.ACCEPTED_FOR_RESEARCH:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.PROPOSAL_NOT_ACCEPTED,),
-        )
-    if authorization is not ExperimentAuthorizationDecision.AUTHORIZED:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.EXPERIMENT_NOT_AUTHORIZED,),
-        )
-    if scientific is ScientificValidationDecision.FAIL:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.SCIENTIFIC_VALIDATION_FAILED,),
-        )
-    if scientific is ScientificValidationDecision.INCONCLUSIVE:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
-            (WorkflowReasonCode.SCIENTIFIC_VALIDATION_INCONCLUSIVE,),
-        )
-    if robustness is RobustnessDecision.FAIL:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.ROBUSTNESS_FAILED,),
-        )
-    if robustness is RobustnessDecision.INCONCLUSIVE:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
-            (WorkflowReasonCode.ROBUSTNESS_INCONCLUSIVE,),
-        )
-    if optimization is SelectionDecision.REJECTED:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,),
-        )
-    if optimization is SelectionDecision.INCONCLUSIVE:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
-            (WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,),
-        )
-    if not pine_intake_accepted:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.PINE_INTAKE_FAILED,),
-        )
-    if parity is PinePythonParityDecision.MISMATCH:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
-            (WorkflowReasonCode.PARITY_MISMATCH,),
-        )
-    if parity is PinePythonParityDecision.INCONCLUSIVE:
-        return (
-            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
-            (WorkflowReasonCode.PARITY_INCONCLUSIVE,),
-        )
-    return (
-        IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY,
-        (WorkflowReasonCode.RESEARCH_HANDOFF_READY,),
+    state, reasons, _ = _derive_workflow_decision(
+        proposal_status=proposal_status,
+        authorization=authorization,
+        scientific=scientific,
+        robustness=robustness,
+        optimization=optimization,
+        parity=parity,
+        pine_intake_accepted=pine_intake_accepted,
     )
+    return state, reasons
+
+
+def derive_workflow_stages(
+    *,
+    proposal_ref: TraceabilityRef,
+    authorization_ref: TraceabilityRef,
+    backtest_ref: TraceabilityRef,
+    scientific_ref: TraceabilityRef,
+    robustness_ref: TraceabilityRef,
+    optimization_ref: TraceabilityRef | None,
+    pine_intake_ref: TraceabilityRef,
+    parity_ref: TraceabilityRef,
+    proposal_status: AIStrategyProposalStatus,
+    authorization: ExperimentAuthorizationDecision,
+    scientific: ScientificValidationDecision,
+    robustness: RobustnessDecision,
+    optimization: SelectionDecision | None,
+    parity: PinePythonParityDecision,
+    pine_intake_accepted: bool,
+) -> tuple[WorkflowStageResult, ...]:
+    """Build a truthful ordered audit trail and stop at the first terminal decision."""
+    final_state, reasons, terminal_stage = _derive_workflow_decision(
+        proposal_status=proposal_status,
+        authorization=authorization,
+        scientific=scientific,
+        robustness=robustness,
+        optimization=optimization,
+        parity=parity,
+        pine_intake_accepted=pine_intake_accepted,
+    )
+    terminal_outcome = (
+        WorkflowStageOutcome.INCONCLUSIVE
+        if final_state is IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE
+        else WorkflowStageOutcome.FAIL
+    )
+    terminal_reason = reasons[0]
+    stages: list[WorkflowStageResult] = []
+
+    def append_stage(
+        stage: WorkflowStage,
+        success_state: IntegratedResearchWorkflowState,
+        evidence_ref: TraceabilityRef,
+        success_outcome: WorkflowStageOutcome,
+    ) -> bool:
+        if terminal_stage is stage:
+            stages.append(
+                _stage(
+                    stage,
+                    final_state,
+                    evidence_ref,
+                    terminal_outcome,
+                    terminal_reason,
+                )
+            )
+            return True
+        stages.append(_stage(stage, success_state, evidence_ref, success_outcome))
+        return False
+
+    if append_stage(
+        WorkflowStage.PROPOSAL,
+        IntegratedResearchWorkflowState.PROPOSAL_ACCEPTED,
+        proposal_ref,
+        WorkflowStageOutcome.ACCEPTED,
+    ):
+        return tuple(stages)
+    if append_stage(
+        WorkflowStage.AUTHORIZATION,
+        IntegratedResearchWorkflowState.EXPERIMENT_AUTHORIZED,
+        authorization_ref,
+        WorkflowStageOutcome.AUTHORIZED,
+    ):
+        return tuple(stages)
+
+    stages.append(
+        _stage(
+            WorkflowStage.BACKTEST,
+            IntegratedResearchWorkflowState.BACKTEST_COMPLETED,
+            backtest_ref,
+            WorkflowStageOutcome.COMPLETED,
+        )
+    )
+    if append_stage(
+        WorkflowStage.SCIENTIFIC_VALIDATION,
+        IntegratedResearchWorkflowState.SCIENTIFIC_VALIDATION_COMPLETED,
+        scientific_ref,
+        WorkflowStageOutcome.PASS,
+    ):
+        return tuple(stages)
+    if append_stage(
+        WorkflowStage.ROBUSTNESS,
+        IntegratedResearchWorkflowState.ROBUSTNESS_COMPLETED,
+        robustness_ref,
+        WorkflowStageOutcome.PASS,
+    ):
+        return tuple(stages)
+
+    if optimization is not None:
+        if optimization_ref is None:
+            raise IntegratedResearchWorkflowError(
+                "optimization decision requires an exact optimization evidence reference"
+            )
+        if append_stage(
+            WorkflowStage.OPTIMIZATION,
+            IntegratedResearchWorkflowState.OPTIMIZATION_COMPLETED,
+            optimization_ref,
+            WorkflowStageOutcome.SELECTED,
+        ):
+            return tuple(stages)
+
+    if append_stage(
+        WorkflowStage.PINE_INTAKE,
+        IntegratedResearchWorkflowState.PINE_INTAKE_COMPLETED,
+        pine_intake_ref,
+        WorkflowStageOutcome.COMPLETED,
+    ):
+        return tuple(stages)
+    if append_stage(
+        WorkflowStage.PARITY,
+        IntegratedResearchWorkflowState.PARITY_COMPLETED,
+        parity_ref,
+        WorkflowStageOutcome.MATCH,
+    ):
+        return tuple(stages)
+
+    if final_state is not IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY:
+        raise IntegratedResearchWorkflowError("workflow decision lacks a terminal audit stage")
+    return tuple(stages)
 
 
 def _verify_authoritative_chain(
@@ -510,50 +675,6 @@ def _build(
             context.parity_result.version,
         ),
     }
-    stages = [
-        _stage(
-            WorkflowStage.PROPOSAL,
-            IntegratedResearchWorkflowState.PROPOSAL_ACCEPTED,
-            refs["proposal"],
-            WorkflowStageOutcome.ACCEPTED,
-        ),
-        _stage(
-            WorkflowStage.AUTHORIZATION,
-            IntegratedResearchWorkflowState.EXPERIMENT_AUTHORIZED,
-            refs["authorization"],
-            WorkflowStageOutcome.AUTHORIZED,
-        ),
-        _stage(
-            WorkflowStage.BACKTEST,
-            IntegratedResearchWorkflowState.BACKTEST_COMPLETED,
-            refs["backtest"],
-            WorkflowStageOutcome.COMPLETED,
-        ),
-        _stage(
-            WorkflowStage.SCIENTIFIC_VALIDATION,
-            IntegratedResearchWorkflowState.SCIENTIFIC_VALIDATION_COMPLETED,
-            refs["scientific"],
-            (
-                WorkflowStageOutcome.PASS
-                if final.scientific_result.decision is ScientificValidationDecision.PASS
-                else WorkflowStageOutcome.INCONCLUSIVE
-                if final.scientific_result.decision is ScientificValidationDecision.INCONCLUSIVE
-                else WorkflowStageOutcome.FAIL
-            ),
-        ),
-        _stage(
-            WorkflowStage.ROBUSTNESS,
-            IntegratedResearchWorkflowState.ROBUSTNESS_COMPLETED,
-            refs["robustness"],
-            (
-                WorkflowStageOutcome.PASS
-                if final.robustness_result.decision is RobustnessDecision.PASS
-                else WorkflowStageOutcome.INCONCLUSIVE
-                if final.robustness_result.decision is RobustnessDecision.INCONCLUSIVE
-                else WorkflowStageOutcome.FAIL
-            ),
-        ),
-    ]
     selected_candidate_ref = None
     optimization_selection_ref = None
     if context.optimization is not None:
@@ -563,39 +684,25 @@ def _build(
             context.optimization.result.version,
         )
         selected_candidate_ref = context.optimization.result.selected_candidate_ref
-        stages.append(
-            _stage(
-                WorkflowStage.OPTIMIZATION,
-                IntegratedResearchWorkflowState.OPTIMIZATION_COMPLETED,
-                optimization_selection_ref,
-                (
-                    WorkflowStageOutcome.SELECTED
-                    if context.optimization.result.decision is SelectionDecision.SELECTED
-                    else WorkflowStageOutcome.INCONCLUSIVE
-                    if context.optimization.result.decision is SelectionDecision.INCONCLUSIVE
-                    else WorkflowStageOutcome.FAIL
-                ),
-            )
-        )
-    stages.extend(
-        (
-            _stage(
-                WorkflowStage.PINE_INTAKE,
-                IntegratedResearchWorkflowState.PINE_INTAKE_COMPLETED,
-                refs["pine_intake"],
-                WorkflowStageOutcome.COMPLETED,
-            ),
-            _stage(
-                WorkflowStage.PARITY,
-                IntegratedResearchWorkflowState.PARITY_COMPLETED,
-                refs["parity"],
-                (
-                    WorkflowStageOutcome.MATCH
-                    if context.parity_result.decision is PinePythonParityDecision.MATCH
-                    else WorkflowStageOutcome.INCONCLUSIVE
-                    if context.parity_result.decision is PinePythonParityDecision.INCONCLUSIVE
-                    else WorkflowStageOutcome.FAIL
-                ),
+
+    stages = list(
+        derive_workflow_stages(
+            proposal_ref=refs["proposal"],
+            authorization_ref=refs["authorization"],
+            backtest_ref=refs["backtest"],
+            scientific_ref=refs["scientific"],
+            robustness_ref=refs["robustness"],
+            optimization_ref=optimization_selection_ref,
+            pine_intake_ref=refs["pine_intake"],
+            parity_ref=refs["parity"],
+            proposal_status=proposal.status,
+            authorization=final.authorization.status,
+            scientific=final.scientific_result.decision,
+            robustness=final.robustness_result.decision,
+            optimization=optimization_decision,
+            parity=context.parity_result.decision,
+            pine_intake_accepted=(
+                context.parity_context.pine_intake_record.status is PineIntakeStatus.ACCEPTED
             ),
         )
     )
