@@ -353,8 +353,7 @@ def test_export_does_not_upgrade_runtime_repaint_or_execution(export_bundle):
 
     assert package.artifact_repaint_assessment is RepaintAssessmentStatus.NOT_EVALUATED
     assert (
-        package.runtime_status
-        is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
+        package.runtime_status is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
     )
     assert package.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert package.execution_state is ExecutionState.PLANNED_CLOSED
