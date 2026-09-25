@@ -152,8 +152,7 @@ def _validate_strategy(strategy: StrategyDefinition) -> None:
     if (
         strategy.model is not StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
         or strategy.signal_timing is not SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
-        or strategy.execution_timing
-        is not SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
+        or strategy.execution_timing is not SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
         or strategy.side_permission is not SidePermission.LONG_ONLY
         or strategy.allow_pyramiding
         or strategy.force_close_at_window_end
