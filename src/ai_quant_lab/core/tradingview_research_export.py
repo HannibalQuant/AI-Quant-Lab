@@ -220,7 +220,8 @@ def _manual_steps(
         "Save the script and add it to the chart; do not modify governed parameters.",
         "Confirm that TradingView reports no Pine compilation error.",
         "Open Strategy Tester and record the resulting orders/trades for runtime parity review.",
-        "Treat the result as research-only; this export grants no deployment or live-trading authority.",
+        "Treat the result as research-only; this export grants no deployment "
+        "or live-trading authority.",
     )
 
 
