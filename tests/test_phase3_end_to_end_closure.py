@@ -129,7 +129,7 @@ def test_real_csv_to_tradingview_export_golden_path_is_one_current_order_pipelin
 
     assert evidence.admission.status is CsvAdmissionStatus.ADMITTED
     assert evidence.eligibility.status is ResearchDatasetEligibilityStatus.ELIGIBLE
-    assert evidence.declaration.acquisition_method.value == "OPERATOR_LOCAL_FILE"
+    assert evidence.declaration.acquisition_method.value == "operator_local_file"
     assert evidence.admission.file_size > 0
     assert evidence.admission.row_count > 0
     assert evidence.eligibility.normalized_manifest_ref is not None
