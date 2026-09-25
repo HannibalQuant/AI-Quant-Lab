@@ -19,6 +19,7 @@ from test_strategy_backtest import (
 
 from ai_quant_lab import EXE_01
 from ai_quant_lab.core import multi_signal_runtime as runtime_module
+from ai_quant_lab.core.data import DecimalValue
 from ai_quant_lab.core.experiment_authorization import (
     ExperimentAuthorizationRequest,
     authorize_experiment,
@@ -37,8 +38,11 @@ from ai_quant_lab.core.model import (
     TraceabilityRef,
 )
 from ai_quant_lab.core.multi_signal_runtime import (
+    MultiSignalIndicatorPoint,
+    MultiSignalMissingNextBar,
     build_multi_signal_indicators,
     multi_signal_direction,
+    simulate_multi_signal_backtest,
 )
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
 from ai_quant_lab.core.strategy_backtest import (
@@ -372,6 +376,238 @@ def test_short_accounting_uses_signed_position_value_and_exact_cash_identity(
         assert Decimal(point.position_value) < 0
         with localcontext(Context(prec=34, rounding=ROUND_HALF_EVEN)):
             assert Decimal(point.equity) == Decimal(point.cash) + Decimal(point.position_value)
+
+
+def _scripted_risk_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    position: SimulatedPositionState,
+    params: MultiSignalTrendParameters,
+    trigger_bar: int | None = None,
+    trigger_high: str = "100",
+    trigger_low: str = "100",
+    bar_count: int = 8,
+) -> tuple[Any, tuple[Any, ...]]:
+    context = _multi_context(tmp_path, params=params)
+    report = context[3]
+    bars = tuple(
+        replace(
+            bar,
+            open=DecimalValue("100"),
+            high=DecimalValue("100"),
+            low=DecimalValue("100"),
+            close=DecimalValue("100"),
+        )
+        for bar in report.normalized_bars[:bar_count]
+    )
+    if trigger_bar is not None:
+        changed = list(bars)
+        changed[trigger_bar] = replace(
+            changed[trigger_bar],
+            high=DecimalValue(trigger_high),
+            low=DecimalValue(trigger_low),
+        )
+        bars = tuple(changed)
+
+    point = MultiSignalIndicatorPoint(
+        Decimal("1"),
+        Decimal("1"),
+        Decimal("1"),
+        None,
+        Decimal("0"),
+        Decimal("0"),
+        None,
+        None,
+        None,
+        Decimal("1"),
+    )
+    points = tuple(point for _ in bars)
+    signal_bar_id = bars[0].bar_id
+    monkeypatch.setattr(
+        runtime_module,
+        "build_multi_signal_indicators",
+        lambda _bars, _parameters: points,
+    )
+    monkeypatch.setattr(
+        runtime_module,
+        "multi_signal_direction",
+        lambda bar, _point, _parameters: (
+            position if bar.bar_id == signal_bar_id else SimulatedPositionState.FLAT
+        ),
+    )
+
+    artifact = simulate_multi_signal_backtest(
+        context[12].experiment_run,
+        context[9].record,
+        context[7],
+        context[6],
+        bars,
+        "sha256:" + "9" * 64,
+    )
+    return artifact, bars
+
+
+@pytest.mark.parametrize(
+    ("position", "trigger_high", "trigger_low", "exit_side"),
+    (
+        (SimulatedPositionState.LONG, "100", "97", SimulatedOrderSide.SELL),
+        (SimulatedPositionState.SHORT, "103", "100", SimulatedOrderSide.BUY),
+    ),
+)
+def test_atr_stop_exits_long_and_short_on_first_eligible_later_open(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    position: SimulatedPositionState,
+    trigger_high: str,
+    trigger_low: str,
+    exit_side: SimulatedOrderSide,
+) -> None:
+    artifact, bars = _scripted_risk_run(
+        tmp_path,
+        monkeypatch,
+        position=position,
+        params=parameters(
+            atr_stop_mult="2",
+            take_profit_r="100",
+            break_even_trigger_r="100",
+            time_stop_bars=100,
+        ),
+        trigger_bar=3,
+        trigger_high=trigger_high,
+        trigger_low=trigger_low,
+    )
+
+    assert len(artifact.orders) == 2
+    assert artifact.orders[1].side is exit_side
+    assert artifact.orders[1].source_bar_ref.object_id == bars[3].bar_id
+    assert artifact.fills[1].bar_ref.object_id == bars[5].bar_id
+    assert artifact.fills[1].fill_time >= artifact.orders[1].signal_time
+
+
+@pytest.mark.parametrize(
+    ("position", "trigger_high", "trigger_low", "exit_side"),
+    (
+        (SimulatedPositionState.LONG, "103", "100", SimulatedOrderSide.SELL),
+        (SimulatedPositionState.SHORT, "100", "97", SimulatedOrderSide.BUY),
+    ),
+)
+def test_take_profit_exits_long_and_short_on_first_eligible_later_open(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    position: SimulatedPositionState,
+    trigger_high: str,
+    trigger_low: str,
+    exit_side: SimulatedOrderSide,
+) -> None:
+    artifact, bars = _scripted_risk_run(
+        tmp_path,
+        monkeypatch,
+        position=position,
+        params=parameters(
+            atr_stop_mult="2",
+            take_profit_r="1",
+            break_even_trigger_r="100",
+            time_stop_bars=100,
+        ),
+        trigger_bar=3,
+        trigger_high=trigger_high,
+        trigger_low=trigger_low,
+    )
+
+    assert len(artifact.orders) == 2
+    assert artifact.orders[1].side is exit_side
+    assert artifact.orders[1].source_bar_ref.object_id == bars[3].bar_id
+    assert artifact.fills[1].bar_ref.object_id == bars[5].bar_id
+
+
+@pytest.mark.parametrize(
+    ("position", "trigger_high", "trigger_low", "exit_side"),
+    (
+        (SimulatedPositionState.LONG, "103", "100", SimulatedOrderSide.SELL),
+        (SimulatedPositionState.SHORT, "100", "97", SimulatedOrderSide.BUY),
+    ),
+)
+def test_break_even_arms_then_exits_only_on_a_later_completed_bar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    position: SimulatedPositionState,
+    trigger_high: str,
+    trigger_low: str,
+    exit_side: SimulatedOrderSide,
+) -> None:
+    artifact, bars = _scripted_risk_run(
+        tmp_path,
+        monkeypatch,
+        position=position,
+        params=parameters(
+            atr_stop_mult="2",
+            take_profit_r="100",
+            break_even_trigger_r="1",
+            time_stop_bars=100,
+        ),
+        trigger_bar=3,
+        trigger_high=trigger_high,
+        trigger_low=trigger_low,
+    )
+
+    assert len(artifact.orders) == 2
+    assert artifact.orders[1].side is exit_side
+    assert artifact.orders[1].source_bar_ref.object_id == bars[4].bar_id
+    assert artifact.fills[1].bar_ref.object_id == bars[6].bar_id
+
+
+@pytest.mark.parametrize(
+    ("position", "exit_side"),
+    (
+        (SimulatedPositionState.LONG, SimulatedOrderSide.SELL),
+        (SimulatedPositionState.SHORT, SimulatedOrderSide.BUY),
+    ),
+)
+def test_time_stop_counts_completed_bars_from_actual_fill_bar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    position: SimulatedPositionState,
+    exit_side: SimulatedOrderSide,
+) -> None:
+    artifact, bars = _scripted_risk_run(
+        tmp_path,
+        monkeypatch,
+        position=position,
+        params=parameters(
+            atr_stop_mult="100",
+            take_profit_r="100",
+            break_even_trigger_r="100",
+            time_stop_bars=1,
+        ),
+    )
+
+    assert artifact.fills[0].bar_ref.object_id == bars[2].bar_id
+    assert artifact.orders[1].side is exit_side
+    assert artifact.orders[1].source_bar_ref.object_id == bars[3].bar_id
+    assert artifact.fills[1].bar_ref.object_id == bars[5].bar_id
+
+
+def test_terminal_risk_exit_without_eligible_later_open_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(MultiSignalMissingNextBar):
+        _scripted_risk_run(
+            tmp_path,
+            monkeypatch,
+            position=SimulatedPositionState.LONG,
+            params=parameters(
+                atr_stop_mult="2",
+                take_profit_r="100",
+                break_even_trigger_r="100",
+                time_stop_bars=100,
+            ),
+            trigger_bar=4,
+            trigger_high="100",
+            trigger_low="97",
+            bar_count=5,
+        )
 
 
 def test_multi_signal_result_is_deterministic_and_exactly_verifiable(tmp_path: Path) -> None:
