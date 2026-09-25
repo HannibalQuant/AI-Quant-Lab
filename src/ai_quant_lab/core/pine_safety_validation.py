@@ -328,6 +328,7 @@ def _verify_boundary(
         request.pine_artifact_ref != expected_artifact_ref
         or request.strategy_definition_ref != artifact.strategy_definition_ref
         or request.generation_input_fingerprint != generation.generation_input_fingerprint
+        or request.provenance_ref != artifact.provenance_ref
     ):
         raise PineSafetyLineageMismatch(
             "Pine safety request does not bind exact generated source lineage"
