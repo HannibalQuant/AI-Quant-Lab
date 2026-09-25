@@ -140,9 +140,9 @@ class Phase3EndToEndClosureRecord:
             Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
         )
         expected_stages = (
-            base + (Phase3EndToEndStage.OPTIMIZATION_SELECTED,) + tail
+            (*base, Phase3EndToEndStage.OPTIMIZATION_SELECTED, *tail)
             if self.optimization_selection_ref is not None
-            else base + tail
+            else (*base, *tail)
         )
         if self.stages != expected_stages:
             raise Phase3EndToEndClosureContractError(
