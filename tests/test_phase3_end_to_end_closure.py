@@ -10,12 +10,10 @@ from pathlib import Path
 
 import pytest
 from test_pine_strategy_intake import (
-    AUTHORITY_REF,
     PROVENANCE_REF,
     _direct_context,
     _selected_context,
 )
-from test_optimization_selection import selection_bundle as optimization_selection_bundle
 
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.dataset_store import (
