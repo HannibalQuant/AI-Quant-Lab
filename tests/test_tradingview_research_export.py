@@ -319,6 +319,16 @@ def test_provenance_substitution_fails_closed(export_bundle):
         )
 
 
+def test_export_contract_rejects_source_hash_mismatch(export_bundle):
+    _request, _context, execution, _repository = export_bundle
+
+    with pytest.raises(ValueError):
+        replace(
+            execution.package,
+            pine_source_sha256="sha256:" + "1" * 64,
+        )
+
+
 def test_tampered_export_package_fails_exact_verification(export_bundle):
     request, context, execution, _repository = export_bundle
     tampered = replace(
