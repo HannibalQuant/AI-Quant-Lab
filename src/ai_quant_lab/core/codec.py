@@ -50,6 +50,23 @@ from ai_quant_lab.core.experiment_runner_contracts import (
     ReplayOrdering,
     ResearchExperimentExecutionStatus,
 )
+from ai_quant_lab.core.integrated_research_workflow_contracts import (
+    AIStrategyProposal,
+    AIStrategyProposalStatus,
+    IntegratedResearchWorkflowMode,
+    IntegratedResearchWorkflowPlan,
+    IntegratedResearchWorkflowResult,
+    IntegratedResearchWorkflowRunRecord,
+    IntegratedResearchWorkflowState,
+    ProposalAuthorityState,
+    ResearchHandoffPackage,
+    ResearchHandoffReadiness,
+    TradingViewResearchHandoffManifest,
+    WorkflowReasonCode,
+    WorkflowStage,
+    WorkflowStageOutcome,
+    WorkflowStageResult,
+)
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     BarFinality,
@@ -274,6 +291,12 @@ type GovernedRecord = (
     | PineExecutionEvidence
     | PinePythonParityResult
     | PinePythonParityRunRecord
+    | AIStrategyProposal
+    | IntegratedResearchWorkflowPlan
+    | IntegratedResearchWorkflowResult
+    | ResearchHandoffPackage
+    | TradingViewResearchHandoffManifest
+    | IntegratedResearchWorkflowRunRecord
 )
 
 _ID_TYPES: dict[str, type[GovernedId]] = {
@@ -347,6 +370,12 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     PineExecutionEvidence: "PineExecutionEvidence",
     PinePythonParityResult: "PinePythonParityResult",
     PinePythonParityRunRecord: "PinePythonParityRunRecord",
+    AIStrategyProposal: "AIStrategyProposal",
+    IntegratedResearchWorkflowPlan: "IntegratedResearchWorkflowPlan",
+    IntegratedResearchWorkflowResult: "IntegratedResearchWorkflowResult",
+    ResearchHandoffPackage: "ResearchHandoffPackage",
+    TradingViewResearchHandoffManifest: "TradingViewResearchHandoffManifest",
+    IntegratedResearchWorkflowRunRecord: "IntegratedResearchWorkflowRunRecord",
 }
 
 
@@ -1703,6 +1732,149 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "mismatch_count": record.mismatch_count,
             "decision": record.decision.value,
             "authority_ref": _trace_ref_payload(record.authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, AIStrategyProposal):
+        return {
+            "proposal_id": str(record.proposal_id),
+            "version": record.version.number,
+            "proposing_agent_ref": _trace_ref_payload(record.proposing_agent_ref),
+            "strategy_family": record.strategy_family,
+            "declared_hypothesis": record.declared_hypothesis,
+            "parameter_declarations": [list(item) for item in record.parameter_declarations],
+            "strategy_definition_ref": _trace_ref_payload(record.strategy_definition_ref),
+            "status": record.status.value,
+            "proposal_authority_state": record.proposal_authority_state.value,
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, IntegratedResearchWorkflowPlan):
+        return {
+            "workflow_plan_id": str(record.workflow_plan_id),
+            "version": record.version.number,
+            "mode": record.mode.value,
+            "proposal_ref": _trace_ref_payload(record.proposal_ref),
+            "proposal_strategy_ref": _trace_ref_payload(record.proposal_strategy_ref),
+            "final_strategy_ref": _trace_ref_payload(record.final_strategy_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "experiment_authorization_ref": _trace_ref_payload(record.experiment_authorization_ref),
+            "validation_plan_ref": _trace_ref_payload(record.validation_plan_ref),
+            "robustness_plan_ref": _trace_ref_payload(record.robustness_plan_ref),
+            "optimization_selection_ref": (
+                None
+                if record.optimization_selection_ref is None
+                else _trace_ref_payload(record.optimization_selection_ref)
+            ),
+            "pine_intake_authority_ref": _trace_ref_payload(record.pine_intake_authority_ref),
+            "parity_authority_ref": _trace_ref_payload(record.parity_authority_ref),
+            "workflow_authority_ref": _trace_ref_payload(record.workflow_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, ResearchHandoffPackage):
+        return {
+            "handoff_id": str(record.handoff_id),
+            "version": record.version.number,
+            "workflow_run_id": str(record.workflow_run_id),
+            "workflow_input_fingerprint": record.workflow_input_fingerprint,
+            "proposal_ref": _trace_ref_payload(record.proposal_ref),
+            "final_strategy_ref": _trace_ref_payload(record.final_strategy_ref),
+            "selected_candidate_ref": (
+                None
+                if record.selected_candidate_ref is None
+                else _trace_ref_payload(record.selected_candidate_ref)
+            ),
+            "backtest_ref": _trace_ref_payload(record.backtest_ref),
+            "scientific_validation_ref": _trace_ref_payload(record.scientific_validation_ref),
+            "robustness_ref": _trace_ref_payload(record.robustness_ref),
+            "optimization_selection_ref": (
+                None
+                if record.optimization_selection_ref is None
+                else _trace_ref_payload(record.optimization_selection_ref)
+            ),
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "pine_intake_ref": _trace_ref_payload(record.pine_intake_ref),
+            "parity_result_ref": _trace_ref_payload(record.parity_result_ref),
+            "parity_decision": record.parity_decision.value,
+            "proposing_agent_ref": _trace_ref_payload(record.proposing_agent_ref),
+            "pine_generating_agent_ref": _trace_ref_payload(record.pine_generating_agent_ref),
+            "readiness": record.readiness.value,
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, TradingViewResearchHandoffManifest):
+        return {
+            "manifest_id": str(record.manifest_id),
+            "version": record.version.number,
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "pine_source_sha256": record.pine_source_sha256,
+            "parity_result_ref": _trace_ref_payload(record.parity_result_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "repaint_assessment": record.repaint_assessment.value,
+            "readiness": record.readiness.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, IntegratedResearchWorkflowResult):
+        return {
+            "workflow_result_id": str(record.workflow_result_id),
+            "version": record.version.number,
+            "workflow_plan_ref": _trace_ref_payload(record.workflow_plan_ref),
+            "proposal_ref": _trace_ref_payload(record.proposal_ref),
+            "final_strategy_ref": _trace_ref_payload(record.final_strategy_ref),
+            "stages": [
+                {
+                    "stage": item.stage.value,
+                    "state": item.state.value,
+                    "evidence_ref": _trace_ref_payload(item.evidence_ref),
+                    "outcome": item.outcome.value,
+                    "reason_code": None if item.reason_code is None else item.reason_code.value,
+                    "stage_fingerprint": item.stage_fingerprint,
+                }
+                for item in record.stages
+            ],
+            "final_state": record.final_state.value,
+            "handoff_ref": (
+                None if record.handoff_ref is None else _trace_ref_payload(record.handoff_ref)
+            ),
+            "tradingview_manifest_ref": (
+                None
+                if record.tradingview_manifest_ref is None
+                else _trace_ref_payload(record.tradingview_manifest_ref)
+            ),
+            "reason_codes": [item.value for item in record.reason_codes],
+            "input_fingerprint": record.input_fingerprint,
+            "workflow_authority_ref": _trace_ref_payload(record.workflow_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, IntegratedResearchWorkflowRunRecord):
+        return {
+            "workflow_run_id": str(record.workflow_run_id),
+            "version": record.version.number,
+            "workflow_plan_ref": _trace_ref_payload(record.workflow_plan_ref),
+            "proposal_ref": _trace_ref_payload(record.proposal_ref),
+            "result_ref": _trace_ref_payload(record.result_ref),
+            "input_fingerprint": record.input_fingerprint,
+            "final_state": record.final_state.value,
+            "handoff_ref": (
+                None if record.handoff_ref is None else _trace_ref_payload(record.handoff_ref)
+            ),
+            "stage_count": record.stage_count,
+            "workflow_authority_ref": _trace_ref_payload(record.workflow_authority_ref),
             "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
@@ -4231,6 +4403,285 @@ def _decode_pine_python_parity_run(payload: Any) -> PinePythonParityRunRecord:
     )
 
 
+def _decode_ai_strategy_proposal(payload: Any) -> AIStrategyProposal:
+    fields = {
+        "proposal_id",
+        "version",
+        "proposing_agent_ref",
+        "strategy_family",
+        "declared_hypothesis",
+        "parameter_declarations",
+        "strategy_definition_ref",
+        "status",
+        "proposal_authority_state",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "AIStrategyProposal.payload")
+    params = item["parameter_declarations"]
+    if not isinstance(params, list):
+        raise InvalidSerialization("parameter_declarations must be an array")
+    parsed: list[tuple[str, str]] = []
+    for value in params:
+        if not isinstance(value, list) or len(value) != 2:
+            raise InvalidSerialization("parameter declaration must be a pair")
+        parsed.append((_text(value[0], "parameter.name"), _text(value[1], "parameter.value")))
+    return AIStrategyProposal(
+        cast(ArtifactId, _typed_id(item["proposal_id"], ArtifactId, "proposal_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["proposing_agent_ref"], "proposing_agent_ref"),
+        _text(item["strategy_family"], "strategy_family"),
+        _text(item["declared_hypothesis"], "declared_hypothesis"),
+        tuple(parsed),
+        _trace_ref(item["strategy_definition_ref"], "strategy_definition_ref"),
+        AIStrategyProposalStatus(_text(item["status"], "status")),
+        ProposalAuthorityState(_text(item["proposal_authority_state"], "proposal_authority_state")),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_integrated_workflow_plan(payload: Any) -> IntegratedResearchWorkflowPlan:
+    fields = {
+        "workflow_plan_id",
+        "version",
+        "mode",
+        "proposal_ref",
+        "proposal_strategy_ref",
+        "final_strategy_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "instrument_ref",
+        "experiment_authorization_ref",
+        "validation_plan_ref",
+        "robustness_plan_ref",
+        "optimization_selection_ref",
+        "pine_intake_authority_ref",
+        "parity_authority_ref",
+        "workflow_authority_ref",
+        "provenance_ref",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "IntegratedResearchWorkflowPlan.payload")
+    return IntegratedResearchWorkflowPlan(
+        cast(ArtifactId, _typed_id(item["workflow_plan_id"], ArtifactId, "workflow_plan_id")),
+        _version(item["version"], "version"),
+        IntegratedResearchWorkflowMode(_text(item["mode"], "mode")),
+        _trace_ref(item["proposal_ref"], "proposal_ref"),
+        _trace_ref(item["proposal_strategy_ref"], "proposal_strategy_ref"),
+        _trace_ref(item["final_strategy_ref"], "final_strategy_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["experiment_authorization_ref"], "experiment_authorization_ref"),
+        _trace_ref(item["validation_plan_ref"], "validation_plan_ref"),
+        _trace_ref(item["robustness_plan_ref"], "robustness_plan_ref"),
+        _optional_trace_ref(item["optimization_selection_ref"], "optimization_selection_ref"),
+        _trace_ref(item["pine_intake_authority_ref"], "pine_intake_authority_ref"),
+        _trace_ref(item["parity_authority_ref"], "parity_authority_ref"),
+        _trace_ref(item["workflow_authority_ref"], "workflow_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_workflow_stage(value: Any) -> WorkflowStageResult:
+    fields = {
+        "stage",
+        "state",
+        "evidence_ref",
+        "outcome",
+        "reason_code",
+        "stage_fingerprint",
+    }
+    item = _strict_object(value, fields, "WorkflowStageResult")
+    reason = item["reason_code"]
+    return WorkflowStageResult(
+        WorkflowStage(_text(item["stage"], "stage")),
+        IntegratedResearchWorkflowState(_text(item["state"], "state")),
+        _trace_ref(item["evidence_ref"], "evidence_ref"),
+        WorkflowStageOutcome(_text(item["outcome"], "outcome")),
+        None if reason is None else WorkflowReasonCode(_text(reason, "reason_code")),
+        _text(item["stage_fingerprint"], "stage_fingerprint"),
+    )
+
+
+def _decode_research_handoff(payload: Any) -> ResearchHandoffPackage:
+    fields = {
+        "handoff_id",
+        "version",
+        "workflow_run_id",
+        "workflow_input_fingerprint",
+        "proposal_ref",
+        "final_strategy_ref",
+        "selected_candidate_ref",
+        "backtest_ref",
+        "scientific_validation_ref",
+        "robustness_ref",
+        "optimization_selection_ref",
+        "pine_artifact_ref",
+        "pine_intake_ref",
+        "parity_result_ref",
+        "parity_decision",
+        "proposing_agent_ref",
+        "pine_generating_agent_ref",
+        "readiness",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "ResearchHandoffPackage.payload")
+    return ResearchHandoffPackage(
+        cast(ArtifactId, _typed_id(item["handoff_id"], ArtifactId, "handoff_id")),
+        _version(item["version"], "version"),
+        cast(RunId, _typed_id(item["workflow_run_id"], RunId, "workflow_run_id")),
+        _text(item["workflow_input_fingerprint"], "workflow_input_fingerprint"),
+        _trace_ref(item["proposal_ref"], "proposal_ref"),
+        _trace_ref(item["final_strategy_ref"], "final_strategy_ref"),
+        _optional_trace_ref(item["selected_candidate_ref"], "selected_candidate_ref"),
+        _trace_ref(item["backtest_ref"], "backtest_ref"),
+        _trace_ref(item["scientific_validation_ref"], "scientific_validation_ref"),
+        _trace_ref(item["robustness_ref"], "robustness_ref"),
+        _optional_trace_ref(item["optimization_selection_ref"], "optimization_selection_ref"),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        _trace_ref(item["pine_intake_ref"], "pine_intake_ref"),
+        _trace_ref(item["parity_result_ref"], "parity_result_ref"),
+        PinePythonParityDecision(_text(item["parity_decision"], "parity_decision")),
+        _trace_ref(item["proposing_agent_ref"], "proposing_agent_ref"),
+        _trace_ref(item["pine_generating_agent_ref"], "pine_generating_agent_ref"),
+        ResearchHandoffReadiness(_text(item["readiness"], "readiness")),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_tradingview_handoff(payload: Any) -> TradingViewResearchHandoffManifest:
+    fields = {
+        "manifest_id",
+        "version",
+        "pine_artifact_ref",
+        "pine_source_sha256",
+        "parity_result_ref",
+        "strategy_ref",
+        "instrument_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "repaint_assessment",
+        "readiness",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "TradingViewResearchHandoffManifest.payload")
+    return TradingViewResearchHandoffManifest(
+        cast(ArtifactId, _typed_id(item["manifest_id"], ArtifactId, "manifest_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        _text(item["pine_source_sha256"], "pine_source_sha256"),
+        _trace_ref(item["parity_result_ref"], "parity_result_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        RepaintAssessmentStatus(_text(item["repaint_assessment"], "repaint_assessment")),
+        ResearchHandoffReadiness(_text(item["readiness"], "readiness")),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_integrated_workflow_result(payload: Any) -> IntegratedResearchWorkflowResult:
+    fields = {
+        "workflow_result_id",
+        "version",
+        "workflow_plan_ref",
+        "proposal_ref",
+        "final_strategy_ref",
+        "stages",
+        "final_state",
+        "handoff_ref",
+        "tradingview_manifest_ref",
+        "reason_codes",
+        "input_fingerprint",
+        "workflow_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "IntegratedResearchWorkflowResult.payload")
+    if not isinstance(item["stages"], list):
+        raise InvalidSerialization("stages must be an array")
+    return IntegratedResearchWorkflowResult(
+        cast(ArtifactId, _typed_id(item["workflow_result_id"], ArtifactId, "workflow_result_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["workflow_plan_ref"], "workflow_plan_ref"),
+        _trace_ref(item["proposal_ref"], "proposal_ref"),
+        _trace_ref(item["final_strategy_ref"], "final_strategy_ref"),
+        tuple(_decode_workflow_stage(value) for value in item["stages"]),
+        IntegratedResearchWorkflowState(_text(item["final_state"], "final_state")),
+        _optional_trace_ref(item["handoff_ref"], "handoff_ref"),
+        _optional_trace_ref(item["tradingview_manifest_ref"], "tradingview_manifest_ref"),
+        tuple(
+            WorkflowReasonCode(value) for value in _strings(item["reason_codes"], "reason_codes")
+        ),
+        _text(item["input_fingerprint"], "input_fingerprint"),
+        _trace_ref(item["workflow_authority_ref"], "workflow_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
+def _decode_integrated_workflow_run(payload: Any) -> IntegratedResearchWorkflowRunRecord:
+    fields = {
+        "workflow_run_id",
+        "version",
+        "workflow_plan_ref",
+        "proposal_ref",
+        "result_ref",
+        "input_fingerprint",
+        "final_state",
+        "handoff_ref",
+        "stage_count",
+        "workflow_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "IntegratedResearchWorkflowRunRecord.payload")
+    return IntegratedResearchWorkflowRunRecord(
+        cast(RunId, _typed_id(item["workflow_run_id"], RunId, "workflow_run_id")),
+        _version(item["version"], "version"),
+        _trace_ref(item["workflow_plan_ref"], "workflow_plan_ref"),
+        _trace_ref(item["proposal_ref"], "proposal_ref"),
+        _trace_ref(item["result_ref"], "result_ref"),
+        _text(item["input_fingerprint"], "input_fingerprint"),
+        IntegratedResearchWorkflowState(_text(item["final_state"], "final_state")),
+        _optional_trace_ref(item["handoff_ref"], "handoff_ref"),
+        _integer(item["stage_count"], "stage_count"),
+        _trace_ref(item["workflow_authority_ref"], "workflow_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 _DECODERS = {
     "ArtifactEnvelope": _decode_artifact,
     "EvidenceEnvelope": _decode_evidence,
@@ -4278,6 +4729,12 @@ _DECODERS = {
     "PineExecutionEvidence": _decode_pine_execution_evidence,
     "PinePythonParityResult": _decode_pine_python_parity_result,
     "PinePythonParityRunRecord": _decode_pine_python_parity_run,
+    "AIStrategyProposal": _decode_ai_strategy_proposal,
+    "IntegratedResearchWorkflowPlan": _decode_integrated_workflow_plan,
+    "IntegratedResearchWorkflowResult": _decode_integrated_workflow_result,
+    "ResearchHandoffPackage": _decode_research_handoff,
+    "TradingViewResearchHandoffManifest": _decode_tradingview_handoff,
+    "IntegratedResearchWorkflowRunRecord": _decode_integrated_workflow_run,
 }
 
 
@@ -4329,6 +4786,12 @@ def decode[
         PineExecutionEvidence,
         PinePythonParityResult,
         PinePythonParityRunRecord,
+        AIStrategyProposal,
+        IntegratedResearchWorkflowPlan,
+        IntegratedResearchWorkflowResult,
+        ResearchHandoffPackage,
+        TradingViewResearchHandoffManifest,
+        IntegratedResearchWorkflowRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
     """Strictly reconstruct an exact governed type from canonical bytes."""

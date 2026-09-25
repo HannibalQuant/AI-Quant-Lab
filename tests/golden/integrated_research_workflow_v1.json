@@ -1,0 +1,18 @@
+{
+  "format": "integrated-research-workflow-v1",
+  "proposal_ref": "artifact:integrated-ai-strategy-proposal",
+  "final_strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
+  "backtest_ref": "artifact:opt-bt-result-6c6043438f48ae15fb61",
+  "scientific_validation_ref": "validation:opt-validation-result-6c6043438f48ae15fb61",
+  "robustness_ref": "artifact:opt-robustness-result-6c6043438f48ae15fb61",
+  "optimization_selection_ref": "artifact:controlled-optimization-selection-result",
+  "pine_artifact_ref": "artifact:governed-pine-strategy-source",
+  "parity_ref": "artifact:pine-python-parity-result-v1",
+  "final_state": "RESEARCH_HANDOFF_READY",
+  "handoff_readiness": "READY_FOR_HUMAN_RESEARCH_USE",
+  "input_fingerprint": "sha256:0cf7395274dc5669dbcc3d1dd325db0c383e305dd35483d1c1085ff6e02cdff8",
+  "result_fingerprint": "sha256:44f7cbe650f9d98919209d2cae6fcdc70b5a7f553ea8328cd1bf8bfe8806396d",
+  "handoff_fingerprint": "sha256:88527d0b200c66953bf28f6d0a157b4bb9dca4264e28de2bbb8296c0c9b96de8",
+  "manifest_fingerprint": "sha256:7d8d35261252172cf39df9b4c41af3945502ea77ca5aa1602a797feb97e19c6d",
+  "run_fingerprint": "sha256:5b93cce1b95c3aaa1d0ea0ff9d82a2ff8e687c1ee4a78faa6073e4a930891bff"
+}
