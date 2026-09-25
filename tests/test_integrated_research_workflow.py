@@ -24,6 +24,7 @@ from ai_quant_lab.core.integrated_research_workflow import (
     IntegratedResearchWorkflowContext,
     IntegratedResearchWorkflowLineageMismatch,
     derive_final_workflow_state,
+    derive_workflow_stages,
     evaluate_integrated_research_workflow,
     verify_integrated_research_workflow_lineage,
 )
@@ -37,6 +38,8 @@ from ai_quant_lab.core.integrated_research_workflow_contracts import (
     ProposalAuthorityState,
     ResearchHandoffReadiness,
     WorkflowReasonCode,
+    WorkflowStage,
+    WorkflowStageOutcome,
 )
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
@@ -273,6 +276,244 @@ def test_fail_and_inconclusive_mapping_remains_distinct():
     direct, reasons = derive_final_workflow_state(**{**common, "optimization": None})
     assert direct is IntegratedResearchWorkflowState.RESEARCH_HANDOFF_READY
     assert reasons == (WorkflowReasonCode.RESEARCH_HANDOFF_READY,)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_stages", "expected_state", "expected_outcome", "expected_reason"),
+    (
+        (
+            {"proposal_status": AIStrategyProposalStatus.REJECTED},
+            (WorkflowStage.PROPOSAL,),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.PROPOSAL_NOT_ACCEPTED,
+        ),
+        (
+            {"authorization": ExperimentAuthorizationDecision.REJECTED},
+            (WorkflowStage.PROPOSAL, WorkflowStage.AUTHORIZATION),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.EXPERIMENT_NOT_AUTHORIZED,
+        ),
+        (
+            {"scientific": ScientificValidationDecision.FAIL},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.SCIENTIFIC_VALIDATION_FAILED,
+        ),
+        (
+            {"scientific": ScientificValidationDecision.INCONCLUSIVE},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            WorkflowStageOutcome.INCONCLUSIVE,
+            WorkflowReasonCode.SCIENTIFIC_VALIDATION_INCONCLUSIVE,
+        ),
+        (
+            {"robustness": RobustnessDecision.FAIL},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.ROBUSTNESS_FAILED,
+        ),
+        (
+            {"robustness": RobustnessDecision.INCONCLUSIVE},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            WorkflowStageOutcome.INCONCLUSIVE,
+            WorkflowReasonCode.ROBUSTNESS_INCONCLUSIVE,
+        ),
+        (
+            {"optimization": SelectionDecision.REJECTED},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+                WorkflowStage.OPTIMIZATION,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,
+        ),
+        (
+            {"optimization": SelectionDecision.INCONCLUSIVE},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+                WorkflowStage.OPTIMIZATION,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            WorkflowStageOutcome.INCONCLUSIVE,
+            WorkflowReasonCode.OPTIMIZATION_NOT_SELECTED,
+        ),
+        (
+            {"pine_intake_accepted": False},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+                WorkflowStage.OPTIMIZATION,
+                WorkflowStage.PINE_INTAKE,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.PINE_INTAKE_FAILED,
+        ),
+        (
+            {"parity": PinePythonParityDecision.MISMATCH},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+                WorkflowStage.OPTIMIZATION,
+                WorkflowStage.PINE_INTAKE,
+                WorkflowStage.PARITY,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_REJECTED,
+            WorkflowStageOutcome.FAIL,
+            WorkflowReasonCode.PARITY_MISMATCH,
+        ),
+        (
+            {"parity": PinePythonParityDecision.INCONCLUSIVE},
+            (
+                WorkflowStage.PROPOSAL,
+                WorkflowStage.AUTHORIZATION,
+                WorkflowStage.BACKTEST,
+                WorkflowStage.SCIENTIFIC_VALIDATION,
+                WorkflowStage.ROBUSTNESS,
+                WorkflowStage.OPTIMIZATION,
+                WorkflowStage.PINE_INTAKE,
+                WorkflowStage.PARITY,
+            ),
+            IntegratedResearchWorkflowState.RESEARCH_INCONCLUSIVE,
+            WorkflowStageOutcome.INCONCLUSIVE,
+            WorkflowReasonCode.PARITY_INCONCLUSIVE,
+        ),
+    ),
+)
+def test_terminal_state_machine_stops_at_first_failure_or_inconclusive(
+    workflow_bundle,
+    overrides,
+    expected_stages,
+    expected_state,
+    expected_outcome,
+    expected_reason,
+):
+    proposal, plan, _request, context, _repository = workflow_bundle
+    final = context.final_evidence
+    base = {
+        "proposal_ref": exact(proposal, proposal.proposal_id, proposal.version),
+        "authorization_ref": exact(
+            final.authorization,
+            final.authorization.authorization_id,
+            final.authorization.version,
+        ),
+        "backtest_ref": exact(
+            final.backtest_artifact,
+            final.backtest_artifact.artifact_id,
+            final.backtest_artifact.version,
+        ),
+        "scientific_ref": exact(
+            final.scientific_result,
+            final.scientific_result.validation_result_id,
+            final.scientific_result.version,
+        ),
+        "robustness_ref": exact(
+            final.robustness_result,
+            final.robustness_result.robustness_result_id,
+            final.robustness_result.version,
+        ),
+        "optimization_ref": plan.optimization_selection_ref,
+        "pine_intake_ref": exact(
+            context.parity_context.pine_intake_record,
+            context.parity_context.pine_intake_record.intake_run_id,
+            context.parity_context.pine_intake_record.version,
+        ),
+        "parity_ref": exact(
+            context.parity_result,
+            context.parity_result.parity_result_id,
+            context.parity_result.version,
+        ),
+        "proposal_status": AIStrategyProposalStatus.ACCEPTED_FOR_RESEARCH,
+        "authorization": ExperimentAuthorizationDecision.AUTHORIZED,
+        "scientific": ScientificValidationDecision.PASS,
+        "robustness": RobustnessDecision.PASS,
+        "optimization": SelectionDecision.SELECTED,
+        "parity": PinePythonParityDecision.MATCH,
+        "pine_intake_accepted": True,
+    }
+    base.update(overrides)
+    stages = derive_workflow_stages(**base)
+
+    assert tuple(item.stage for item in stages) == expected_stages
+    assert stages[-1].state is expected_state
+    assert stages[-1].outcome is expected_outcome
+    assert stages[-1].reason_code is expected_reason
+    assert all(item.reason_code is None for item in stages[:-1])
+
+
+def test_rejected_proposal_stops_integrated_handoff_and_records_terminal_stage(workflow_bundle):
+    proposal = replace(workflow_bundle[0], status=AIStrategyProposalStatus.REJECTED)
+    proposal_ref = exact(proposal, proposal.proposal_id, proposal.version)
+    plan = replace(workflow_bundle[1], proposal_ref=proposal_ref)
+    request = replace(
+        workflow_bundle[2],
+        proposal_ref=proposal_ref,
+        workflow_plan_ref=exact(plan, plan.workflow_plan_id, plan.version),
+    )
+
+    execution = evaluate_integrated_research_workflow(
+        proposal,
+        plan,
+        request,
+        context=workflow_bundle[3],
+        repository=workflow_bundle[4],
+    )
+
+    assert execution.result.final_state is IntegratedResearchWorkflowState.RESEARCH_REJECTED
+    assert execution.result.reason_codes == (WorkflowReasonCode.PROPOSAL_NOT_ACCEPTED,)
+    assert execution.handoff is None
+    assert execution.tradingview_manifest is None
+    assert execution.result.handoff_ref is None
+    assert execution.result.tradingview_manifest_ref is None
+    assert tuple(item.stage for item in execution.result.stages) == (WorkflowStage.PROPOSAL,)
+    terminal = execution.result.stages[-1]
+    assert terminal.state is IntegratedResearchWorkflowState.RESEARCH_REJECTED
+    assert terminal.outcome is WorkflowStageOutcome.FAIL
+    assert terminal.reason_code is WorkflowReasonCode.PROPOSAL_NOT_ACCEPTED
+    assert execution.result.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    assert execution.result.execution_state is ExecutionState.PLANNED_CLOSED
 
 
 def test_wrong_workflow_authority_fails_closed(workflow_bundle):
