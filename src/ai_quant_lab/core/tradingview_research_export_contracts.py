@@ -112,7 +112,9 @@ class TradingViewResearchExportPackage:
             or self.readiness
             is not TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
         ):
-            raise TradingViewResearchExportContractError("invalid TradingView research export package")
+            raise TradingViewResearchExportContractError(
+                "invalid TradingView research export package"
+            )
 
         for reference, expected, field in (
             (self.pine_artifact_ref, ArtifactId, "pine_artifact_ref"),
@@ -157,10 +159,7 @@ class TradingViewResearchExportPackage:
             or names != tuple(sorted(names))
             or len(names) != len(set(names))
             or any(
-                not isinstance(name, str)
-                or not name
-                or not isinstance(value, str)
-                or not value
+                not isinstance(name, str) or not name or not isinstance(value, str) or not value
                 for name, value in self.strategy_parameters
             )
         ):
