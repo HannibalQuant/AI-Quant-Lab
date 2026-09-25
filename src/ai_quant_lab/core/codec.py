@@ -221,6 +221,13 @@ from ai_quant_lab.core.scientific_validation_contracts import (
     ValidationRunRecord,
     ValidationRunStatus,
 )
+from ai_quant_lab.core.tradingview_research_export_contracts import (
+    TradingViewResearchExportPackage,
+    TradingViewResearchExportReadiness,
+    TradingViewResearchExportRuntimeStatus,
+    TradingViewResearchExportSafetyStatus,
+)
+
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
@@ -296,6 +303,7 @@ type GovernedRecord = (
     | IntegratedResearchWorkflowResult
     | ResearchHandoffPackage
     | TradingViewResearchHandoffManifest
+    | TradingViewResearchExportPackage
     | IntegratedResearchWorkflowRunRecord
 )
 
@@ -375,6 +383,7 @@ _SUPPORTED_TYPES: dict[type[GovernedRecord], str] = {
     IntegratedResearchWorkflowResult: "IntegratedResearchWorkflowResult",
     ResearchHandoffPackage: "ResearchHandoffPackage",
     TradingViewResearchHandoffManifest: "TradingViewResearchHandoffManifest",
+    TradingViewResearchExportPackage: "TradingViewResearchExportPackage",
     IntegratedResearchWorkflowRunRecord: "IntegratedResearchWorkflowRunRecord",
 }
 
@@ -1822,6 +1831,48 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
             "repaint_assessment": record.repaint_assessment.value,
             "readiness": record.readiness.value,
+            "deployment_authorization": record.deployment_authorization.value,
+            "execution_state": record.execution_state.value,
+            "contract_version": record.contract_version.number,
+        }
+    if isinstance(record, TradingViewResearchExportPackage):
+        return {
+            "export_id": str(record.export_id),
+            "version": record.version.number,
+            "export_run_id": str(record.export_run_id),
+            "pine_artifact_ref": _trace_ref_payload(record.pine_artifact_ref),
+            "strategy_ref": _trace_ref_payload(record.strategy_ref),
+            "backtest_ref": _trace_ref_payload(record.backtest_ref),
+            "scientific_validation_ref": _trace_ref_payload(record.scientific_validation_ref),
+            "robustness_ref": _trace_ref_payload(record.robustness_ref),
+            "optimization_selection_ref": (
+                None
+                if record.optimization_selection_ref is None
+                else _trace_ref_payload(record.optimization_selection_ref)
+            ),
+            "instrument_ref": _trace_ref_payload(record.instrument_ref),
+            "timeframe_ref": _trace_ref_payload(record.timeframe_ref),
+            "normalized_manifest_ref": _trace_ref_payload(record.normalized_manifest_ref),
+            "normalized_lock_ref": _trace_ref_payload(record.normalized_lock_ref),
+            "generation_input_fingerprint": record.generation_input_fingerprint,
+            "safety_assessment_id": str(record.safety_assessment_id),
+            "safety_input_fingerprint": record.safety_input_fingerprint,
+            "safety_status": record.safety_status.value,
+            "static_repaint_status": record.static_repaint_status,
+            "artifact_repaint_assessment": record.artifact_repaint_assessment.value,
+            "runtime_status": record.runtime_status.value,
+            "pine_source_sha256": record.pine_source_sha256,
+            "pine_source_byte_size": record.pine_source_byte_size,
+            "pine_filename": record.pine_filename,
+            "manifest_filename": record.manifest_filename,
+            "pine_source_text": record.pine_source_text,
+            "instrument_symbol": record.instrument_symbol,
+            "timeframe_token": record.timeframe_token,
+            "strategy_parameters": [list(item) for item in record.strategy_parameters],
+            "manual_steps": list(record.manual_steps),
+            "readiness": record.readiness.value,
+            "export_authority_ref": _trace_ref_payload(record.export_authority_ref),
+            "provenance_ref": _trace_ref_payload(record.provenance_ref),
             "deployment_authorization": record.deployment_authorization.value,
             "execution_state": record.execution_state.value,
             "contract_version": record.contract_version.number,
@@ -4598,6 +4649,108 @@ def _decode_tradingview_handoff(payload: Any) -> TradingViewResearchHandoffManif
     )
 
 
+def _decode_tradingview_research_export(
+    payload: Any,
+) -> TradingViewResearchExportPackage:
+    fields = {
+        "export_id",
+        "version",
+        "export_run_id",
+        "pine_artifact_ref",
+        "strategy_ref",
+        "backtest_ref",
+        "scientific_validation_ref",
+        "robustness_ref",
+        "optimization_selection_ref",
+        "instrument_ref",
+        "timeframe_ref",
+        "normalized_manifest_ref",
+        "normalized_lock_ref",
+        "generation_input_fingerprint",
+        "safety_assessment_id",
+        "safety_input_fingerprint",
+        "safety_status",
+        "static_repaint_status",
+        "artifact_repaint_assessment",
+        "runtime_status",
+        "pine_source_sha256",
+        "pine_source_byte_size",
+        "pine_filename",
+        "manifest_filename",
+        "pine_source_text",
+        "instrument_symbol",
+        "timeframe_token",
+        "strategy_parameters",
+        "manual_steps",
+        "readiness",
+        "export_authority_ref",
+        "provenance_ref",
+        "deployment_authorization",
+        "execution_state",
+        "contract_version",
+    }
+    item = _strict_object(payload, fields, "TradingViewResearchExportPackage.payload")
+    params = item["strategy_parameters"]
+    if not isinstance(params, list):
+        raise InvalidSerialization("strategy_parameters must be an array")
+    parsed_params: list[tuple[str, str]] = []
+    for value in params:
+        if not isinstance(value, list) or len(value) != 2:
+            raise InvalidSerialization("strategy parameter must be a pair")
+        parsed_params.append(
+            (
+                _text(value[0], "strategy_parameter.name"),
+                _text(value[1], "strategy_parameter.value"),
+            )
+        )
+    return TradingViewResearchExportPackage(
+        cast(ArtifactId, _typed_id(item["export_id"], ArtifactId, "export_id")),
+        _version(item["version"], "version"),
+        cast(RunId, _typed_id(item["export_run_id"], RunId, "export_run_id")),
+        _trace_ref(item["pine_artifact_ref"], "pine_artifact_ref"),
+        _trace_ref(item["strategy_ref"], "strategy_ref"),
+        _trace_ref(item["backtest_ref"], "backtest_ref"),
+        _trace_ref(item["scientific_validation_ref"], "scientific_validation_ref"),
+        _trace_ref(item["robustness_ref"], "robustness_ref"),
+        _optional_trace_ref(item["optimization_selection_ref"], "optimization_selection_ref"),
+        _trace_ref(item["instrument_ref"], "instrument_ref"),
+        _trace_ref(item["timeframe_ref"], "timeframe_ref"),
+        _trace_ref(item["normalized_manifest_ref"], "normalized_manifest_ref"),
+        _trace_ref(item["normalized_lock_ref"], "normalized_lock_ref"),
+        _text(item["generation_input_fingerprint"], "generation_input_fingerprint"),
+        cast(
+            ArtifactId,
+            _typed_id(item["safety_assessment_id"], ArtifactId, "safety_assessment_id"),
+        ),
+        _text(item["safety_input_fingerprint"], "safety_input_fingerprint"),
+        TradingViewResearchExportSafetyStatus(_text(item["safety_status"], "safety_status")),
+        _text(item["static_repaint_status"], "static_repaint_status"),
+        RepaintAssessmentStatus(
+            _text(item["artifact_repaint_assessment"], "artifact_repaint_assessment")
+        ),
+        TradingViewResearchExportRuntimeStatus(
+            _text(item["runtime_status"], "runtime_status")
+        ),
+        _text(item["pine_source_sha256"], "pine_source_sha256"),
+        _integer(item["pine_source_byte_size"], "pine_source_byte_size"),
+        _text(item["pine_filename"], "pine_filename"),
+        _text(item["manifest_filename"], "manifest_filename"),
+        _text(item["pine_source_text"], "pine_source_text"),
+        _text(item["instrument_symbol"], "instrument_symbol"),
+        _text(item["timeframe_token"], "timeframe_token"),
+        tuple(parsed_params),
+        _strings(item["manual_steps"], "manual_steps"),
+        TradingViewResearchExportReadiness(_text(item["readiness"], "readiness")),
+        _trace_ref(item["export_authority_ref"], "export_authority_ref"),
+        _trace_ref(item["provenance_ref"], "provenance_ref"),
+        DeploymentAuthorizationStatus(
+            _text(item["deployment_authorization"], "deployment_authorization")
+        ),
+        ExecutionState(_text(item["execution_state"], "execution_state")),
+        _version(item["contract_version"], "contract_version"),
+    )
+
+
 def _decode_integrated_workflow_result(payload: Any) -> IntegratedResearchWorkflowResult:
     fields = {
         "workflow_result_id",
@@ -4734,6 +4887,7 @@ _DECODERS = {
     "IntegratedResearchWorkflowResult": _decode_integrated_workflow_result,
     "ResearchHandoffPackage": _decode_research_handoff,
     "TradingViewResearchHandoffManifest": _decode_tradingview_handoff,
+    "TradingViewResearchExportPackage": _decode_tradingview_research_export,
     "IntegratedResearchWorkflowRunRecord": _decode_integrated_workflow_run,
 }
 
@@ -4791,6 +4945,7 @@ def decode[
         IntegratedResearchWorkflowResult,
         ResearchHandoffPackage,
         TradingViewResearchHandoffManifest,
+        TradingViewResearchExportPackage,
         IntegratedResearchWorkflowRunRecord,
     )
 ](data: bytes, expected_type: type[T]) -> T:
