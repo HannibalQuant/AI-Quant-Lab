@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
@@ -38,8 +37,15 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
 
 _V1 = ObjectVersion(1)
 _GENERATOR_PROFILE = "AIQL_GOVERNED_PINE_V6_CLOSE_VS_OPEN_LONG_ONLY_V1"
-_TITLE = re.compile(r'^[^"\\\r\n]{1,96}
-
+def _valid_title(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and 1 <= len(value) <= 96
+        and '"' not in value
+        and "\\" not in value
+        and "\r" not in value
+        and "\n" not in value
+    )
 
 class GovernedPineGeneratorError(ValueError):
     pass
@@ -75,8 +81,7 @@ class GovernedPineGenerationRequest:
             or not isinstance(self.intake_run_id, RunId)
             or not isinstance(self.requested_artifact_id, ArtifactId)
             or self.contract_version != _V1
-            or not isinstance(self.script_title, str)
-            or _TITLE.fullmatch(self.script_title) is None
+            or not _valid_title(self.script_title)
         ):
             raise GovernedPineGeneratorError("invalid governed Pine generation request")
         _exact_ref(self.strategy_definition_ref, ArtifactId, "strategy_definition_ref")
@@ -176,7 +181,7 @@ def render_governed_pine_v6(
     script_title: str,
 ) -> str:
     """Render canonical Pine source for the exact bounded StrategyDefinition."""
-    if not isinstance(script_title, str) or _TITLE.fullmatch(script_title) is None:
+    if not _valid_title(script_title):
         raise GovernedPineGeneratorError(
             "script title must be 1..96 characters without quotes, backslashes or newlines"
         )
