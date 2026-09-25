@@ -1,1 +1,19 @@
-{}
+{
+  "format": "pine-static-safety-validation-v1",
+  "assessment_id": "artifact:sprint-21-safety-result",
+  "input_fingerprint": "sha256:20a2ef875e14844a730516c5631b4fa47faac98c4f619816784207db1bec1e33",
+  "pine_artifact_ref": "artifact:sprint-21-generated-pine",
+  "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
+  "generation_input_fingerprint": "sha256:0de0b6d5a2599cebafbc283ca345a3df121028e25b42825e19a5e51756649c5c",
+  "source_sha256": "sha256:150efb9123e5be789ba485d24d099c10d16349ea073aeac344a640c2d9b2b3c7",
+  "normalized_source_sha256": "sha256:150efb9123e5be789ba485d24d099c10d16349ea073aeac344a640c2d9b2b3c7",
+  "decision": "PASS",
+  "static_repaint_status": "NO_STATIC_REPAINT_HAZARD_DETECTED",
+  "reason_codes": [
+    "CANONICAL_GENERATED_PROFILE"
+  ],
+  "finding_count": 0,
+  "artifact_repaint_assessment": "NOT_EVALUATED",
+  "deployment_authorization": "NOT_AUTHORIZED",
+  "execution_state": "PLANNED_CLOSED"
+}
