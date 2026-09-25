@@ -803,7 +803,10 @@ def verify_multi_signal_backtest_accounting(
             exit_fill = fills_by_id.get(stored_stored_trade.exit_fill_id)
             if entry is None or exit_fill is None:
                 raise MultiSignalAccountingError("trade references an unknown fill")
-            if stored_trade.entry_fill_id in participating or stored_trade.exit_fill_id in participating:
+            if (
+                stored_trade.entry_fill_id in participating
+                or stored_trade.exit_fill_id in participating
+            ):
                 raise MultiSignalAccountingError("a fill participates in multiple completed trades")
             if entry.side is exit_fill.side:
                 raise MultiSignalAccountingError(

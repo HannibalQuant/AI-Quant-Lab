@@ -258,9 +258,7 @@ def _multi_signal_parameter_update(
     }
     unknown = set(values) - supported
     if unknown:
-        raise OptimizationInputInvalid(
-            f"unsupported multi-signal parameters: {sorted(unknown)}"
-        )
+        raise OptimizationInputInvalid(f"unsupported multi-signal parameters: {sorted(unknown)}")
 
     try:
         return MultiSignalTrendParameters(
