@@ -54,7 +54,6 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
     TradingViewResearchExportRuntimeStatus,
 )
 
-
 V1 = ObjectVersion(1)
 GOLDEN = Path(__file__).parent / "golden" / "phase3_end_to_end_closure_v1.json"
 
