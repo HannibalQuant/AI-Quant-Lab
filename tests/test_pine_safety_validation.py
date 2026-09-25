@@ -27,6 +27,7 @@ from ai_quant_lab.core.model import (
     AuthorityBindingId,
     ExecutionState,
     ObjectVersion,
+    ProvenanceId,
     RunId,
     TraceabilityRef,
 )
@@ -254,6 +255,19 @@ def test_strategy_substitution_fails_closed(safety_bundle):
         "sha256:" + "5" * 64,
     )
     request = replace(request, strategy_definition_ref=wrong)
+
+    with pytest.raises(PineSafetyLineageMismatch):
+        assess_governed_pine_static_safety(request, context=context)
+
+
+def test_provenance_substitution_fails_closed(safety_bundle):
+    request, context, _result, _repository = safety_bundle
+    wrong = TraceabilityRef(
+        ProvenanceId("wrong-pine-safety-provenance"),
+        V1,
+        "sha256:" + "2" * 64,
+    )
+    request = replace(request, provenance_ref=wrong)
 
     with pytest.raises(PineSafetyLineageMismatch):
         assess_governed_pine_static_safety(request, context=context)
