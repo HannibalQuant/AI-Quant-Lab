@@ -346,8 +346,7 @@ def test_tampered_export_package_fails_exact_verification(export_bundle):
     request, context, execution, _repository = export_bundle
     tampered = replace(
         execution.package,
-        manual_steps=execution.package.manual_steps
-        + ("Uncontrolled extra manual instruction.",),
+        manual_steps=execution.package.manual_steps + ("Uncontrolled extra manual instruction.",),
     )
 
     with pytest.raises(TradingViewResearchExportLineageMismatch):
