@@ -133,10 +133,7 @@ def test_optimized_generated_pine_passes_bounded_static_safety(safety_bundle):
     verify_pine_static_safety_assessment(request, result=result, context=context)
 
     assert result.decision is PineSafetyDecision.PASS
-    assert (
-        result.static_repaint_status
-        is PineStaticRepaintStatus.NO_STATIC_REPAINT_HAZARD_DETECTED
-    )
+    assert result.static_repaint_status is PineStaticRepaintStatus.NO_STATIC_REPAINT_HAZARD_DETECTED
     assert result.reason_codes == (PineSafetyReasonCode.CANONICAL_GENERATED_PROFILE,)
     assert result.findings == ()
     assert result.source_sha256 == context.generation_result.artifact.source_sha256
@@ -166,7 +163,10 @@ def test_direct_generated_pine_passes_same_safety_boundary(selection_bundle):
 @pytest.mark.parametrize(
     ("snippet", "expected"),
     (
-        ('x = request.security(syminfo.tickerid, "60", close)', PineSafetyReasonCode.EXTERNAL_DATA_REQUEST),
+        (
+            'x = request.security(syminfo.tickerid, "60", close)',
+            PineSafetyReasonCode.EXTERNAL_DATA_REQUEST,
+        ),
         ("x = security(syminfo.tickerid, close)", PineSafetyReasonCode.LEGACY_SECURITY_CALL),
         ("x = barmerge.lookahead_on", PineSafetyReasonCode.EXPLICIT_LOOKAHEAD),
         ("x = timeframe.period", PineSafetyReasonCode.DYNAMIC_TIMEFRAME),
@@ -318,9 +318,7 @@ def test_static_safety_does_not_upgrade_runtime_repaint_or_deployment_claim(safe
 
 
 def test_safety_validator_has_no_external_execution_capability():
-    source = Path("src/ai_quant_lab/core/pine_safety_validation.py").read_text(
-        encoding="utf-8"
-    )
+    source = Path("src/ai_quant_lab/core/pine_safety_validation.py").read_text(encoding="utf-8")
     forbidden = (
         "import requests",
         "import httpx",
