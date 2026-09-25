@@ -346,10 +346,8 @@ def test_tampered_export_package_fails_exact_verification(export_bundle):
     request, context, execution, _repository = export_bundle
     tampered = replace(
         execution.package,
-        pine_source_text=execution.package.pine_source_text + "// tampered\n",
-        pine_source_byte_size=len(
-            (execution.package.pine_source_text + "// tampered\n").encode("utf-8")
-        ),
+        manual_steps=execution.package.manual_steps
+        + ("Uncontrolled extra manual instruction.",),
     )
 
     with pytest.raises(TradingViewResearchExportLineageMismatch):
