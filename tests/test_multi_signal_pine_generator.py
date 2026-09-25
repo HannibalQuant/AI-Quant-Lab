@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 
 import pytest
@@ -150,7 +151,9 @@ def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive() -> 
         lambda p: replace(p, time_stop_bars=0),
     ),
 )
-def test_invalid_multi_signal_parameters_fail_closed(mutator) -> None:
+def test_invalid_multi_signal_parameters_fail_closed(
+    mutator: Callable[[MultiSignalTrendParameters], MultiSignalTrendParameters],
+) -> None:
     with pytest.raises(StrategyBacktestContractError):
         mutator(parameters())
 

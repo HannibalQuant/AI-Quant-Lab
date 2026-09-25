@@ -212,7 +212,7 @@ def render_governed_pine_v6(
     profile = _generator_profile(strategy)
 
     if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
-        lines = (
+        lines: tuple[str, ...] = (
             "//@version=6",
             "// AI Quant Lab governed Pine generator v1",
             f"// Generator profile: {profile}",
