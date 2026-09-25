@@ -67,7 +67,10 @@ from ai_quant_lab.core.strategy_backtest import StrategyBacktestRunRequest
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
+    MultiSignalTrendParameters,
+    StrategyBacktestContractError,
     StrategyDefinition,
+    StrategyModel,
 )
 
 
@@ -222,6 +225,57 @@ def _candidate_suffix(
     return identity.removeprefix("sha256:")[:20]
 
 
+def _scaled_decimal(value: int, scale: int = 100) -> str:
+    whole, remainder = divmod(value, scale)
+    if remainder == 0:
+        return str(whole)
+    width = len(str(scale)) - 1
+    fraction = f"{remainder:0{width}d}".rstrip("0")
+    return f"{whole}.{fraction}"
+
+
+def _multi_signal_parameter_update(
+    parent: MultiSignalTrendParameters,
+    values: dict[str, int],
+) -> MultiSignalTrendParameters:
+    direct = {
+        "adx_length": "adx_length",
+        "atr_length": "atr_length",
+        "fast_ema": "fast_ema",
+        "macd_fast": "macd_fast",
+        "macd_signal": "macd_signal",
+        "macd_slow": "macd_slow",
+        "medium_ema": "medium_ema",
+        "rsi_length": "rsi_length",
+        "slow_ema": "slow_ema",
+        "time_stop_bars": "time_stop_bars",
+    }
+    scaled = {
+        "adx_threshold_x100": "adx_threshold",
+        "atr_stop_mult_x100": "atr_stop_mult",
+        "break_even_trigger_r_x100": "break_even_trigger_r",
+        "rsi_long_min_x100": "rsi_long_min",
+        "rsi_short_max_x100": "rsi_short_max",
+        "take_profit_r_x100": "take_profit_r",
+    }
+    changes: dict[str, object] = {}
+    for name, value in values.items():
+        if name in direct:
+            changes[direct[name]] = value
+        elif name in scaled:
+            changes[scaled[name]] = _scaled_decimal(value)
+        else:
+            raise OptimizationInputInvalid(
+                f"parameter {name} is not supported by the multi-signal strategy"
+            )
+    try:
+        return replace(parent, **changes)
+    except StrategyBacktestContractError as exc:
+        raise OptimizationInputInvalid(
+            "multi-signal parameter set violates strategy invariants"
+        ) from exc
+
+
 def derive_candidate(
     *,
     plan: OptimizationPlan,
@@ -238,11 +292,30 @@ def derive_candidate(
         parameters=parameters,
     )
     values = dict(parameters)
-    strategy = replace(
-        parent_strategy,
-        strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
-        threshold_bps=values["threshold_bps"],
-    )
+    if parent_strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
+        if set(values) != {"threshold_bps"}:
+            raise OptimizationInputInvalid(
+                "legacy strategy optimization supports threshold_bps only"
+            )
+        strategy = replace(
+            parent_strategy,
+            strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
+            threshold_bps=values["threshold_bps"],
+        )
+    elif parent_strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+        if parent_strategy.multi_signal is None:
+            raise OptimizationInputInvalid(
+                "multi-signal optimization requires exact strategy parameters"
+            )
+        updated = _multi_signal_parameter_update(parent_strategy.multi_signal, values)
+        strategy = replace(
+            parent_strategy,
+            strategy_id=ArtifactId(f"optimized-strategy-{suffix}"),
+            multi_signal=updated,
+        )
+    else:  # pragma: no cover - closed StrategyModel enum guard
+        raise OptimizationInputInvalid("unsupported strategy optimization model")
+
     definition = OptimizationCandidateDefinition(
         ArtifactId(f"optimization-candidate-{suffix}"),
         _V1,

@@ -33,7 +33,23 @@ class OptimizationParameterType(StrEnum):
 
 
 class OptimizationParameterName(StrEnum):
+    ADX_LENGTH = "adx_length"
+    ADX_THRESHOLD_X100 = "adx_threshold_x100"
+    ATR_LENGTH = "atr_length"
+    ATR_STOP_MULT_X100 = "atr_stop_mult_x100"
+    BREAK_EVEN_TRIGGER_R_X100 = "break_even_trigger_r_x100"
+    FAST_EMA = "fast_ema"
+    MACD_FAST = "macd_fast"
+    MACD_SIGNAL = "macd_signal"
+    MACD_SLOW = "macd_slow"
+    MEDIUM_EMA = "medium_ema"
+    RSI_LENGTH = "rsi_length"
+    RSI_LONG_MIN_X100 = "rsi_long_min_x100"
+    RSI_SHORT_MAX_X100 = "rsi_short_max_x100"
+    SLOW_EMA = "slow_ema"
+    TAKE_PROFIT_R_X100 = "take_profit_r_x100"
     THRESHOLD_BPS = "threshold_bps"
+    TIME_STOP_BARS = "time_stop_bars"
 
 
 class OptimizationSearchMethod(StrEnum):
@@ -119,11 +135,12 @@ def _reasons(values: tuple[OptimizationReasonCode, ...]) -> None:
 
 def _parameters(values: tuple[tuple[str, int], ...]) -> None:
     names = tuple(name for name, _ in values)
+    supported = {item.value for item in OptimizationParameterName}
     if (
         not values
         or names != tuple(sorted(names))
         or len(set(names)) != len(names)
-        or any(name != OptimizationParameterName.THRESHOLD_BPS.value for name in names)
+        or any(name not in supported for name in names)
         or any(isinstance(value, bool) or not isinstance(value, int) for _, value in values)
     ):
         raise OptimizationContractError("candidate parameters must be canonical and supported")
@@ -140,16 +157,52 @@ class OptimizationParameter:
 
     def __post_init__(self) -> None:
         if (
-            self.name is not OptimizationParameterName.THRESHOLD_BPS
+            not isinstance(self.name, OptimizationParameterName)
             or self.parameter_type is not OptimizationParameterType.INTEGER
             or any(
                 isinstance(value, bool) or not isinstance(value, int)
                 for value in (self.lower_bound, self.upper_bound, self.step, self.default_value)
             )
-            or not 0 <= self.lower_bound <= self.default_value <= self.upper_bound <= 10_000
             or self.step <= 0
+            or not self.lower_bound <= self.default_value <= self.upper_bound
             or (self.upper_bound - self.lower_bound) % self.step != 0
         ):
+            raise OptimizationContractError("optimization parameter bounds are invalid")
+
+        length_parameters = {
+            OptimizationParameterName.ADX_LENGTH,
+            OptimizationParameterName.ATR_LENGTH,
+            OptimizationParameterName.FAST_EMA,
+            OptimizationParameterName.MACD_FAST,
+            OptimizationParameterName.MACD_SIGNAL,
+            OptimizationParameterName.MACD_SLOW,
+            OptimizationParameterName.MEDIUM_EMA,
+            OptimizationParameterName.RSI_LENGTH,
+            OptimizationParameterName.SLOW_EMA,
+            OptimizationParameterName.TIME_STOP_BARS,
+        }
+        percentage_parameters = {
+            OptimizationParameterName.ADX_THRESHOLD_X100,
+            OptimizationParameterName.RSI_LONG_MIN_X100,
+            OptimizationParameterName.RSI_SHORT_MAX_X100,
+        }
+        positive_scaled_parameters = {
+            OptimizationParameterName.ATR_STOP_MULT_X100,
+            OptimizationParameterName.BREAK_EVEN_TRIGGER_R_X100,
+            OptimizationParameterName.TAKE_PROFIT_R_X100,
+        }
+        if self.name is OptimizationParameterName.THRESHOLD_BPS:
+            valid = 0 <= self.lower_bound <= self.upper_bound <= 10_000
+        elif self.name in length_parameters:
+            valid = 1 <= self.lower_bound <= self.upper_bound <= 1000
+        elif self.name in percentage_parameters:
+            minimum = 1 if self.name is OptimizationParameterName.ADX_THRESHOLD_X100 else 0
+            valid = minimum <= self.lower_bound <= self.upper_bound <= 10_000
+        elif self.name in positive_scaled_parameters:
+            valid = 1 <= self.lower_bound <= self.upper_bound <= 100_000
+        else:  # pragma: no cover - exhaustive enum guard
+            valid = False
+        if not valid:
             raise OptimizationContractError("optimization parameter bounds are invalid")
 
 

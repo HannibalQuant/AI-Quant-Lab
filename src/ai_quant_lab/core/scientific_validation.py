@@ -181,7 +181,7 @@ def _evaluate(
     blockers: list[ValidationReasonCode] = []
     if artifact.trade_count < plan.min_trade_count or len(trade_returns) < plan.min_sample_size:
         blockers.append(ValidationReasonCode.INSUFFICIENT_TRADES)
-    if artifact.open_position is SimulatedPositionState.LONG:
+    if artifact.open_position is not SimulatedPositionState.FLAT:
         blockers.append(ValidationReasonCode.OPEN_POSITION_UNRESOLVED)
     if plan.holdout_policy is HoldoutPolicy.RESERVED_HOLDOUT:
         blockers.append(ValidationReasonCode.HOLDOUT_REQUIRED)
