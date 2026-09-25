@@ -133,11 +133,13 @@ def test_optimized_export_is_ready_and_immutably_stored(export_bundle):
     )
 
     package = execution.package
-    assert package.readiness is TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
+    assert (
+        package.readiness
+        is TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
+    )
     assert package.safety_status is TradingViewResearchExportSafetyStatus.STATIC_SAFETY_PASS
     assert (
-        package.runtime_status
-        is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
+        package.runtime_status is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
     )
     assert package.optimization_selection_ref is not None
     assert execution.pine_bytes == package.pine_source_text.encode("utf-8")
@@ -178,7 +180,10 @@ def test_export_contains_exact_pine_and_research_evidence(export_bundle):
     assert package.normalized_manifest_ref == evidence.eligibility.normalized_manifest_ref
     assert package.normalized_lock_ref == evidence.eligibility.normalized_lock_ref
     assert package.backtest_ref.object_id == evidence.backtest_artifact.artifact_id
-    assert package.scientific_validation_ref.object_id == evidence.scientific_result.validation_result_id
+    assert (
+        package.scientific_validation_ref.object_id
+        == evidence.scientific_result.validation_result_id
+    )
     assert package.robustness_ref.object_id == evidence.robustness_result.robustness_result_id
 
 
@@ -215,9 +220,7 @@ def test_strategy_parameters_are_sorted_and_exact(export_bundle):
     strategy = context.generator_context.pine_intake_context.strategy
     params = dict(execution.package.strategy_parameters)
 
-    assert tuple(name for name, _ in execution.package.strategy_parameters) == tuple(
-        sorted(params)
-    )
+    assert tuple(name for name, _ in execution.package.strategy_parameters) == tuple(sorted(params))
     assert params["model"] == strategy.model.value
     assert params["threshold_bps"] == str(strategy.threshold_bps)
     assert params["fixed_notional_minor"] == str(strategy.fixed_notional_minor)
