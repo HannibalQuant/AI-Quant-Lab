@@ -113,13 +113,27 @@ PINE_INTAKE_COMPLETED → PARITY_COMPLETED → RESEARCH_HANDOFF_READY`.
 
 Direct mode omits only `OPTIMIZATION_COMPLETED`.
 
+The audit-stage sequence is terminal and truthful: the first rejected or inconclusive decision is
+recorded on the stage where it occurs, with the terminal workflow state and reason code, and no
+later stage is emitted. A successful handoff is emitted only after every required preceding stage
+has succeeded.
+
+The integrated artifact builder consumes a complete, exact evidence package. Structural,
+authority or lineage corruption fails closed by exception and does not fabricate a synthetic
+terminal result for missing or unverifiable downstream artifacts.
+
 ## 18. Failure vs inconclusive
 
-Mechanical mapping preserves:
+Mechanical mapping preserves and terminates at the first applicable stage:
+- proposal not accepted → `RESEARCH_REJECTED`
+- experiment not authorized → `RESEARCH_REJECTED`
 - scientific FAIL → `RESEARCH_REJECTED`
 - scientific INCONCLUSIVE → `RESEARCH_INCONCLUSIVE`
 - robustness FAIL → `RESEARCH_REJECTED`
 - robustness INCONCLUSIVE → `RESEARCH_INCONCLUSIVE`
+- optimization REJECTED → `RESEARCH_REJECTED`
+- optimization INCONCLUSIVE → `RESEARCH_INCONCLUSIVE`
+- Pine intake not accepted → `RESEARCH_REJECTED`
 - parity MISMATCH → `RESEARCH_REJECTED`
 - parity INCONCLUSIVE → `RESEARCH_INCONCLUSIVE`
 
@@ -183,9 +197,11 @@ No success path can open execution.
 
 ## 28. Tests
 
-Focused tests cover optimized end-to-end success, direct-path decision semantics, fail versus
-inconclusive mapping, authority mismatch, dataset/strategy substitution, handoff tampering, agent
-traceability, codec/persistence idempotency and explicit deployment/execution closure.
+Focused tests cover optimized end-to-end success, direct-path success, complete terminal
+failure/inconclusive state-machine coverage for proposal, authorization, scientific validation,
+robustness, optimization, Pine intake and parity, a full integrated rejected-proposal path, authority
+mismatch, dataset/strategy substitution, handoff tampering, agent traceability,
+codec/persistence idempotency and explicit deployment/execution closure.
 
 ## 29. Governance BEFORE → AFTER
 
