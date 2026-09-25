@@ -79,15 +79,15 @@ from ai_quant_lab.core.scientific_validation_contracts import (
     ValidationPlan,
     ValidationRunRecord,
 )
-from ai_quant_lab.core.tradingview_research_export_contracts import (
-    TradingViewResearchExportPackage,
-)
-
 from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestResultArtifact,
     BacktestRunRecord,
     StrategyDefinition,
 )
+from ai_quant_lab.core.tradingview_research_export_contracts import (
+    TradingViewResearchExportPackage,
+)
+
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
