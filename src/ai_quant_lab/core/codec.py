@@ -4838,9 +4838,7 @@ def _decode_phase3_end_to_end_closure(
         _trace_ref(item["export_ref"], "export_ref"),
         tuple(Phase3EndToEndStage(value) for value in _strings(item["stages"], "stages")),
         Phase3EndToEndState(_text(item["final_state"], "final_state")),
-        TradingViewResearchExportRuntimeStatus(
-            _text(item["runtime_status"], "runtime_status")
-        ),
+        TradingViewResearchExportRuntimeStatus(_text(item["runtime_status"], "runtime_status")),
         _trace_ref(item["closure_authority_ref"], "closure_authority_ref"),
         _trace_ref(item["provenance_ref"], "provenance_ref"),
         DeploymentAuthorizationStatus(
