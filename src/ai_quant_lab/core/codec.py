@@ -112,11 +112,6 @@ from ai_quant_lab.core.model import (
     VersionedRef,
     canonical_json,
 )
-from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
-    Phase3EndToEndClosureRecord,
-    Phase3EndToEndStage,
-    Phase3EndToEndState,
-)
 from ai_quant_lab.core.optimization_contracts import (
     CandidateEligibility,
     OptimizationCandidateDefinition,
@@ -136,6 +131,11 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationTrialRecord,
     OptimizationTrialStatus,
     SelectionDecision,
+)
+from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
+    Phase3EndToEndClosureRecord,
+    Phase3EndToEndStage,
+    Phase3EndToEndState,
 )
 from ai_quant_lab.core.pine_python_parity_contracts import (
     ParityMismatch,
