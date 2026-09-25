@@ -33,6 +33,7 @@ class StrategyBacktestContractError(ValueError):
 
 class StrategyModel(StrEnum):
     CLOSE_VS_OPEN_LONG_ONLY = "CLOSE_VS_OPEN_LONG_ONLY"
+    MULTI_SIGNAL_TREND_LONG_SHORT = "MULTI_SIGNAL_TREND_LONG_SHORT"
 
 
 class SignalTiming(StrEnum):
@@ -45,6 +46,7 @@ class SimulatedExecutionTiming(StrEnum):
 
 class SidePermission(StrEnum):
     LONG_ONLY = "LONG_ONLY"
+    LONG_SHORT = "LONG_SHORT"
 
 
 class SimulatedOrderSide(StrEnum):
@@ -96,6 +98,82 @@ def _fingerprint(value: str, field: str) -> None:
 
 
 @dataclass(frozen=True, slots=True)
+class MultiSignalTrendParameters:
+    """Closed deterministic parameter set for the Sprint 24 trend profile."""
+
+    fast_ema: int
+    medium_ema: int
+    slow_ema: int
+    rsi_length: int
+    rsi_long_min: str
+    rsi_short_max: str
+    macd_fast: int
+    macd_slow: int
+    macd_signal: int
+    adx_length: int
+    adx_threshold: str
+    atr_length: int
+    atr_stop_mult: str
+    take_profit_r: str
+    break_even_trigger_r: str
+    time_stop_bars: int
+
+    def __post_init__(self) -> None:
+        integer_fields = (
+            ("fast_ema", self.fast_ema),
+            ("medium_ema", self.medium_ema),
+            ("slow_ema", self.slow_ema),
+            ("rsi_length", self.rsi_length),
+            ("macd_fast", self.macd_fast),
+            ("macd_slow", self.macd_slow),
+            ("macd_signal", self.macd_signal),
+            ("adx_length", self.adx_length),
+            ("atr_length", self.atr_length),
+            ("time_stop_bars", self.time_stop_bars),
+        )
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 1000
+            for _name, value in integer_fields
+        ):
+            raise StrategyBacktestContractError(
+                "multi-signal integer parameters must be integers in [1, 1000]"
+            )
+        if not self.fast_ema < self.medium_ema < self.slow_ema:
+            raise StrategyBacktestContractError(
+                "multi-signal EMA lengths must satisfy fast < medium < slow"
+            )
+        if not self.macd_fast < self.macd_slow:
+            raise StrategyBacktestContractError("MACD fast length must be below MACD slow length")
+
+        for field in (
+            "rsi_long_min",
+            "rsi_short_max",
+            "adx_threshold",
+            "atr_stop_mult",
+            "take_profit_r",
+            "break_even_trigger_r",
+        ):
+            _decimal_text(getattr(self, field), f"multi_signal.{field}")
+
+        rsi_long = Decimal(self.rsi_long_min)
+        rsi_short = Decimal(self.rsi_short_max)
+        adx = Decimal(self.adx_threshold)
+        atr_stop = Decimal(self.atr_stop_mult)
+        take_profit = Decimal(self.take_profit_r)
+        break_even = Decimal(self.break_even_trigger_r)
+        if not Decimal(0) <= rsi_short < rsi_long <= Decimal(100):
+            raise StrategyBacktestContractError(
+                "RSI thresholds must satisfy 0 <= short < long <= 100"
+            )
+        if not Decimal(0) < adx <= Decimal(100):
+            raise StrategyBacktestContractError("ADX threshold must be in (0, 100]")
+        if atr_stop <= 0 or take_profit <= 0 or break_even <= 0:
+            raise StrategyBacktestContractError(
+                "ATR stop, take-profit R and break-even trigger R must be positive"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class StrategyDefinition:
     strategy_id: ArtifactId
     version: ObjectVersion
@@ -112,22 +190,36 @@ class StrategyDefinition:
     engine_contract_ref: TraceabilityRef
     provenance_ref: TraceabilityRef
     contract_version: ObjectVersion
+    multi_signal: MultiSignalTrendParameters | None = None
 
     def __post_init__(self) -> None:
+        legacy_profile = (
+            self.version == ObjectVersion(1)
+            and self.contract_version == ObjectVersion(1)
+            and self.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
+            and self.side_permission is SidePermission.LONG_ONLY
+            and self.multi_signal is None
+        )
+        multi_signal_profile = (
+            self.version == ObjectVersion(2)
+            and self.contract_version == ObjectVersion(2)
+            and self.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+            and self.side_permission is SidePermission.LONG_SHORT
+            and isinstance(self.multi_signal, MultiSignalTrendParameters)
+            and self.threshold_bps == 0
+        )
         if (
             not isinstance(self.strategy_id, ArtifactId)
-            or self.version != ObjectVersion(1)
-            or self.model is not StrategyModel.CLOSE_VS_OPEN_LONG_ONLY
             or self.signal_timing is not SignalTiming.BAR_CLOSE_AFTER_AVAILABILITY
             or self.execution_timing is not SimulatedExecutionTiming.FIRST_ELIGIBLE_NEXT_BAR_OPEN
-            or self.side_permission is not SidePermission.LONG_ONLY
-            or self.contract_version != ObjectVersion(1)
+            or not (legacy_profile or multi_signal_profile)
         ):
             raise StrategyBacktestContractError("unsupported strategy definition")
         if (
             isinstance(self.threshold_bps, bool)
             or not isinstance(self.threshold_bps, int)
-            or not 0 <= self.threshold_bps <= 10_000
+            or (legacy_profile and not 0 <= self.threshold_bps <= 10_000)
+            or (multi_signal_profile and self.threshold_bps != 0)
             or isinstance(self.fixed_notional_minor, bool)
             or not isinstance(self.fixed_notional_minor, int)
             or self.fixed_notional_minor <= 0
