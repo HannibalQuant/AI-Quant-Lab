@@ -313,9 +313,24 @@ def render_tradingview_research_manifest(
         "pine_filename": package.pine_filename,
         "pine_source_sha256": package.pine_source_sha256,
         "strategy_ref": str(package.strategy_ref.object_id),
+        "backtest_ref": str(package.backtest_ref.object_id),
+        "scientific_validation_ref": str(package.scientific_validation_ref.object_id),
+        "robustness_ref": str(package.robustness_ref.object_id),
+        "optimization_selection_ref": (
+            None
+            if package.optimization_selection_ref is None
+            else str(package.optimization_selection_ref.object_id)
+        ),
+        "instrument_ref": str(package.instrument_ref.object_id),
+        "timeframe_ref": str(package.timeframe_ref.object_id),
+        "normalized_manifest_ref": str(package.normalized_manifest_ref.object_id),
+        "normalized_lock_ref": str(package.normalized_lock_ref.object_id),
         "instrument_symbol": package.instrument_symbol,
         "timeframe_token": package.timeframe_token,
         "strategy_parameters": [list(item) for item in package.strategy_parameters],
+        "generation_input_fingerprint": package.generation_input_fingerprint,
+        "safety_assessment_id": str(package.safety_assessment_id),
+        "safety_input_fingerprint": package.safety_input_fingerprint,
         "safety_status": package.safety_status.value,
         "static_repaint_status": package.static_repaint_status,
         "artifact_repaint_assessment": package.artifact_repaint_assessment.value,
