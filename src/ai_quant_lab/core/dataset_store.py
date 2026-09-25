@@ -84,6 +84,9 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     BacktestRunRecord,
     StrategyDefinition,
 )
+from ai_quant_lab.core.tradingview_research_export_contracts import (
+    TradingViewResearchExportPackage,
+)
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
@@ -132,6 +135,7 @@ type StoredDatasetObject = (
     | IntegratedResearchWorkflowResult
     | ResearchHandoffPackage
     | TradingViewResearchHandoffManifest
+    | TradingViewResearchExportPackage
     | IntegratedResearchWorkflowRunRecord
 )
 
@@ -217,6 +221,7 @@ class StoredObjectType(StrEnum):
     INTEGRATED_RESEARCH_WORKFLOW_RESULT = "integrated-research-workflow-result"
     RESEARCH_HANDOFF_PACKAGE = "research-handoff-package"
     TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST = "tradingview-research-handoff-manifest"
+    TRADINGVIEW_RESEARCH_EXPORT_PACKAGE = "tradingview-research-export-package"
     INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD = "integrated-research-workflow-run-record"
 
 
@@ -332,6 +337,7 @@ _TYPE_TO_STORAGE: Final[dict[type[StoredDatasetObject], StoredObjectType]] = {
     IntegratedResearchWorkflowResult: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_RESULT,
     ResearchHandoffPackage: StoredObjectType.RESEARCH_HANDOFF_PACKAGE,
     TradingViewResearchHandoffManifest: StoredObjectType.TRADINGVIEW_RESEARCH_HANDOFF_MANIFEST,
+    TradingViewResearchExportPackage: StoredObjectType.TRADINGVIEW_RESEARCH_EXPORT_PACKAGE,
     IntegratedResearchWorkflowRunRecord: StoredObjectType.INTEGRATED_RESEARCH_WORKFLOW_RUN_RECORD,
 }
 
@@ -426,6 +432,8 @@ def _object_id(record: StoredDatasetObject) -> str:
         return str(record.handoff_id)
     if isinstance(record, TradingViewResearchHandoffManifest):
         return str(record.manifest_id)
+    if isinstance(record, TradingViewResearchExportPackage):
+        return str(record.export_id)
     if isinstance(record, IntegratedResearchWorkflowRunRecord):
         return str(record.workflow_run_id)
     return str(record.dataset_id)
