@@ -2,18 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 
-from test_optimization_selection import (
-    _candidate_evidence_with_repository,
-    _multi_signal_source,
-    _request,
-    optimization_plan,
-)
+from test_optimization_selection import _multi_signal_source
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository
-from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
     AuthorityBindingId,
@@ -22,18 +15,6 @@ from ai_quant_lab.core.model import (
     ProvenanceId,
     RunId,
     TraceabilityRef,
-)
-from ai_quant_lab.core.optimization_contracts import (
-    OptimizationMultiplicityPolicy,
-    OptimizationParameter,
-    OptimizationParameterName,
-    OptimizationParameterType,
-    OptimizationSearchSpace,
-    SelectionDecision,
-)
-from ai_quant_lab.core.optimization_selection import (
-    enumerate_parameter_sets,
-    run_optimization_selection,
 )
 from ai_quant_lab.core.phase3_end_to_end_closure import (
     Phase3EndToEndClosureContext,
@@ -45,10 +26,7 @@ from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
     Phase3EndToEndStage,
     Phase3EndToEndState,
 )
-from ai_quant_lab.core.pine_strategy_intake import (
-    PineOptimizationSelectionEvidence,
-    PineStrategyIntakeContext,
-)
+from ai_quant_lab.core.pine_strategy_intake import PineStrategyIntakeContext
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
 from ai_quant_lab.core.strategy_backtest_contracts import StrategyModel
 from ai_quant_lab.core.tradingview_research_export_contracts import (
@@ -78,87 +56,16 @@ PROVENANCE = TraceabilityRef(
 )
 
 
-def exact(record: object, object_id: object, version: ObjectVersion) -> TraceabilityRef:
-    return TraceabilityRef(object_id, version, fingerprint_record(record))  # type: ignore[arg-type]
-
-
 def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_path: Path) -> None:
-    source = _multi_signal_source(tmp_path)
+    evidence = _multi_signal_source(tmp_path)
     repository = LocalDatasetRepository(
         root=tmp_path / "vault-sprint-26-activation",
         allowed_root=tmp_path,
-    )
-    space = OptimizationSearchSpace(
-        ArtifactId("sprint-26-multi-signal-search-space"),
-        V1,
-        (
-            OptimizationParameter(
-                OptimizationParameterName.ATR_STOP_MULT_X100,
-                OptimizationParameterType.INTEGER,
-                10_000,
-                10_000,
-                1,
-                10_000,
-            ),
-        ),
-        V1,
-    )
-    plan = replace(
-        optimization_plan(
-            source,
-            space,
-            multiplicity=OptimizationMultiplicityPolicy.SINGLE_CANDIDATE,
-            maximum_trials=1,
-        ),
-        optimization_plan_id=ArtifactId("sprint-26-multi-signal-optimization-plan"),
-        minimum_trade_count=1,
-    )
-    parameter_sets = enumerate_parameter_sets(space, plan.maximum_trials)
-    candidates = (
-        _candidate_evidence_with_repository(
-            source,
-            repository,
-            plan,
-            space,
-            parameter_sets[0],
-            1,
-        ),
-    )
-    selection = run_optimization_selection(
-        _request(plan),
-        plan=plan,
-        search_space=space,
-        source=source,
-        candidates=candidates,
-        repository=repository,
-    )
-    assert selection.result.decision is SelectionDecision.SELECTED
-    selected_ref = selection.result.selected_candidate_ref
-    assert selected_ref is not None
-
-    selected_index = next(
-        index
-        for index, result in enumerate(selection.candidate_results)
-        if exact(result, result.candidate_id, result.version) == selected_ref
-    )
-    evidence = candidates[selected_index]
-    optimization = PineOptimizationSelectionEvidence(
-        _request(plan),
-        plan,
-        space,
-        source,
-        candidates,
-        selection.record,
-        selection.result,
-        selection.candidate_definitions,
-        selection.candidate_results,
-        selection.trials,
     )
     pine_context = PineStrategyIntakeContext(
         evidence.strategy,
         evidence,
         PINE_AUTHORITY,
-        optimization,
     )
     context = Phase3EndToEndClosureContext(pine_context, CLOSURE_AUTHORITY)
     request = Phase3EndToEndClosureRequest(
@@ -198,12 +105,13 @@ def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_pa
         Phase3EndToEndStage.BACKTEST_COMPLETED,
         Phase3EndToEndStage.SCIENTIFIC_VALIDATION_PASSED,
         Phase3EndToEndStage.ROBUSTNESS_PASSED,
-        Phase3EndToEndStage.OPTIMIZATION_SELECTED,
         Phase3EndToEndStage.PINE_GENERATED,
         Phase3EndToEndStage.PINE_INTAKE_ACCEPTED,
         Phase3EndToEndStage.STATIC_SAFETY_PASSED,
         Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
     )
+    assert Phase3EndToEndStage.OPTIMIZATION_SELECTED not in execution.record.stages
+    assert execution.record.optimization_selection_ref is None
     assert execution.record.final_state is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
     assert (
         execution.export_execution.package.readiness
