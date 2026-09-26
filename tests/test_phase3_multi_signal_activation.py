@@ -102,10 +102,7 @@ def test_multi_signal_evidence_generates_pine_and_final_closure_remains_fail_clo
     )
 
     assert evidence.strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
-    assert (
-        generation.generator_profile
-        == "AIQL_GOVERNED_PINE_V6_MULTI_SIGNAL_TREND_LONG_SHORT_V1"
-    )
+    assert generation.generator_profile == "AIQL_GOVERNED_PINE_V6_MULTI_SIGNAL_TREND_LONG_SHORT_V1"
     assert generation.intake_record.status is PineIntakeStatus.ACCEPTED
     assert 'strategy.entry("AIQL-L", strategy.long)' in generation.source_text
     assert 'strategy.entry("AIQL-S", strategy.short)' in generation.source_text
