@@ -325,8 +325,7 @@ def _parse_static_source(
         Decimal(strategy.fixed_notional_minor) / Decimal(strategy.capital_minor_unit_scale)
     )
     expected_initial_capital = _canonical_decimal(
-        Decimal(specification.capital_notional_minor)
-        / Decimal(strategy.capital_minor_unit_scale)
+        Decimal(specification.capital_notional_minor) / Decimal(strategy.capital_minor_unit_scale)
     )
     if specification.commission_semantics is CostSemantics.DECLARED_ZERO:
         expected_commission = Decimal(0)
