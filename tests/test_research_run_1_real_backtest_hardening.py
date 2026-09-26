@@ -26,12 +26,13 @@ def _key(object_type: StoredObjectType, version: ObjectVersion = V1) -> Reposito
     return RepositoryObjectKey(object_type, version, FINGERPRINT)
 
 
-def test_fixed_notional_accepts_only_one_decimal128_ulp_of_round_trip_drift() -> None:
+def test_fixed_notional_accepts_only_decimal128_scale_round_trip_drift() -> None:
     expected = Decimal("100")
-    one_ulp_below = expected - Decimal("1E-31")
+    observed_real_run_drift = Decimal("99.99999999999999999999999999999996")
+    material_drift = Decimal("99.9999999999999999999999999999998")
 
     _match_fixed_notional(
-        one_ulp_below,
+        observed_real_run_drift,
         expected,
         "entry fill does not match governed fixed notional",
     )
@@ -41,7 +42,7 @@ def test_fixed_notional_accepts_only_one_decimal128_ulp_of_round_trip_drift() ->
         match="entry fill does not match governed fixed notional",
     ):
         _match_fixed_notional(
-            expected - Decimal("2E-31"),
+            material_drift,
             expected,
             "entry fill does not match governed fixed notional",
         )
