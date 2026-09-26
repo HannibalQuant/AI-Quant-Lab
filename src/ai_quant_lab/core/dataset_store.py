@@ -633,7 +633,7 @@ class LocalDatasetRepository:
             try:
                 os.link(temporary_path, destination)
             except FileExistsError:
-                existing = self._read_exact_bytes(destination)
+                existing = self._read_exact_bytes(destination, max_bytes)
                 status = (
                     RepositoryWriteStatus.ALREADY_PRESENT_IDENTICAL
                     if hmac.compare_digest(existing, canonical_bytes)
