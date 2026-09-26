@@ -222,9 +222,12 @@ def normalize_tradingview_csv(
                     "TradingView bar opens must be unique and strictly ascending"
                 )
             previous_open = opened
-            if policy.window_start is not None and policy.window_end is not None:
-                if not (policy.window_start <= opened < policy.window_end):
-                    continue
+            if (
+                policy.window_start is not None
+                and policy.window_end is not None
+                and not (policy.window_start <= opened < policy.window_end)
+            ):
+                continue
             closed = opened + timeframe.duration
             canonical_row = [
                 _stamp(opened),
