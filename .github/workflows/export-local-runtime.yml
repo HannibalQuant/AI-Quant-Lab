@@ -1,0 +1,25 @@
+name: Export local research runtime
+
+on:
+  push:
+    branches:
+      - ops/research-run-1-runtime-export
+
+permissions:
+  contents: read
+
+jobs:
+  export-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive runtime source
+        run: |
+          tar --exclude=.git -czf /tmp/ai-quant-lab-runtime.tar.gz .
+      - name: Upload runtime source
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-quant-lab-runtime
+          path: /tmp/ai-quant-lab-runtime.tar.gz
+          if-no-files-found: error
+          retention-days: 1
