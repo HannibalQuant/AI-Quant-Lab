@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from test_multi_signal_strategy_backtest import _multi_context
@@ -93,7 +94,7 @@ def test_multi_signal_strategy_contract_is_strict_and_codec_roundtrips() -> None
 
 
 def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     context = _multi_context(tmp_path)
     definition = context[6]
@@ -133,7 +134,9 @@ def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls(
     assert "lookahead" not in source.lower()
 
 
-def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(tmp_path) -> None:
+def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(
+    tmp_path: Path,
+) -> None:
     context = _multi_context(tmp_path)
     definition = context[6]
     specification = context[7]
