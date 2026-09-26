@@ -206,8 +206,7 @@ def test_explicit_research_window_filters_bar_opens_and_preserves_full_source_ha
     assert result.last_bar_close == end
     assert result.source_sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
     assert result.provenance_note.endswith(
-        ";window_start=2022-01-03T00:00:00.000000Z;"
-        "window_end=2022-01-03T08:00:00.000000Z"
+        ";window_start=2022-01-03T00:00:00.000000Z;window_end=2022-01-03T08:00:00.000000Z"
     )
     assert "1641196800" not in result.canonical_csv
 
