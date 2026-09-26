@@ -688,6 +688,17 @@ def _match(actual: Decimal, expected: Decimal, message: str) -> None:
         raise MultiSignalAccountingError(message)
 
 
+def _match_fixed_notional(actual: Decimal, expected: Decimal, message: str) -> None:
+    """Bound fixed-notional round-trip drift to one Decimal128 ULP."""
+    with localcontext(_DECIMAL_CONTEXT):
+        magnitude = max(abs(expected), Decimal(1))
+        tolerance = Decimal(1).scaleb(
+            magnitude.adjusted() - _DECIMAL_CONTEXT.prec + 1
+        )
+        if abs(actual - expected) > tolerance:
+            raise MultiSignalAccountingError(message)
+
+
 def verify_multi_signal_backtest_accounting(
     *,
     artifact: BacktestResultArtifact,
@@ -880,7 +891,7 @@ def verify_multi_signal_backtest_accounting(
                 notional = Decimal(event_fill.fill_notional)
                 commission = Decimal(event_fill.commission)
                 if signed_quantity == 0:
-                    _match(
+                    _match_fixed_notional(
                         notional,
                         fixed_notional,
                         "entry fill does not match governed fixed notional",
