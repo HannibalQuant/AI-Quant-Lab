@@ -84,6 +84,11 @@ from ai_quant_lab.core.real_csv_onboarding import (
     onboard_real_csv,
     verify_real_csv_lineage,
 )
+from ai_quant_lab.core.tradingview_csv_adapter import (
+    TradingViewCsvAdapterPolicy,
+    normalize_tradingview_csv,
+    write_canonical_csv,
+)
 
 V1 = ObjectVersion(1)
 CLOCK = DeterministicClock(datetime(2025, 2, 2, tzinfo=UTC))
@@ -116,6 +121,7 @@ def context(
     availability: AvailabilitySemantics = AvailabilitySemantics.EXPLICIT_SOURCE_AVAILABILITY_UTC,
     missing: MissingDataPolicy = MissingDataPolicy.RECORD_GAPS,
     acquired_at: datetime | None = None,
+    provenance_note: str = "operator declaration is recorded, not independently authenticated",
 ) -> tuple[
     RealCsvOnboardingRequest,
     SourceIdentity,
@@ -208,7 +214,7 @@ def context(
         "operator-declared local retention only",
         "redistribution prohibited by this workflow",
         actor,
-        "operator declaration is recorded, not independently authenticated",
+        provenance_note,
         V1,
     )
     declaration_ref = exact(declaration, declaration.provenance_id)
@@ -303,6 +309,97 @@ def run(
         repository=repository,
     )
     return request, repository, result
+
+
+def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_lineage(
+    tmp_path: Path,
+) -> None:
+    root = (tmp_path / "tradingview-integration").resolve()
+    root.mkdir()
+    source = root / "tradingview.csv"
+    start = int(datetime(2025, 2, 1, tzinfo=UTC).timestamp())
+    source.write_text(
+        "time,open,high,low,close,Volume,EMA\n"
+        f"{start},100,102,99,101,10,100\n"
+        f"{start + 3600},101,103,100,102,11,101\n"
+        f"{start + 7200},102,104,101,103,12,102\n",
+        encoding="utf-8",
+    )
+    timeframe = TimeframeIdentity(
+        TimeframeId("1h"),
+        V1,
+        TimeframeUnit.HOUR,
+        1,
+        AlignmentKind.UTC_EPOCH_FIXED,
+        V1,
+    )
+    normalized = normalize_tradingview_csv(
+        source,
+        allowed_root=root,
+        timeframe=timeframe,
+        policy=TradingViewCsvAdapterPolicy(
+            time_column="time",
+            volume_column="Volume",
+            timestamp_unit="unix_seconds",
+            source_timezone="UTC",
+            derive_bar_close_from_timeframe=True,
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
+        ),
+    )
+    canonical = root / "canonical.csv"
+    write_canonical_csv(normalized, canonical, allowed_root=root)
+
+    request, source_identity, instrument, schema, governed_timeframe, repository = context(
+        tmp_path,
+        path=canonical.resolve(),
+        allowed_root=root,
+        suffix="tv-adapter",
+        timestamps=TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME,
+        availability=AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC,
+        provenance_note=normalized.provenance_note,
+    )
+    result = onboard_real_csv(
+        request,
+        source=source_identity,
+        instrument=instrument,
+        schema=schema,
+        timeframe=governed_timeframe,
+        clock=CLOCK,
+        repository=repository,
+    )
+
+    assert result.admission.status is CsvAdmissionStatus.ADMITTED
+    assert result.report is not None
+    assert result.admission.file_sha256 == "sha256:" + normalized.canonical_sha256
+    assert normalized.source_sha256 in request.declaration.provenance_note
+    verification = verify_real_csv_lineage(
+        admission=result.admission,
+        declaration=request.declaration,
+        report=result.report,
+    )
+    assert verification.file_sha256 == result.admission.file_sha256
+
+    bad_note = f"tv_adapter_v1;source_sha256={normalized.source_sha256};canonical_sha256={'0' * 64}"
+    bad_request, bad_source, bad_instrument, bad_schema, bad_timeframe, bad_repository = context(
+        tmp_path,
+        path=canonical.resolve(),
+        allowed_root=root,
+        suffix="tv-adapter-bad-lineage",
+        timestamps=TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME,
+        availability=AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC,
+        provenance_note=bad_note,
+    )
+    with pytest.raises(RealCsvOnboardingError, match="canonical hash"):
+        onboard_real_csv(
+            bad_request,
+            source=bad_source,
+            instrument=bad_instrument,
+            schema=bad_schema,
+            timeframe=bad_timeframe,
+            clock=CLOCK,
+            repository=bad_repository,
+        )
 
 
 def test_valid_real_csv_is_admitted_persisted_reloaded_and_lineage_verified(
