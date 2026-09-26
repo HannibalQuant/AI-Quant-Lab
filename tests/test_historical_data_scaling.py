@@ -15,6 +15,7 @@ from ai_quant_lab.core.csv_import import (
     CsvInputScope,
     LocalCsvInputAdapter,
 )
+
 FOUR_YEAR_4H_BAR_BUDGET = 8_766
 
 
