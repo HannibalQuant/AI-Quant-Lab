@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
-import re
 
 from ai_quant_lab.core.codec import REPRESENTATION_VERSION, GovernedRecord
 from ai_quant_lab.core.csv_import import (
@@ -454,6 +454,7 @@ def verify_real_csv_lineage(
     declaration_ref = _exact(declaration, declaration.provenance_id, declaration.version)
     if admission.source_declaration_ref != declaration_ref:
         raise RealCsvOnboardingError("admission does not bind the exact source declaration")
+    _derived_tradingview_lineage(declaration, report.file_sha256)
     if (
         admission.file_sha256 != "sha256:" + report.file_sha256
         or admission.file_size != report.file_size
