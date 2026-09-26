@@ -63,8 +63,9 @@ from ai_quant_lab.core.model import (
     require_utc,
 )
 
-MAX_FILE_BYTES = 1_000_000
-MAX_ROWS = 2_000
+# Sprint 26 keeps historical CSV intake bounded while allowing multi-year 4H research.
+MAX_FILE_BYTES = 8_000_000
+MAX_ROWS = 20_000
 MAX_FIELD_LENGTH = 256
 MAX_LINE_BYTES = 4_096
 MAX_COLUMNS = 32
