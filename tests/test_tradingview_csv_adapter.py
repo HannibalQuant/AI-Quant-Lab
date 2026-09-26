@@ -132,10 +132,43 @@ def test_missing_semantic_authority_fails_closed(
         )
 
 
-def test_volume_mapping_is_required_for_v1() -> None:
-    with pytest.raises(TradingViewCsvAdapterError, match="column names"):
+def test_no_volume_profile_omits_volume_column_without_inventing_values(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "no_volume.csv"
+    source.write_text(
+        "time,open,high,low,close,EMA\n"
+        "1641168000,170,172,168,171,169\n"
+        "1641182400,171,174,170,173,170\n",
+        encoding="utf-8",
+    )
+    result = normalize_tradingview_csv(
+        source,
+        allowed_root=tmp_path,
+        timeframe=timeframe_4h(),
+        policy=TradingViewCsvAdapterPolicy(
+            time_column="time",
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
+        ),
+    )
+
+    assert result.canonical_csv.startswith(
+        "bar_open_time,bar_close_time,open,high,low,close,finality,availability_time\n"
+    )
+    assert ",volume," not in result.canonical_csv.splitlines()[0]
+    assert (
+        "2022-01-03T00:00:00.000000Z,2022-01-03T04:00:00.000000Z,"
+        "170,172,168,171,final,2022-01-03T04:00:00.000000Z\n"
+    ) in result.canonical_csv
+    assert "EMA" not in result.canonical_csv
+
+
+def test_blank_volume_mapping_fails_closed() -> None:
+    with pytest.raises(TradingViewCsvAdapterError, match="volume column"):
         TradingViewCsvAdapterPolicy(
             time_column="time",
+            volume_column="",
             derive_finality_from_historical_export=True,
             availability_at_bar_close=True,
         )
