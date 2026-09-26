@@ -84,6 +84,11 @@ def test_multi_signal_evidence_generates_pine_and_final_closure_remains_fail_clo
         RunId("sprint-26-intake-run"),
         ArtifactId("sprint-26-multi-signal-pine"),
         exact(evidence.strategy, evidence.strategy.strategy_id, evidence.strategy.version),
+        exact(
+            evidence.specification,
+            evidence.specification.experiment_id,
+            evidence.specification.version,
+        ),
         "AIQL SOLUSDT 4H Multi Signal Research",
         GENERATOR_AUTHORITY,
         PINE_AUTHORITY,
@@ -106,6 +111,8 @@ def test_multi_signal_evidence_generates_pine_and_final_closure_remains_fail_clo
     assert generation.intake_record.status is PineIntakeStatus.ACCEPTED
     assert 'strategy.entry("AIQL-L", strategy.long)' in generation.source_text
     assert 'strategy.entry("AIQL-S", strategy.short)' in generation.source_text
+    assert "initial_capital=" in generation.source_text
+    assert "commission_type=strategy.commission.percent" in generation.source_text
     assert generation.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
     assert generation.execution_state is ExecutionState.PLANNED_CLOSED
 
