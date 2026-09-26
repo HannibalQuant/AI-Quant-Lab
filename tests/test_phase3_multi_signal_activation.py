@@ -9,12 +9,11 @@ from test_optimization_selection import (
     _candidate_evidence_with_repository,
     _multi_signal_source,
     _request,
-    enumerate_parameter_sets,
-    exact,
     optimization_plan,
 )
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository
+from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
     AuthorityBindingId,
@@ -32,7 +31,10 @@ from ai_quant_lab.core.optimization_contracts import (
     OptimizationSearchSpace,
     SelectionDecision,
 )
-from ai_quant_lab.core.optimization_selection import run_optimization_selection
+from ai_quant_lab.core.optimization_selection import (
+    enumerate_parameter_sets,
+    run_optimization_selection,
+)
 from ai_quant_lab.core.phase3_end_to_end_closure import (
     Phase3EndToEndClosureContext,
     Phase3EndToEndClosureRequest,
@@ -74,6 +76,10 @@ CLOSURE_AUTHORITY = TraceabilityRef(
 PROVENANCE = TraceabilityRef(
     ProvenanceId("sprint-26-research-activation"), V1, "sha256:" + "6" * 64
 )
+
+
+def exact(record: object, object_id: object, version: ObjectVersion) -> TraceabilityRef:
+    return TraceabilityRef(object_id, version, fingerprint_record(record))  # type: ignore[arg-type]
 
 
 def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_path: Path) -> None:
