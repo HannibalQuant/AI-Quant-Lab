@@ -689,7 +689,7 @@ def _match(actual: Decimal, expected: Decimal, message: str) -> None:
 
 
 def _match_fixed_notional(actual: Decimal, expected: Decimal, message: str) -> None:
-    """Bound fixed-notional round-trip drift to one Decimal128 ULP."""
+    """Bound fixed-notional round-trip drift to Decimal128 precision."""
     with localcontext(_DECIMAL_CONTEXT):
         magnitude = max(abs(expected), Decimal(1))
         tolerance = Decimal(1).scaleb(
