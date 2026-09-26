@@ -156,9 +156,7 @@ def test_missing_mapping_and_misaligned_or_duplicate_time_fail_closed(tmp_path: 
 
     duplicate = tmp_path / "duplicate.csv"
     duplicate.write_text(
-        "time,open,high,low,close,Volume\n"
-        "1641168000,1,2,0.5,1.5,10\n"
-        "1641168000,1.5,2,1,1.8,11\n",
+        "time,open,high,low,close,Volume\n1641168000,1,2,0.5,1.5,10\n1641168000,1.5,2,1,1.8,11\n",
         encoding="utf-8",
     )
     with pytest.raises(TradingViewCsvAdapterError, match="strictly ascending"):
