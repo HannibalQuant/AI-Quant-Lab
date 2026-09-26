@@ -96,7 +96,7 @@ def test_multi_signal_strategy_contract_is_strict_and_codec_roundtrips() -> None
 def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls(
     tmp_path: Path,
 ) -> None:
-    context = _multi_context(tmp_path)
+    context = _multi_context(tmp_path, params=parameters())
     definition = context[6]
     specification = context[7]
     source = render_governed_pine_v6(
@@ -137,7 +137,7 @@ def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls(
 def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(
     tmp_path: Path,
 ) -> None:
-    context = _multi_context(tmp_path)
+    context = _multi_context(tmp_path, params=parameters())
     definition = context[6]
     specification = context[7]
     first = render_governed_pine_v6(
