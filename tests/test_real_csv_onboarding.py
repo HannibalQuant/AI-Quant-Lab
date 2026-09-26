@@ -14,8 +14,8 @@ import pytest
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
 from ai_quant_lab.core.csv_import import (
     MAX_COLUMNS,
-    MAX_FIELD_LENGTH,
     MAX_CONTROLLED_HISTORICAL_FILE_BYTES,
+    MAX_FIELD_LENGTH,
     MAX_LINE_BYTES,
     CsvFileFailure,
     CsvImportAssemblyFailure,
