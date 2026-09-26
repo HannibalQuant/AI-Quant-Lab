@@ -36,7 +36,7 @@ class TradingViewCsvAdapterPolicy:
     high_column: str = "high"
     low_column: str = "low"
     close_column: str = "close"
-    volume_column: str | None = None
+    volume_column: str = ""
     timestamp_unit: str = "unix_seconds"
     source_timezone: str = "UTC"
     derive_bar_close_from_timeframe: bool = True
@@ -50,6 +50,7 @@ class TradingViewCsvAdapterPolicy:
             self.high_column,
             self.low_column,
             self.close_column,
+            self.volume_column,
         )
         if any(not isinstance(item, str) or not item.strip() for item in required):
             raise TradingViewCsvAdapterError("source column names must be explicit non-empty text")
@@ -84,6 +85,7 @@ class TradingViewCsvNormalizationResult:
     last_bar_close: datetime
     canonical_csv: str
     transformation_notes: tuple[str, ...]
+    provenance_note: str
 
 
 def _stamp(value: datetime) -> str:
@@ -163,8 +165,7 @@ def normalize_tradingview_csv(
         policy.low_column,
         policy.close_column,
     }
-    if policy.volume_column is not None:
-        required.add(policy.volume_column)
+    required.add(policy.volume_column)
     if not required.issubset(headers):
         raise TradingViewCsvAdapterError("TradingView export is missing explicitly mapped columns")
 
@@ -192,7 +193,7 @@ def normalize_tradingview_csv(
                     "TradingView bar opens must be unique and strictly ascending"
                 )
             closed = opened + timeframe.duration
-            volume = "" if policy.volume_column is None else row[policy.volume_column]
+            volume = row[policy.volume_column]
             writer.writerow(
                 (
                     _stamp(opened),
@@ -215,7 +216,16 @@ def normalize_tradingview_csv(
     if count == 0 or first_open is None or last_close is None:
         raise TradingViewCsvAdapterError("TradingView export contains no data rows")
     canonical_csv = output.getvalue()
-    canonical_sha256 = hashlib.sha256(canonical_csv.encode("utf-8")).hexdigest()
+    canonical_bytes = canonical_csv.encode("utf-8")
+    if len(canonical_bytes) > MAX_CONTROLLED_HISTORICAL_FILE_BYTES:
+        raise TradingViewCsvAdapterError(
+            "canonical TradingView output exceeds controlled historical byte bound"
+        )
+    canonical_sha256 = hashlib.sha256(canonical_bytes).hexdigest()
+    provenance_note = (
+        f"tv_adapter_v1;source_sha256={source_sha256};"
+        f"canonical_sha256={canonical_sha256}"
+    )
     return TradingViewCsvNormalizationResult(
         source_sha256,
         len(data),
@@ -238,6 +248,7 @@ def normalize_tradingview_csv(
                 "governed OHLCV source fields"
             ),
         ),
+        provenance_note,
     )
 
 
