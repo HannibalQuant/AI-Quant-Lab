@@ -1,12 +1,12 @@
 {
   "format": "pine-static-safety-validation-v1",
   "assessment_id": "artifact:sprint-21-safety-result",
-  "input_fingerprint": "sha256:20a2ef875e14844a730516c5631b4fa47faac98c4f619816784207db1bec1e33",
+  "input_fingerprint": "sha256:ae901197e145d3f1de19284157ab44b594ff1a07f959ca55660e87f2184a2e39",
   "pine_artifact_ref": "artifact:sprint-21-generated-pine",
   "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
-  "generation_input_fingerprint": "sha256:0de0b6d5a2599cebafbc283ca345a3df121028e25b42825e19a5e51756649c5c",
-  "source_sha256": "sha256:150efb9123e5be789ba485d24d099c10d16349ea073aeac344a640c2d9b2b3c7",
-  "normalized_source_sha256": "sha256:150efb9123e5be789ba485d24d099c10d16349ea073aeac344a640c2d9b2b3c7",
+  "generation_input_fingerprint": "sha256:70b144d6e4f0281cf322d9877f6eb0881dddeb1f133fa67ed777479289b0310d",
+  "source_sha256": "sha256:c9a8736fe1d79f312522630f6a34c4ca3105353bffbb3c9c35e2a0026e9bd149",
+  "normalized_source_sha256": "sha256:c9a8736fe1d79f312522630f6a34c4ca3105353bffbb3c9c35e2a0026e9bd149",
   "decision": "PASS",
   "static_repaint_status": "NO_STATIC_REPAINT_HAZARD_DETECTED",
   "reason_codes": [
