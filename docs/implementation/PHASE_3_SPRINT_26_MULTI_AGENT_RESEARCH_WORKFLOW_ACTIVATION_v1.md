@@ -70,7 +70,9 @@ Sprint 26 reuses, without redesign:
 
 The activation test proves the existing multi-signal evidence can move through:
 
-`real CSV -> eligibility -> authorization -> multi-signal backtest -> validation -> robustness -> optimization -> Pine generation -> Pine intake -> static safety -> manual TradingView export`
+`real CSV -> eligibility -> authorization -> multi-signal backtest -> validation -> robustness -> Pine generation -> Pine intake -> static safety -> manual TradingView export`
+
+Sprint 25 separately verifies the bounded multi-signal optimization path through candidate derivation, backtest, scientific validation, robustness, and deterministic selection. Sprint 26 does not force an optimization candidate to be selected when the governed evidence is inconclusive.
 
 No Pine↔Python parity claim is created by this test. TradingView runtime remains
 `NOT_VERIFIED_ON_TRADINGVIEW`.
@@ -115,10 +117,12 @@ New focused coverage proves:
 1. A controlled historical CSV with 8,766 valid rows can be parsed inside the bounded
    resource envelope.
 2. A file exceeding the new row limit still fails closed.
-3. A Sprint 25 `MULTI_SIGNAL_TREND_LONG_SHORT` optimized candidate can move through
-   the existing Phase 3 closure and generate deterministic Pine v6 containing both
-   LONG and SHORT entries.
-4. The resulting package remains:
+3. Existing `MULTI_SIGNAL_TREND_LONG_SHORT` governed evidence can move through the
+   current-order Phase 3 closure and generate deterministic Pine v6 containing both
+   LONG and SHORT entries without manufacturing an optimization-selection outcome.
+4. Sprint 25's separate optimization E2E coverage remains the authority for the
+   bounded multi-signal optimization path.
+5. The resulting package remains:
    - deployment `NOT_AUTHORIZED`;
    - execution `PLANNED_CLOSED`;
    - TradingView runtime `NOT_VERIFIED_ON_TRADINGVIEW`.
