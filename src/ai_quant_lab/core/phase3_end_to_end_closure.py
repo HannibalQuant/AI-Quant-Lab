@@ -298,6 +298,12 @@ def run_phase3_end_to_end_closure(
         pine_context.strategy.strategy_id,
         pine_context.strategy.version,
     )
+    specification = pine_context.evidence.specification
+    specification_ref = _exact(
+        specification,
+        specification.experiment_id,
+        specification.version,
+    )
     base = request.closure_id.value
 
     generator_context = GovernedPineGeneratorContext(
@@ -309,6 +315,7 @@ def run_phase3_end_to_end_closure(
         RunId(_token(base, "intake-run")),
         ArtifactId(_token(base, "pine")),
         strategy_ref,
+        specification_ref,
         request.script_title,
         request.generator_authority_ref,
         pine_context.pine_intake_authority_ref,
@@ -441,12 +448,19 @@ def verify_phase3_end_to_end_closure(
         context.pine_context.strategy.strategy_id,
         context.pine_context.strategy.version,
     )
+    specification = context.pine_context.evidence.specification
+    specification_ref = _exact(
+        specification,
+        specification.experiment_id,
+        specification.version,
+    )
     base = request.closure_id.value
     expected_generation_request = GovernedPineGenerationRequest(
         RunId(_token(base, "gen-run")),
         RunId(_token(base, "intake-run")),
         ArtifactId(_token(base, "pine")),
         strategy_ref,
+        specification_ref,
         request.script_title,
         request.generator_authority_ref,
         context.pine_context.pine_intake_authority_ref,
