@@ -109,26 +109,22 @@ def test_canonical_output_is_written_without_mutating_source(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize(
-    "policy_overrides",
+    ("derive_finality_from_historical_export", "availability_at_bar_close"),
     [
-        {
-            "derive_finality_from_historical_export": False,
-            "availability_at_bar_close": True,
-        },
-        {
-            "derive_finality_from_historical_export": True,
-            "availability_at_bar_close": False,
-        },
+        (False, True),
+        (True, False),
     ],
 )
 def test_missing_semantic_authority_fails_closed(
-    policy_overrides: dict[str, bool],
+    derive_finality_from_historical_export: bool,
+    availability_at_bar_close: bool,
 ) -> None:
     with pytest.raises(TradingViewCsvAdapterError):
         TradingViewCsvAdapterPolicy(
             time_column="time",
             volume_column="Volume",
-            **policy_overrides,
+            derive_finality_from_historical_export=derive_finality_from_historical_export,
+            availability_at_bar_close=availability_at_bar_close,
         )
 
 
