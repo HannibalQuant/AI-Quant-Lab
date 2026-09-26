@@ -223,8 +223,7 @@ def normalize_tradingview_csv(
         )
     canonical_sha256 = hashlib.sha256(canonical_bytes).hexdigest()
     provenance_note = (
-        f"tv_adapter_v1;source_sha256={source_sha256};"
-        f"canonical_sha256={canonical_sha256}"
+        f"tv_adapter_v1;source_sha256={source_sha256};canonical_sha256={canonical_sha256}"
     )
     return TradingViewCsvNormalizationResult(
         source_sha256,
