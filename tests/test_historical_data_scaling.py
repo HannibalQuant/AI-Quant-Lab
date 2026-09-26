@@ -15,7 +15,7 @@ from ai_quant_lab.core.csv_import import (
     CsvInputScope,
     LocalCsvInputAdapter,
 )
-from ai_quant_lab.core.model import ArtifactId, ObjectVersion, TraceabilityRef
+from ai_quant_lab.core.model import ObjectVersion
 
 V1 = ObjectVersion(1)
 FOUR_YEAR_4H_BAR_BUDGET = 8_766
@@ -48,13 +48,8 @@ def _adapter(tmp_path: Path, count: int, suffix: str) -> LocalCsvInputAdapter:
         allowed_root=root.resolve(),
         suffix=suffix,
     )
-    adapter_ref = TraceabilityRef(
-        ArtifactId(f"sprint-26-scaled-csv-adapter-{suffix}"),
-        V1,
-        "sha256:" + "c" * 64,
-    )
     return LocalCsvInputAdapter(
-        adapter_ref,
+        request.csv_request.ingestion.adapter_ref,
         request.csv_request,
         schema,
         timeframe,
