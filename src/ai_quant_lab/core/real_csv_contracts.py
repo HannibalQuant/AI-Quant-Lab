@@ -41,11 +41,13 @@ class RetentionClassification(StrEnum):
 
 class TimestampSemantics(StrEnum):
     BAR_OPEN_AND_CLOSE_UTC = "bar_open_and_close_utc"
+    BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME = "bar_open_utc_close_derived_from_timeframe"
     AMBIGUOUS = "ambiguous"
 
 
 class AvailabilitySemantics(StrEnum):
     EXPLICIT_SOURCE_AVAILABILITY_UTC = "explicit_source_availability_utc"
+    DERIVED_BAR_CLOSE_UTC = "derived_bar_close_utc"
     UNKNOWN = "unknown"
 
 
