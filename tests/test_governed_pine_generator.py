@@ -234,6 +234,46 @@ def test_generator_cannot_mint_or_substitute_intake_authority(selection_bundle):
         )
 
 
+def test_experiment_specification_substitution_fails_closed(selection_bundle):
+    _old_request, pine_context, *_rest, repository = _selected_context(selection_bundle)
+    context = GovernedPineGeneratorContext(pine_context, GENERATOR_AUTHORITY)
+    request = generation_request(pine_context)
+    wrong = TraceabilityRef(
+        request.experiment_specification_ref.object_id,
+        request.experiment_specification_ref.version,
+        "sha256:" + "5" * 64,
+    )
+    request = replace(request, experiment_specification_ref=wrong)
+
+    with pytest.raises(GovernedPineGeneratorLineageMismatch):
+        generate_governed_pine_strategy(
+            request,
+            context=context,
+            repository=repository,
+        )
+
+
+def test_experiment_capital_and_commission_change_generated_source(generator_bundle):
+    request, context, result, _repository = generator_bundle
+    strategy = context.pine_intake_context.strategy
+    specification = context.pine_intake_context.evidence.specification
+    changed = replace(
+        specification,
+        capital_notional_minor=specification.capital_notional_minor + 100_000,
+        commission_bps=specification.commission_bps + 5,
+    )
+
+    changed_source = render_governed_pine_v6(
+        strategy,
+        changed,
+        script_title=request.script_title,
+    )
+
+    assert changed_source != result.source_text
+    assert "initial_capital=2000" in changed_source
+    assert "commission_value=0.15" in changed_source
+
+
 def test_strategy_substitution_fails_closed(selection_bundle):
     _old_request, pine_context, *_rest, repository = _selected_context(selection_bundle)
     context = GovernedPineGeneratorContext(pine_context, GENERATOR_AUTHORITY)
