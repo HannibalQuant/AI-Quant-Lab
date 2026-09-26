@@ -68,14 +68,25 @@ Sprint 26 reuses, without redesign:
 - TradingView research export;
 - Phase 3 current-order end-to-end closure.
 
-The activation test proves the existing multi-signal evidence can move through:
+The activation coverage proves two complementary properties:
 
-`real CSV -> eligibility -> authorization -> multi-signal backtest -> validation -> robustness -> Pine generation -> Pine intake -> static safety -> manual TradingView export`
+- existing multi-signal governed evidence can bind to deterministic Pine v6 generation
+  and governed Pine intake with exact lineage;
+- the final Phase 3 closure remains fail-closed when scientific validation is not
+  `PASS`, so inconclusive research cannot be promoted to a manual TradingView export.
 
-Sprint 25 separately verifies the bounded multi-signal optimization path through candidate derivation, backtest, scientific validation, robustness, and deterministic selection. Sprint 26 does not force an optimization candidate to be selected when the governed evidence is inconclusive.
+Sprint 25 separately verifies the bounded multi-signal optimization path through
+candidate derivation, backtest, scientific validation, robustness, and deterministic
+selection. Sprint 26 does not force an optimization candidate to be selected and does
+not manufacture a scientific `PASS` when the controlled sample is inconclusive.
 
-No Pine↔Python parity claim is created by this test. TradingView runtime remains
-`NOT_VERIFIED_ON_TRADINGVIEW`.
+The authoritative intended path remains:
+
+`real CSV -> eligibility -> authorization -> multi-signal backtest -> validation -> robustness -> optional governed selection -> Pine generation/intake -> final closure -> manual TradingView export`
+
+The final closure advances past validation only when its existing PASS gates are
+satisfied. No Pine↔Python parity claim is created by this test. TradingView runtime
+remains `NOT_VERIFIED_ON_TRADINGVIEW`.
 
 ## 5. Historical data scaling
 
@@ -117,15 +128,17 @@ New focused coverage proves:
 1. A controlled historical CSV with 8,766 valid rows can be parsed inside the bounded
    resource envelope.
 2. A file exceeding the new row limit still fails closed.
-3. Existing `MULTI_SIGNAL_TREND_LONG_SHORT` governed evidence can move through the
-   current-order Phase 3 closure and generate deterministic Pine v6 containing both
-   LONG and SHORT entries without manufacturing an optimization-selection outcome.
-4. Sprint 25's separate optimization E2E coverage remains the authority for the
+3. Existing `MULTI_SIGNAL_TREND_LONG_SHORT` governed evidence generates deterministic
+   Pine v6 containing both LONG and SHORT entries and is accepted by governed Pine
+   intake with exact evidence lineage.
+4. The final Phase 3 closure rejects that same controlled sample when scientific
+   validation is not `PASS`; no test or runtime path promotes inconclusive evidence.
+5. Sprint 25's separate optimization E2E coverage remains the authority for the
    bounded multi-signal optimization path.
-5. The resulting package remains:
+6. All generated research artifacts remain:
    - deployment `NOT_AUTHORIZED`;
    - execution `PLANNED_CLOSED`;
-   - TradingView runtime `NOT_VERIFIED_ON_TRADINGVIEW`.
+   - TradingView runtime unverified until a package legitimately reaches that stage.
 
 ## 7. Research Run #1
 
@@ -133,8 +146,9 @@ Registered issue:
 
 `#88 — Research Run #1 — SOLUSDT 4H Multi-Signal Trend Research (2022–2026)`
 
-After Sprint 26, the importer-size blocker and the multi-signal current-order pipeline
-activation blocker are removed.
+After Sprint 26, the importer-size blocker and the multi-signal Pine
+generation/intake integration blocker are removed. The existing final closure remains
+intentionally conditional on scientific and robustness PASS evidence.
 
 The remaining external input is the exact governed historical source bytes for
 SOLUSDT 4H covering the requested period, together with the source declaration needed
