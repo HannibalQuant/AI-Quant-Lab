@@ -52,8 +52,5 @@ def test_large_backtest_limit_is_type_specific_and_bounded() -> None:
     assert _object_byte_limit(_key(StoredObjectType.RAW_OBSERVATION)) == 1_000_000
     assert _object_byte_limit(_key(StoredObjectType.DATASET_MANIFEST)) == 8_000_000
     assert _object_byte_limit(_key(StoredObjectType.NORMALIZED_BAR_MANIFEST)) == 8_000_000
-    assert (
-        _object_byte_limit(_key(StoredObjectType.BACKTEST_RESULT_ARTIFACT, V2))
-        == 16_000_000
-    )
+    assert _object_byte_limit(_key(StoredObjectType.BACKTEST_RESULT_ARTIFACT, V2)) == 16_000_000
     assert _object_byte_limit(_key(StoredObjectType.BACKTEST_RUN_RECORD, V2)) == 1_000_000
