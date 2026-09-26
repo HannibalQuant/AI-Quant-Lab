@@ -150,9 +150,19 @@ def normalize_tradingview_csv(
 
     reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
     headers = reader.fieldnames
-    if headers is None or len(headers) > MAX_TRADINGVIEW_COLUMNS or len(headers) != len(set(headers)):
+    if (
+        headers is None
+        or len(headers) > MAX_TRADINGVIEW_COLUMNS
+        or len(headers) != len(set(headers))
+    ):
         raise TradingViewCsvAdapterError("TradingView header is missing, duplicated, or too wide")
-    required = {policy.time_column, policy.open_column, policy.high_column, policy.low_column, policy.close_column}
+    required = {
+        policy.time_column,
+        policy.open_column,
+        policy.high_column,
+        policy.low_column,
+        policy.close_column,
+    }
     if policy.volume_column is not None:
         required.add(policy.volume_column)
     if not required.issubset(headers):
@@ -233,10 +243,16 @@ def write_canonical_csv(
 ) -> str:
     """Write canonical bytes inside an explicit local boundary and return their SHA-256."""
 
-    if not destination.is_absolute() or not allowed_root.is_absolute() or destination.suffix != ".csv":
+    if (
+        not destination.is_absolute()
+        or not allowed_root.is_absolute()
+        or destination.suffix != ".csv"
+    ):
         raise TradingViewCsvAdapterError("canonical destination must be an absolute .csv path")
     if destination.exists():
-        raise TradingViewCsvAdapterError("canonical destination must not overwrite an existing file")
+        raise TradingViewCsvAdapterError(
+            "canonical destination must not overwrite an existing file"
+        )
     try:
         root = allowed_root.resolve(strict=True)
         parent = destination.parent.resolve(strict=True)
