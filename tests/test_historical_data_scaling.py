@@ -15,9 +15,6 @@ from ai_quant_lab.core.csv_import import (
     CsvInputScope,
     LocalCsvInputAdapter,
 )
-from ai_quant_lab.core.model import ObjectVersion
-
-V1 = ObjectVersion(1)
 FOUR_YEAR_4H_BAR_BUDGET = 8_766
 
 
