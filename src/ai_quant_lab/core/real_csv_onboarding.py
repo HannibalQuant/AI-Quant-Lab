@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
+import re
 
 from ai_quant_lab.core.codec import REPRESENTATION_VERSION, GovernedRecord
 from ai_quant_lab.core.csv_import import (
@@ -183,6 +184,35 @@ def _validate_bindings(
     return declaration_ref
 
 
+_TRADINGVIEW_LINEAGE_RE = re.compile(
+    r"^tv_adapter_v1;source_sha256=([0-9a-f]{64});canonical_sha256=([0-9a-f]{64})$"
+)
+
+
+def _derived_tradingview_lineage(
+    declaration: RealCsvSourceDeclaration,
+    evaluated_file_sha256: str,
+) -> None:
+    derived_timestamp = (
+        declaration.timestamp_semantics
+        is TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME
+    )
+    derived_availability = (
+        declaration.availability_semantics is AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC
+    )
+    if not (derived_timestamp or derived_availability):
+        return
+    if not (derived_timestamp and derived_availability):
+        raise RealCsvOnboardingError("derived timestamp and availability semantics must be paired")
+    match = _TRADINGVIEW_LINEAGE_RE.fullmatch(declaration.provenance_note)
+    if match is None:
+        raise RealCsvOnboardingError("derived TradingView semantics require exact adapter lineage")
+    if match.group(2) != evaluated_file_sha256:
+        raise RealCsvOnboardingError(
+            "derived TradingView canonical hash does not match the evaluated file"
+        )
+
+
 def _policy_outcome(declaration: RealCsvSourceDeclaration) -> tuple[CsvAdmissionStatus, str] | None:
     if declaration.permission_state is SourcePermissionState.PROHIBITED:
         return CsvAdmissionStatus.REJECTED, "permission_prohibited"
@@ -190,14 +220,24 @@ def _policy_outcome(declaration: RealCsvSourceDeclaration) -> tuple[CsvAdmission
         return CsvAdmissionStatus.QUARANTINED, "permission_not_declared_permitted"
     if declaration.retention_classification is RetentionClassification.UNKNOWN:
         return CsvAdmissionStatus.INCOMPLETE, "retention_unknown"
-    if declaration.timestamp_semantics is not TimestampSemantics.BAR_OPEN_AND_CLOSE_UTC:
+
+    explicit_pair = (
+        declaration.timestamp_semantics is TimestampSemantics.BAR_OPEN_AND_CLOSE_UTC
+        and declaration.availability_semantics
+        is AvailabilitySemantics.EXPLICIT_SOURCE_AVAILABILITY_UTC
+    )
+    derived_pair = (
+        declaration.timestamp_semantics
+        is TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME
+        and declaration.availability_semantics is AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC
+    )
+    if explicit_pair or derived_pair:
+        return None
+    if declaration.timestamp_semantics is TimestampSemantics.AMBIGUOUS:
         return CsvAdmissionStatus.UNSUPPORTED, "timestamp_semantics_ambiguous"
-    if (
-        declaration.availability_semantics
-        is not AvailabilitySemantics.EXPLICIT_SOURCE_AVAILABILITY_UTC
-    ):
+    if declaration.availability_semantics is AvailabilitySemantics.UNKNOWN:
         return CsvAdmissionStatus.QUARANTINED, "availability_time_unknown"
-    return None
+    return CsvAdmissionStatus.QUARANTINED, "timestamp_availability_semantics_mismatch"
 
 
 def _admission(
@@ -287,6 +327,7 @@ def onboard_real_csv(
         CsvInputScope.CONTROLLED_HISTORICAL,
     )
     prepared = controlled_adapter.prepare()
+    _derived_tradingview_lineage(request.declaration, prepared.file_sha256)
     pinned_request = replace(request.csv_request, expected_file_sha256=prepared.file_sha256)
     controlled_adapter = replace(controlled_adapter, request=pinned_request, prepared=prepared)
 
