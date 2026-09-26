@@ -229,8 +229,14 @@ def normalize_tradingview_csv(
             "source bytes preserved by SHA-256; source file is not rewritten",
             "bar_close_time derived as bar_open_time + exact governed timeframe duration",
             "finality=final derived only under explicit historical-export operator declaration",
-            "availability_time=bar_close_time derived only under explicit confirmed-bar research policy",
-            "extra TradingView indicator columns are ignored and never treated as governed OHLCV source fields",
+            (
+                "availability_time=bar_close_time derived only under explicit "
+                "confirmed-bar research policy"
+            ),
+            (
+                "extra TradingView indicator columns are ignored and never treated as "
+                "governed OHLCV source fields"
+            ),
         ),
     )
 
