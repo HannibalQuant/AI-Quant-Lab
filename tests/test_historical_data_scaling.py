@@ -22,10 +22,7 @@ FOUR_YEAR_4H_BAR_BUDGET = 8_766
 
 
 def _write_valid_rows(path: Path, count: int) -> None:
-    header = (
-        "bar_open_time,bar_close_time,open,high,low,close,volume,finality,"
-        "availability_time\n"
-    )
+    header = "bar_open_time,bar_close_time,open,high,low,close,volume,finality,availability_time\n"
     start = datetime(2022, 1, 1, tzinfo=UTC)
     rows: list[str] = []
     for index in range(count):
