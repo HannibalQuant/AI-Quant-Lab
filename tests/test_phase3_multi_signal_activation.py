@@ -198,10 +198,7 @@ def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_pa
         Phase3EndToEndStage.STATIC_SAFETY_PASSED,
         Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
     )
-    assert (
-        execution.record.final_state
-        is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
-    )
+    assert execution.record.final_state is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
     assert (
         execution.export_execution.package.readiness
         is TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
