@@ -69,6 +69,7 @@ def exact(record, object_id, version):
 def build_generation(pine_context, repository, *, suffix=""):
     tail = f"-{suffix}" if suffix else ""
     strategy = pine_context.strategy
+    specification = pine_context.evidence.specification
     generator_context = GovernedPineGeneratorContext(
         pine_context,
         GENERATOR_AUTHORITY,
@@ -78,6 +79,7 @@ def build_generation(pine_context, repository, *, suffix=""):
         RunId(f"sprint-21-intake{tail}"),
         ArtifactId(f"sprint-21-generated-pine{tail}"),
         exact(strategy, strategy.strategy_id, strategy.version),
+        exact(specification, specification.experiment_id, specification.version),
         "AIQL Sprint 21 Safety Candidate",
         GENERATOR_AUTHORITY,
         AUTHORITY_REF,

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
+from test_multi_signal_strategy_backtest import _multi_context
 
 from ai_quant_lab.core.codec import decode, encode
 from ai_quant_lab.core.governed_pine_generator import render_governed_pine_v6
@@ -91,9 +93,15 @@ def test_multi_signal_strategy_contract_is_strict_and_codec_roundtrips() -> None
     assert decode(encode(definition), StrategyDefinition) == definition
 
 
-def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls() -> None:
+def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls(
+    tmp_path: Path,
+) -> None:
+    context = _multi_context(tmp_path, params=parameters())
+    definition = context[6]
+    specification = context[7]
     source = render_governed_pine_v6(
-        strategy(),
+        definition,
+        specification,
         script_title="AIQL SOLUSDT 4H Multi Signal",
     )
 
@@ -115,6 +123,9 @@ def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls() ->
         "timeStopBars = 18",
         "process_orders_on_close=false",
         "calc_on_every_tick=false",
+        "initial_capital=1000",
+        "commission_type=strategy.commission.percent",
+        "commission_value=0.1",
     )
     for token in required:
         assert token in source
@@ -123,17 +134,33 @@ def test_multi_signal_pine_contains_long_short_indicators_and_risk_controls() ->
     assert "lookahead" not in source.lower()
 
 
-def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive() -> None:
-    definition = strategy()
-    first = render_governed_pine_v6(definition, script_title="AIQL SOL 4H")
-    second = render_governed_pine_v6(definition, script_title="AIQL SOL 4H")
+def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(
+    tmp_path: Path,
+) -> None:
+    context = _multi_context(tmp_path, params=parameters())
+    definition = context[6]
+    specification = context[7]
+    first = render_governed_pine_v6(
+        definition,
+        specification,
+        script_title="AIQL SOL 4H",
+    )
+    second = render_governed_pine_v6(
+        definition,
+        specification,
+        script_title="AIQL SOL 4H",
+    )
 
     assert first == second
     changed = replace(
         definition,
         multi_signal=replace(parameters(), atr_stop_mult="3"),
     )
-    changed_source = render_governed_pine_v6(changed, script_title="AIQL SOL 4H")
+    changed_source = render_governed_pine_v6(
+        changed,
+        specification,
+        script_title="AIQL SOL 4H",
+    )
     assert changed_source != first
     assert "atrStopMult = 3" in changed_source
 

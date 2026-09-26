@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
+from ai_quant_lab.core.experiment_contracts import CostSemantics, ExperimentSpecification
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import ExecutionState, ObjectVersion, TraceabilityRef, fingerprint
 from ai_quant_lab.core.optimization_contracts import (
@@ -117,6 +118,9 @@ class _StaticDeclaration:
     calc_on_every_tick: bool
     default_qty_type: PineDefaultQuantityType
     default_qty_value: str
+    initial_capital: str
+    commission_type: str
+    commission_value: str
 
 
 def _failure(
@@ -235,7 +239,11 @@ def _canonical_decimal(value: Decimal) -> str:
     return text or "0"
 
 
-def _parse_static_source(source: str, strategy: StrategyDefinition) -> _StaticDeclaration:
+def _parse_static_source(
+    source: str,
+    strategy: StrategyDefinition,
+    specification: ExperimentSpecification,
+) -> _StaticDeclaration:
     versions = _version_declarations(source)
     if not versions:
         raise _failure(
@@ -302,6 +310,9 @@ def _parse_static_source(source: str, strategy: StrategyDefinition) -> _StaticDe
             "calc_on_every_tick",
             "default_qty_type",
             "default_qty_value",
+            "initial_capital",
+            "commission_type",
+            "commission_value",
         )
     }
     if any(value is None for value in settings.values()):
@@ -313,6 +324,19 @@ def _parse_static_source(source: str, strategy: StrategyDefinition) -> _StaticDe
     expected_notional = _canonical_decimal(
         Decimal(strategy.fixed_notional_minor) / Decimal(strategy.capital_minor_unit_scale)
     )
+    expected_initial_capital = _canonical_decimal(
+        Decimal(specification.capital_notional_minor) / Decimal(strategy.capital_minor_unit_scale)
+    )
+    if specification.commission_semantics is CostSemantics.DECLARED_ZERO:
+        expected_commission = Decimal(0)
+    elif specification.commission_semantics is CostSemantics.DECLARED_BPS:
+        expected_commission = Decimal(specification.commission_bps) / Decimal(100)
+    else:
+        raise _failure(
+            PineIntakeStatus.UNSUPPORTED,
+            PineIntakeReasonCode.STATIC_SETTING_MISMATCH,
+            "Pine strategy commission semantics are not representable",
+        )
     literal_value = settings["default_qty_value"]
     try:
         quantity_matches = (
@@ -320,14 +344,39 @@ def _parse_static_source(source: str, strategy: StrategyDefinition) -> _StaticDe
             and re.fullmatch(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?", literal_value) is not None
             and Decimal(literal_value) == Decimal(expected_notional)
         )
-    except Exception:  # pragma: no cover - guarded by the literal expression
+        initial_capital_literal = settings["initial_capital"]
+        initial_capital_matches = (
+            initial_capital_literal is not None
+            and re.fullmatch(
+                r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?",
+                initial_capital_literal,
+            )
+            is not None
+            and Decimal(initial_capital_literal) == Decimal(expected_initial_capital)
+        )
+        commission_value_literal = settings["commission_value"]
+        commission_matches = (
+            commission_value_literal is not None
+            and re.fullmatch(
+                r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?",
+                commission_value_literal,
+            )
+            is not None
+            and Decimal(commission_value_literal) == expected_commission
+        )
+    except Exception:  # pragma: no cover - guarded by literal expressions
         quantity_matches = False
+        initial_capital_matches = False
+        commission_matches = False
     if (
         settings["pyramiding"] != "0"
         or settings["process_orders_on_close"] != "false"
         or settings["calc_on_every_tick"] != "false"
         or settings["default_qty_type"] != PineDefaultQuantityType.STRATEGY_CASH.value
+        or settings["commission_type"] != "strategy.commission.percent"
         or not quantity_matches
+        or not initial_capital_matches
+        or not commission_matches
     ):
         raise _failure(
             PineIntakeStatus.UNSUPPORTED,
@@ -343,6 +392,9 @@ def _parse_static_source(source: str, strategy: StrategyDefinition) -> _StaticDe
         False,
         PineDefaultQuantityType.STRATEGY_CASH,
         expected_notional,
+        expected_initial_capital,
+        "strategy.commission.percent",
+        _canonical_decimal(expected_commission),
     )
 
 
@@ -558,7 +610,11 @@ def _build(
 ) -> tuple[PineStrategySourceArtifact, PineStrategyIntakeRecord]:
     _verify_context(request, context)
     source, normalized, raw_hash, normalized_hash = _decode_source(request.source_bytes)
-    declaration = _parse_static_source(source, context.strategy)
+    declaration = _parse_static_source(
+        source,
+        context.strategy,
+        context.evidence.specification,
+    )
     artifact = PineStrategySourceArtifact(
         request.requested_artifact_id,
         _V1,

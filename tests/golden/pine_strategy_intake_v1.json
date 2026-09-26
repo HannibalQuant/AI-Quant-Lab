@@ -1,21 +1,21 @@
 {
-  "artifact_fingerprint": "sha256:ee5087e756e3260210fee5c12e2c5a232baed3c9d66609ed22283e42a02a952a",
+  "artifact_fingerprint": "sha256:74ee4ed95cceacee4df07fb537a2b409078b776206986d336fa04abbdf034f8c",
   "backtest_ref": "artifact:opt-bt-result-6c6043438f48ae15fb61",
   "candidate_ref": "artifact:optimization-candidate-6c6043438f48ae15fb61",
   "format": "pine-strategy-intake-v1",
-  "input_fingerprint": "sha256:96789335d010161a9ec2349c7dc3a2d8ee28ac0e2bd42248e9e2766f33e5cf7c",
-  "intake_record_fingerprint": "sha256:4ed44ccd604582772e1fa23026d31b4871ff840fb643ab93bbbb767cef5642da",
+  "input_fingerprint": "sha256:957da8720b1f996c3de897e32dceec89886ac4cbaa3fb7e17b1ecebe94d7221a",
+  "intake_record_fingerprint": "sha256:962876cddf23a0e6d3422eb2d2773e95538f5e7aa2d7964cf13bb802b28c0c94",
   "intake_status": "ACCEPTED",
-  "normalized_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "normalized_sha256": "sha256:651b63adcce3da67ada0a21322be19d4bb479fbddd8539d6ab9b3e38a56fc38b",
   "pine_version": "PINE_V6",
-  "raw_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "raw_sha256": "sha256:651b63adcce3da67ada0a21322be19d4bb479fbddd8539d6ab9b3e38a56fc38b",
   "reason_codes": [
     "ACCEPTED_BOUNDED_STATIC_INTAKE"
   ],
-  "record_normalized_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
-  "record_raw_sha256": "sha256:e47755b890c1f935656dfc98fe400e03582741c170f247652b0f857bcb3b7a29",
+  "record_normalized_sha256": "sha256:651b63adcce3da67ada0a21322be19d4bb479fbddd8539d6ab9b3e38a56fc38b",
+  "record_raw_sha256": "sha256:651b63adcce3da67ada0a21322be19d4bb479fbddd8539d6ab9b3e38a56fc38b",
   "record_requested_artifact_id": "artifact:governed-pine-strategy-source",
-  "record_source_byte_size": 260,
+  "record_source_byte_size": 361,
   "repaint_assessment": "NOT_EVALUATED",
   "requested_artifact_id": "artifact:governed-pine-strategy-source",
   "robustness_ref": "artifact:opt-robustness-result-6c6043438f48ae15fb61",
@@ -23,7 +23,7 @@
   "script_kind": "STRATEGY",
   "selection_ref": "artifact:controlled-optimization-selection-result",
   "semantic_parity": "NOT_EVALUATED",
-  "source_byte_size": 260,
+  "source_byte_size": 361,
   "strategy_ref": "artifact:optimized-strategy-6c6043438f48ae15fb61",
   "title": "Synthetic governed strategy"
 }

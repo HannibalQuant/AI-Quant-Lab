@@ -10,9 +10,9 @@
   "parity_ref": "artifact:pine-python-parity-result-v1",
   "final_state": "RESEARCH_HANDOFF_READY",
   "handoff_readiness": "READY_FOR_HUMAN_RESEARCH_USE",
-  "input_fingerprint": "sha256:0cf7395274dc5669dbcc3d1dd325db0c383e305dd35483d1c1085ff6e02cdff8",
-  "result_fingerprint": "sha256:44f7cbe650f9d98919209d2cae6fcdc70b5a7f553ea8328cd1bf8bfe8806396d",
-  "handoff_fingerprint": "sha256:88527d0b200c66953bf28f6d0a157b4bb9dca4264e28de2bbb8296c0c9b96de8",
-  "manifest_fingerprint": "sha256:7d8d35261252172cf39df9b4c41af3945502ea77ca5aa1602a797feb97e19c6d",
-  "run_fingerprint": "sha256:5b93cce1b95c3aaa1d0ea0ff9d82a2ff8e687c1ee4a78faa6073e4a930891bff"
+  "input_fingerprint": "sha256:30cb01c470c8fe3a66453e73251118596e2f616f52fc51493cce161e14756015",
+  "result_fingerprint": "sha256:8014600dc0005d84066a2e265ed27dbfb95fb09c36f3dcfe0bbe21d7553624cf",
+  "handoff_fingerprint": "sha256:466b190f951c5ff76fe5c9fbdfef1fa37faedf0ed7b93f99c763da30a3b28422",
+  "manifest_fingerprint": "sha256:9b1de931269b48497a24b560e38a9b7c8929e02cff446d0f14dd6d03936d7b97",
+  "run_fingerprint": "sha256:ccb1da15d0be7a05ffc26f783ab38f39523437c8b9f969c4cfab6bad17d6f033"
 }
