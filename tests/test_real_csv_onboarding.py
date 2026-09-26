@@ -380,10 +380,7 @@ def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_li
     )
     assert verification.file_sha256 == result.admission.file_sha256
 
-    bad_note = (
-        f"tv_adapter_v1;source_sha256={normalized.source_sha256};"
-        f"canonical_sha256={'0' * 64}"
-    )
+    bad_note = f"tv_adapter_v1;source_sha256={normalized.source_sha256};canonical_sha256={'0' * 64}"
     bad_request, bad_source, bad_instrument, bad_schema, bad_timeframe, bad_repository = context(
         tmp_path,
         path=canonical.resolve(),
