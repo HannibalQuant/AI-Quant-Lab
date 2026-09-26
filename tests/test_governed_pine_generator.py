@@ -65,11 +65,13 @@ def generation_request(
 ):
     tail = f"-{suffix}" if suffix else ""
     strategy = pine_context.strategy
+    specification = pine_context.evidence.specification
     return GovernedPineGenerationRequest(
         RunId(f"governed-pine-generation{tail}"),
         RunId(f"governed-pine-generated-intake{tail}"),
         ArtifactId(f"governed-pine-generated-source{tail}"),
         exact(strategy, strategy.strategy_id, strategy.version),
+        exact(specification, specification.experiment_id, specification.version),
         title,
         generator_authority,
         intake_authority,
@@ -126,6 +128,7 @@ def test_direct_strategy_generation_omits_optimization_binding(selection_bundle)
 def test_generated_source_matches_bounded_python_strategy_semantics(generator_bundle):
     _request, context, result, _repository = generator_bundle
     strategy = context.pine_intake_context.strategy
+    specification = context.pine_intake_context.evidence.specification
     source = result.source_text
 
     assert source.startswith("//@version=6\n")
@@ -133,6 +136,10 @@ def test_generated_source_matches_bounded_python_strategy_semantics(generator_bu
     assert "process_orders_on_close=false" in source
     assert "calc_on_every_tick=false" in source
     assert "default_qty_type=strategy.cash" in source
+    expected_initial = specification.capital_notional_minor / strategy.capital_minor_unit_scale
+    assert f"initial_capital={expected_initial:g}" in source
+    assert "commission_type=strategy.commission.percent" in source
+    assert f"commission_value={specification.commission_bps / 100:g}" in source
     assert f"thresholdBps = {strategy.threshold_bps}.0" in source
     assert "threshold = thresholdBps / 10000.0" in source
     assert "confirmedBar = barstate.isconfirmed" in source
@@ -147,13 +154,26 @@ def test_generated_source_matches_bounded_python_strategy_semantics(generator_bu
 def test_render_is_byte_deterministic_and_strategy_sensitive(generator_bundle):
     request, context, result, _repository = generator_bundle
     strategy = context.pine_intake_context.strategy
+    specification = context.pine_intake_context.evidence.specification
 
-    first = render_governed_pine_v6(strategy, script_title=request.script_title)
-    second = render_governed_pine_v6(strategy, script_title=request.script_title)
+    first = render_governed_pine_v6(
+        strategy,
+        specification,
+        script_title=request.script_title,
+    )
+    second = render_governed_pine_v6(
+        strategy,
+        specification,
+        script_title=request.script_title,
+    )
 
     assert first == second == result.source_text
     changed = replace(strategy, threshold_bps=strategy.threshold_bps + 1)
-    changed_source = render_governed_pine_v6(changed, script_title=request.script_title)
+    changed_source = render_governed_pine_v6(
+        changed,
+        specification,
+        script_title=request.script_title,
+    )
     assert changed_source != first
     assert f"thresholdBps = {changed.threshold_bps}.0" in changed_source
 
@@ -173,6 +193,7 @@ def test_script_title_cannot_escape_canonical_template(generator_bundle, title):
     with pytest.raises(ValueError):
         render_governed_pine_v6(
             context.pine_intake_context.strategy,
+            context.pine_intake_context.evidence.specification,
             script_title=title,
         )
 
