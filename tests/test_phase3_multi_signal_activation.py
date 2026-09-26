@@ -4,9 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from test_optimization_selection import _multi_signal_source
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository
+from ai_quant_lab.core.governed_pine_generator import (
+    GovernedPineGenerationRequest,
+    GovernedPineGeneratorContext,
+    generate_governed_pine_strategy,
+    verify_governed_pine_generation,
+)
+from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
     AuthorityBindingId,
@@ -18,21 +26,15 @@ from ai_quant_lab.core.model import (
 )
 from ai_quant_lab.core.phase3_end_to_end_closure import (
     Phase3EndToEndClosureContext,
+    Phase3EndToEndClosureNotReady,
     Phase3EndToEndClosureRequest,
     run_phase3_end_to_end_closure,
-    verify_phase3_end_to_end_closure,
 )
-from ai_quant_lab.core.phase3_end_to_end_closure_contracts import (
-    Phase3EndToEndStage,
-    Phase3EndToEndState,
-)
+from ai_quant_lab.core.pine_strategy_contracts import PineIntakeStatus
 from ai_quant_lab.core.pine_strategy_intake import PineStrategyIntakeContext
 from ai_quant_lab.core.research_eligibility_contracts import DeploymentAuthorizationStatus
+from ai_quant_lab.core.scientific_validation_contracts import ScientificValidationDecision
 from ai_quant_lab.core.strategy_backtest_contracts import StrategyModel
-from ai_quant_lab.core.tradingview_research_export_contracts import (
-    TradingViewResearchExportReadiness,
-    TradingViewResearchExportRuntimeStatus,
-)
 
 V1 = ObjectVersion(1)
 
@@ -56,7 +58,13 @@ PROVENANCE = TraceabilityRef(
 )
 
 
-def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_path: Path) -> None:
+def exact(record: object, object_id: object, version: ObjectVersion) -> TraceabilityRef:
+    return TraceabilityRef(object_id, version, fingerprint_record(record))  # type: ignore[arg-type]
+
+
+def test_multi_signal_evidence_generates_pine_and_final_closure_remains_fail_closed(
+    tmp_path: Path,
+) -> None:
     evidence = _multi_signal_source(tmp_path)
     repository = LocalDatasetRepository(
         root=tmp_path / "vault-sprint-26-activation",
@@ -67,8 +75,47 @@ def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_pa
         evidence,
         PINE_AUTHORITY,
     )
-    context = Phase3EndToEndClosureContext(pine_context, CLOSURE_AUTHORITY)
-    request = Phase3EndToEndClosureRequest(
+    generator_context = GovernedPineGeneratorContext(
+        pine_context,
+        GENERATOR_AUTHORITY,
+    )
+    generation_request = GovernedPineGenerationRequest(
+        RunId("sprint-26-generator-run"),
+        RunId("sprint-26-intake-run"),
+        ArtifactId("sprint-26-multi-signal-pine"),
+        exact(evidence.strategy, evidence.strategy.strategy_id, evidence.strategy.version),
+        "AIQL SOLUSDT 4H Multi Signal Research",
+        GENERATOR_AUTHORITY,
+        PINE_AUTHORITY,
+        PROVENANCE,
+    )
+
+    generation = generate_governed_pine_strategy(
+        generation_request,
+        context=generator_context,
+        repository=repository,
+    )
+    verify_governed_pine_generation(
+        generation_request,
+        result=generation,
+        context=generator_context,
+    )
+
+    assert evidence.strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+    assert (
+        generation.generator_profile
+        == "AIQL_GOVERNED_PINE_V6_MULTI_SIGNAL_TREND_LONG_SHORT_V1"
+    )
+    assert generation.intake_record.status is PineIntakeStatus.ACCEPTED
+    assert 'strategy.entry("AIQL-L", strategy.long)' in generation.source_text
+    assert 'strategy.entry("AIQL-S", strategy.short)' in generation.source_text
+    assert generation.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
+    assert generation.execution_state is ExecutionState.PLANNED_CLOSED
+
+    assert evidence.scientific_result.decision is not ScientificValidationDecision.PASS
+
+    closure_context = Phase3EndToEndClosureContext(pine_context, CLOSURE_AUTHORITY)
+    closure_request = Phase3EndToEndClosureRequest(
         RunId("sprint-26-closure-run"),
         ArtifactId("sprint-26-closure"),
         "AIQL SOLUSDT 4H Multi Signal Research",
@@ -79,47 +126,12 @@ def test_existing_multi_signal_pipeline_reaches_manual_tradingview_export(tmp_pa
         CLOSURE_AUTHORITY,
         PROVENANCE,
     )
-
-    execution = run_phase3_end_to_end_closure(
-        request,
-        context=context,
-        repository=repository,
-    )
-    verify_phase3_end_to_end_closure(
-        request,
-        execution=execution,
-        context=context,
-    )
-
-    assert evidence.strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
-    assert (
-        execution.generation_result.generator_profile
-        == "AIQL_GOVERNED_PINE_V6_MULTI_SIGNAL_TREND_LONG_SHORT_V1"
-    )
-    assert 'strategy.entry("AIQL-L", strategy.long)' in execution.generation_result.source_text
-    assert 'strategy.entry("AIQL-S", strategy.short)' in execution.generation_result.source_text
-    assert execution.record.stages == (
-        Phase3EndToEndStage.REAL_CSV_ADMITTED,
-        Phase3EndToEndStage.DATASET_ELIGIBLE,
-        Phase3EndToEndStage.EXPERIMENT_AUTHORIZED,
-        Phase3EndToEndStage.BACKTEST_COMPLETED,
-        Phase3EndToEndStage.SCIENTIFIC_VALIDATION_PASSED,
-        Phase3EndToEndStage.ROBUSTNESS_PASSED,
-        Phase3EndToEndStage.PINE_GENERATED,
-        Phase3EndToEndStage.PINE_INTAKE_ACCEPTED,
-        Phase3EndToEndStage.STATIC_SAFETY_PASSED,
-        Phase3EndToEndStage.TRADINGVIEW_EXPORT_READY,
-    )
-    assert Phase3EndToEndStage.OPTIMIZATION_SELECTED not in execution.record.stages
-    assert execution.record.optimization_selection_ref is None
-    assert execution.record.final_state is Phase3EndToEndState.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
-    assert (
-        execution.export_execution.package.readiness
-        is TradingViewResearchExportReadiness.READY_FOR_MANUAL_TRADINGVIEW_RESEARCH
-    )
-    assert (
-        execution.record.runtime_status
-        is TradingViewResearchExportRuntimeStatus.NOT_VERIFIED_ON_TRADINGVIEW
-    )
-    assert execution.record.deployment_authorization is DeploymentAuthorizationStatus.NOT_AUTHORIZED
-    assert execution.record.execution_state is ExecutionState.PLANNED_CLOSED
+    with pytest.raises(
+        Phase3EndToEndClosureNotReady,
+        match="scientific validation PASS",
+    ):
+        run_phase3_end_to_end_closure(
+            closure_request,
+            context=closure_context,
+            repository=repository,
+        )
