@@ -17,7 +17,7 @@ eligibility, experiment authorization, validation, optimization, Pine, or deploy
 The source must explicitly map:
 - bar-open epoch timestamp;
 - open, high, low, close;
-- optional volume.
+- volume (required in the v1 canonical profile).
 
 Extra TradingView columns, including exported indicators, are ignored by the adapter and
 are never promoted into governed OHLCV evidence.
@@ -31,13 +31,25 @@ The operator must explicitly declare:
   represented as `final`;
 - that confirmed-bar research uses bar close as the earliest modeled availability time.
 
+The downstream declaration records these facts truthfully as derived semantics:
+- `TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME`;
+- `AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC`.
+
+They are distinct from source-explicit close/availability semantics and cannot be silently
+substituted for them.
+
 If those declarations are absent, the adapter fails closed. The code does not claim that
 derived close/finality/availability fields physically existed in the source export.
 
 ### Lineage
 The adapter records and returns the SHA-256 of the exact original source bytes. It also
-computes a separate SHA-256 for deterministic canonical output. The source file is never
-rewritten. Canonical output cannot silently overwrite an existing file.
+computes a separate SHA-256 for deterministic canonical output. It emits a bounded
+machine-readable provenance note containing both hashes. Derived-semantics onboarding
+requires that note and verifies that its canonical hash matches the exact evaluated
+canonical file. The persisted source declaration therefore preserves the original-source
+to canonical-file lineage without claiming that derived fields existed in the source.
+The source file is never rewritten. Canonical output cannot silently overwrite an existing
+file.
 
 ### Security and boundedness
 - local files only;
@@ -80,4 +92,6 @@ Sprint 27 is complete only after:
 4. `ruff check .` passes;
 5. strict mypy passes;
 6. GitHub Actions matrix is green;
-7. final PR re-review confirms no scope/governance regression.
+7. adapter -> controlled real CSV onboarding integration coverage passes with exact
+   source/canonical lineage and derived semantics;
+8. final PR re-review confirms no scope/governance regression.
