@@ -692,9 +692,7 @@ def _match_fixed_notional(actual: Decimal, expected: Decimal, message: str) -> N
     """Bound fixed-notional round-trip drift to Decimal128 precision."""
     with localcontext(_DECIMAL_CONTEXT):
         magnitude = max(abs(expected), Decimal(1))
-        tolerance = Decimal(1).scaleb(
-            magnitude.adjusted() - _DECIMAL_CONTEXT.prec + 1
-        )
+        tolerance = Decimal(1).scaleb(magnitude.adjusted() - _DECIMAL_CONTEXT.prec + 1)
         if abs(actual - expected) > tolerance:
             raise MultiSignalAccountingError(message)
 
