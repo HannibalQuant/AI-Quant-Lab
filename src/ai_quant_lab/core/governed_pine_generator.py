@@ -5,10 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ai_quant_lab.core.dataset_store import LocalDatasetRepository, RepositoryWriteResult
+from ai_quant_lab.core.experiment_contracts import (
+    CostSemantics,
+    ExperimentSpecification,
+    PositionSizingSemantics,
+)
 from ai_quant_lab.core.integrity import fingerprint_record
 from ai_quant_lab.core.model import (
     ArtifactId,
     AuthorityBindingId,
+    ExperimentId,
     ExecutionState,
     ObjectVersion,
     ProvenanceId,
@@ -73,6 +79,7 @@ class GovernedPineGenerationRequest:
     intake_run_id: RunId
     requested_artifact_id: ArtifactId
     strategy_definition_ref: TraceabilityRef
+    experiment_specification_ref: TraceabilityRef
     script_title: str
     generator_authority_ref: TraceabilityRef
     pine_intake_authority_ref: TraceabilityRef
@@ -89,6 +96,11 @@ class GovernedPineGenerationRequest:
         ):
             raise GovernedPineGeneratorError("invalid governed Pine generation request")
         _exact_ref(self.strategy_definition_ref, ArtifactId, "strategy_definition_ref")
+        _exact_ref(
+            self.experiment_specification_ref,
+            ExperimentId,
+            "experiment_specification_ref",
+        )
         _exact_ref(
             self.generator_authority_ref,
             AuthorityBindingId,
@@ -181,9 +193,9 @@ def _validate_strategy(strategy: StrategyDefinition) -> None:
         )
 
 
-def _cash_literal(strategy: StrategyDefinition) -> str:
-    scale = strategy.capital_minor_unit_scale
-    amount = strategy.fixed_notional_minor
+def _minor_literal(amount: int, scale: int) -> str:
+    if scale <= 0:
+        raise GovernedPineGeneratorUnsupported("capital minor-unit scale must be positive")
     whole, remainder = divmod(amount, scale)
     if remainder == 0:
         return str(whole)
@@ -196,20 +208,91 @@ def _cash_literal(strategy: StrategyDefinition) -> str:
     return f"{whole}.{fraction}"
 
 
+def _cash_literal(strategy: StrategyDefinition) -> str:
+    return _minor_literal(strategy.fixed_notional_minor, strategy.capital_minor_unit_scale)
+
+
+def _initial_capital_literal(
+    strategy: StrategyDefinition,
+    specification: ExperimentSpecification,
+) -> str:
+    return _minor_literal(
+        specification.capital_notional_minor,
+        strategy.capital_minor_unit_scale,
+    )
+
+
+def _commission_percent_literal(specification: ExperimentSpecification) -> str:
+    if specification.commission_semantics is CostSemantics.DECLARED_ZERO:
+        return "0"
+    if specification.commission_semantics is CostSemantics.DECLARED_BPS:
+        basis_points = specification.commission_bps
+        whole, remainder = divmod(basis_points, 100)
+        if remainder == 0:
+            return str(whole)
+        return f"{whole}.{remainder:02d}".rstrip("0").rstrip(".")
+    raise GovernedPineGeneratorUnsupported(
+        "Pine generation requires declared-zero or declared-bps commission semantics"
+    )
+
+
+def _validate_specification(
+    strategy: StrategyDefinition,
+    specification: ExperimentSpecification,
+) -> None:
+    if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
+        raise GovernedPineGeneratorUnsupported(
+            "Pine generation currently supports FIXED_NOTIONAL experiment sizing only"
+        )
+    if specification.capital_notional_minor <= 0:
+        raise GovernedPineGeneratorUnsupported(
+            "Pine generation requires positive experiment initial capital"
+        )
+    if specification.commission_semantics not in {
+        CostSemantics.DECLARED_ZERO,
+        CostSemantics.DECLARED_BPS,
+    }:
+        raise GovernedPineGeneratorUnsupported(
+            "Pine generation requires explicit commission semantics"
+        )
+    if specification.funding_semantics is CostSemantics.DECLARED_BPS:
+        raise GovernedPineGeneratorUnsupported(
+            "Pine strategy() cannot represent governed funding-bps semantics"
+        )
+    if specification.engine_contract_ref != strategy.engine_contract_ref:
+        raise GovernedPineGeneratorLineageMismatch(
+            "ExperimentSpecification engine does not match StrategyDefinition"
+        )
+
+
 def render_governed_pine_v6(
     strategy: StrategyDefinition,
+    specification: ExperimentSpecification,
     *,
     script_title: str,
 ) -> str:
-    """Render canonical Pine source for the exact governed StrategyDefinition."""
+    """Render canonical Pine source for the exact governed strategy and experiment specification."""
     if not _valid_title(script_title):
         raise GovernedPineGeneratorError(
             "script title must be 1..96 characters without quotes, backslashes or newlines"
         )
     _validate_strategy(strategy)
+    _validate_specification(strategy, specification)
     cash = _cash_literal(strategy)
+    initial_capital = _initial_capital_literal(strategy, specification)
+    commission_percent = _commission_percent_literal(specification)
     strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
+    specification_ref = _exact(
+        specification,
+        specification.experiment_id,
+        specification.version,
+    )
     profile = _generator_profile(strategy)
+    slippage_note = (
+        f"// Governed slippage: {specification.slippage_semantics.value} "
+        f"{specification.slippage_bps} bps; Pine strategy() slippage is tick-based, "
+        "so no false bps-to-tick conversion is emitted."
+    )
 
     if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
         lines: tuple[str, ...] = (
@@ -218,13 +301,19 @@ def render_governed_pine_v6(
             f"// Generator profile: {profile}",
             f"// Strategy: {strategy_ref.object_id}",
             f"// Strategy fingerprint: {strategy_ref.expected_fingerprint}",
+            f"// Experiment: {specification_ref.object_id}",
+            f"// Experiment fingerprint: {specification_ref.expected_fingerprint}",
+            slippage_note,
             "strategy(",
             f'    "{script_title}",',
+            f"    initial_capital={initial_capital},",
             "    pyramiding=0,",
             "    process_orders_on_close=false,",
             "    calc_on_every_tick=false,",
             "    default_qty_type=strategy.cash,",
-            f"    default_qty_value={cash}",
+            f"    default_qty_value={cash},",
+            "    commission_type=strategy.commission.percent,",
+            f"    commission_value={commission_percent}",
             ")",
             "",
             f"thresholdBps = {strategy.threshold_bps}.0",
@@ -251,15 +340,21 @@ def render_governed_pine_v6(
         f"// Generator profile: {profile}",
         f"// Strategy: {strategy_ref.object_id}",
         f"// Strategy fingerprint: {strategy_ref.expected_fingerprint}",
+        f"// Experiment: {specification_ref.object_id}",
+        f"// Experiment fingerprint: {specification_ref.expected_fingerprint}",
+        slippage_note,
         "// Exit semantics: thresholds are evaluated on confirmed bars; "
         "closes execute next bar open.",
         "strategy(",
         f'    "{script_title}",',
+        f"    initial_capital={initial_capital},",
         "    pyramiding=0,",
         "    process_orders_on_close=false,",
         "    calc_on_every_tick=false,",
         "    default_qty_type=strategy.cash,",
-        f"    default_qty_value={cash}",
+        f"    default_qty_value={cash},",
+        "    commission_type=strategy.commission.percent,",
+        f"    commission_value={commission_percent}",
         ")",
         "",
         f"fastEmaLength = {parameters.fast_ema}",
@@ -396,6 +491,7 @@ def _generation_input_fingerprint(
     request: GovernedPineGenerationRequest,
     *,
     strategy: StrategyDefinition,
+    specification: ExperimentSpecification,
     source_text: str,
 ) -> str:
     return fingerprint(
@@ -405,6 +501,8 @@ def _generation_input_fingerprint(
             "intake_run_id": str(request.intake_run_id),
             "requested_artifact_id": str(request.requested_artifact_id),
             "strategy_fingerprint": fingerprint_record(strategy),
+            "experiment_specification_ref": request.experiment_specification_ref,
+            "experiment_specification_fingerprint": fingerprint_record(specification),
             "script_title": request.script_title,
             "generator_authority_ref": request.generator_authority_ref,
             "pine_intake_authority_ref": request.pine_intake_authority_ref,
@@ -456,10 +554,16 @@ def _verify_generation_boundary(
     request: GovernedPineGenerationRequest,
     *,
     context: GovernedPineGeneratorContext,
-) -> StrategyDefinition:
+) -> tuple[StrategyDefinition, ExperimentSpecification]:
     pine_context = context.pine_intake_context
     strategy = pine_context.strategy
+    specification = pine_context.evidence.specification
     strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
+    specification_ref = _exact(
+        specification,
+        specification.experiment_id,
+        specification.version,
+    )
     if request.generator_authority_ref != context.generator_authority_ref:
         raise GovernedPineGeneratorAuthorityInvalid(
             "generation request lacks exact governed generator authority"
@@ -472,8 +576,17 @@ def _verify_generation_boundary(
         raise GovernedPineGeneratorLineageMismatch(
             "generation request does not bind the exact StrategyDefinition"
         )
+    if request.experiment_specification_ref != specification_ref:
+        raise GovernedPineGeneratorLineageMismatch(
+            "generation request does not bind the exact ExperimentSpecification"
+        )
+    if specification != pine_context.evidence.specification:
+        raise GovernedPineGeneratorLineageMismatch(
+            "generator context does not carry the exact experiment specification"
+        )
     _validate_strategy(strategy)
-    return strategy
+    _validate_specification(strategy, specification)
+    return strategy, specification
 
 
 def generate_governed_pine_strategy(
@@ -483,8 +596,12 @@ def generate_governed_pine_strategy(
     repository: LocalDatasetRepository,
 ) -> GovernedPineGenerationResult:
     """Generate canonical Pine and immediately submit it to the existing governed intake."""
-    strategy = _verify_generation_boundary(request, context=context)
-    source_text = render_governed_pine_v6(strategy, script_title=request.script_title)
+    strategy, specification = _verify_generation_boundary(request, context=context)
+    source_text = render_governed_pine_v6(
+        strategy,
+        specification,
+        script_title=request.script_title,
+    )
     intake_request = _build_intake_request(request, context=context, source_text=source_text)
     intake = intake_pine_strategy(
         intake_request,
@@ -500,6 +617,7 @@ def generate_governed_pine_strategy(
     input_fp = _generation_input_fingerprint(
         request,
         strategy=strategy,
+        specification=specification,
         source_text=source_text,
     )
     return GovernedPineGenerationResult(
@@ -525,7 +643,11 @@ def verify_governed_pine_generation(
 ) -> None:
     """Deterministically rebuild generation and verify exact persisted intake lineage."""
     strategy = _verify_generation_boundary(request, context=context)
-    expected_source = render_governed_pine_v6(strategy, script_title=request.script_title)
+    expected_source = render_governed_pine_v6(
+        strategy,
+        specification,
+        script_title=request.script_title,
+    )
     expected_request = _build_intake_request(
         request,
         context=context,
@@ -534,6 +656,7 @@ def verify_governed_pine_generation(
     expected_fp = _generation_input_fingerprint(
         request,
         strategy=strategy,
+        specification=specification,
         source_text=expected_source,
     )
     if (
