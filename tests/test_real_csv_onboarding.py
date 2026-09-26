@@ -14,8 +14,8 @@ import pytest
 from ai_quant_lab.core.codec import GovernedRecord, decode, encode
 from ai_quant_lab.core.csv_import import (
     MAX_COLUMNS,
+    MAX_CONTROLLED_HISTORICAL_FILE_BYTES,
     MAX_FIELD_LENGTH,
-    MAX_FILE_BYTES,
     MAX_LINE_BYTES,
     CsvFileFailure,
     CsvImportAssemblyFailure,
@@ -545,7 +545,7 @@ def test_oversized_binary_and_control_character_inputs_fail_closed(tmp_path: Pat
     root = tmp_path / "hostile"
     root.mkdir()
     for suffix, data, match in (
-        ("oversized", b"x" * (MAX_FILE_BYTES + 1), "byte bound"),
+        ("oversized", b"x" * (MAX_CONTROLLED_HISTORICAL_FILE_BYTES + 1), "byte bound"),
         ("utf8", b"\xff", "strict UTF-8"),
         ("nul", (HEADER + ROW_1).encode() + b"\x00", "control character"),
         ("binary", b"PK\x03\x04", "control character"),

@@ -65,6 +65,8 @@ from ai_quant_lab.core.model import (
 
 MAX_FILE_BYTES = 1_000_000
 MAX_ROWS = 2_000
+MAX_CONTROLLED_HISTORICAL_FILE_BYTES = 8_000_000
+MAX_CONTROLLED_HISTORICAL_ROWS = 20_000
 MAX_FIELD_LENGTH = 256
 MAX_LINE_BYTES = 4_096
 MAX_COLUMNS = 32
@@ -278,11 +280,21 @@ class LocalCsvInputAdapter:
         require_utc(self.clock.now(), "CSV deterministic clock")
         if self.prepared is not None:
             return self.prepared
+        max_file_bytes = (
+            MAX_CONTROLLED_HISTORICAL_FILE_BYTES
+            if self.input_scope is CsvInputScope.CONTROLLED_HISTORICAL
+            else MAX_FILE_BYTES
+        )
+        max_rows = (
+            MAX_CONTROLLED_HISTORICAL_ROWS
+            if self.input_scope is CsvInputScope.CONTROLLED_HISTORICAL
+            else MAX_ROWS
+        )
         with _safe_file(
             self.request.allowed_root, self.request.fixture_path, self.input_scope
         ) as stream:
-            data = stream.read(MAX_FILE_BYTES + 1)
-        if len(data) > MAX_FILE_BYTES:
+            data = stream.read(max_file_bytes + 1)
+        if len(data) > max_file_bytes:
             raise CsvFileFailure("bounded CSV file byte bound exceeded")
         digest = hashlib.sha256(data).hexdigest()
         if (
@@ -323,7 +335,7 @@ class LocalCsvInputAdapter:
         try:
             for row in reader:
                 row_count += 1
-                if row_count > MAX_ROWS:
+                if row_count > max_rows:
                     raise CsvFileFailure("bounded CSV row limit exceeded")
                 line = reader.line_num
                 if len(row) != len(headers):
