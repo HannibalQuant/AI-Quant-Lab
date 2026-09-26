@@ -28,6 +28,8 @@ The operator must explicitly declare:
 - UTC source timestamps;
 - epoch unit (seconds or milliseconds);
 - exact governed timeframe;
+- optional explicit bar-open research window `[start,end)`; when present, both bounds
+  must be UTC and aligned to the governed timeframe;
 - authority to derive `bar_close_time = bar_open_time + timeframe duration`;
 - that the supplied rows are a historical/confirmed-bar export and may therefore be
   represented as `final`;
