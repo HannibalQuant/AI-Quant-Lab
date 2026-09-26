@@ -54,9 +54,13 @@ class TradingViewCsvAdapterPolicy:
         if any(not isinstance(item, str) or not item.strip() for item in required):
             raise TradingViewCsvAdapterError("source column names must be explicit non-empty text")
         if self.timestamp_unit not in {"unix_seconds", "unix_milliseconds"}:
-            raise TradingViewCsvAdapterError(\n                "TradingView timestamp unit must be explicitly declared"\n            )
+            raise TradingViewCsvAdapterError(
+                "TradingView timestamp unit must be explicitly declared"
+            )
         if self.source_timezone != "UTC":
-            raise TradingViewCsvAdapterError(\n                "only explicitly declared UTC TradingView exports are supported"\n            )
+            raise TradingViewCsvAdapterError(
+                "only explicitly declared UTC TradingView exports are supported"
+            )
         if not self.derive_bar_close_from_timeframe:
             raise TradingViewCsvAdapterError("bar close derivation must be explicitly authorized")
         if not self.derive_finality_from_historical_export:
@@ -131,7 +135,9 @@ def normalize_tradingview_csv(
 
     data = path.read_bytes()
     if len(data) > MAX_CONTROLLED_HISTORICAL_FILE_BYTES:
-        raise TradingViewCsvAdapterError(\n            "TradingView export exceeds controlled historical byte bound"\n        )
+        raise TradingViewCsvAdapterError(
+            "TradingView export exceeds controlled historical byte bound"
+        )
     source_sha256 = hashlib.sha256(data).hexdigest()
     try:
         text = data.decode("utf-8", errors="strict")
@@ -164,13 +170,17 @@ def normalize_tradingview_csv(
         for row in reader:
             count += 1
             if count > MAX_CONTROLLED_HISTORICAL_ROWS:
-                raise TradingViewCsvAdapterError(\n                    "TradingView export exceeds controlled historical row bound"\n                )
+                raise TradingViewCsvAdapterError(
+                    "TradingView export exceeds controlled historical row bound"
+                )
             if None in row or any(value is None for value in row.values()):
                 raise TradingViewCsvAdapterError("TradingView row width does not match the header")
             opened = _timestamp(row[policy.time_column], policy.timestamp_unit)
             timeframe.require_aligned(opened)
             if previous_open is not None and opened <= previous_open:
-                raise TradingViewCsvAdapterError(\n                    "TradingView bar opens must be unique and strictly ascending"\n                )
+                raise TradingViewCsvAdapterError(
+                    "TradingView bar opens must be unique and strictly ascending"
+                )
             closed = opened + timeframe.duration
             volume = "" if policy.volume_column is None else row[policy.volume_column]
             writer.writerow(
@@ -232,7 +242,9 @@ def write_canonical_csv(
         parent = destination.parent.resolve(strict=True)
         parent.relative_to(root)
     except (OSError, ValueError) as exc:
-        raise TradingViewCsvAdapterError(\n            "canonical destination is outside the allowed root"\n        ) from exc
+        raise TradingViewCsvAdapterError(
+            "canonical destination is outside the allowed root"
+        ) from exc
     destination.write_text(result.canonical_csv, encoding="utf-8", newline="")
     digest = hashlib.sha256(destination.read_bytes()).hexdigest()
     if digest != result.canonical_sha256:
