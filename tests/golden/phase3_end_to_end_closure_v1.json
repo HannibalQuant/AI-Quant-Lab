@@ -1,7 +1,7 @@
 {
   "format": "phase3-end-to-end-closure-v1",
   "closure_id": "artifact:phase3-e2e-closure-optimized",
-  "closure_fingerprint": "sha256:f39222150e8ae705e37276a5efac644cbb3c8e715e5efbfba93cfb7e7c61b541",
+  "closure_fingerprint": "sha256:c1270aa26305d585cfecb34923526d9baebd69e8b183d02c051b864af7bf1f11",
   "source_declaration_ref": "provenance:real-csv-declaration-optimization-source",
   "admission_ref": "artifact:real-csv-admission-optimization-source",
   "eligibility_ref": "artifact:research-dataset-eligibility-optimization-source",
@@ -15,8 +15,8 @@
   "source_file_sha256": "sha256:e124e70f0d301b7f4de14d6d8430aa134937d1a96ae36af4a2dc2b1a6a42a124",
   "normalized_manifest_ref": "dataset:real-normalized-dataset-optimization-source",
   "normalized_lock_ref": "dataset-lock:real-normalized-lock-optimization-source",
-  "pine_source_sha256": "sha256:acf3195e3e1f83af831963c5eb97b285e6fe756d64249faea8f42bfd880895ee",
-  "safety_input_fingerprint": "sha256:a024faa8a93e8078640305e40422d60a3783f837e4cfd0fbef82cef500a1d450",
+  "pine_source_sha256": "sha256:56f88235e078441a9d02891f832b28dde20a2bbf1f58ad69ffdd386d0066e92c",
+  "safety_input_fingerprint": "sha256:29bb1d2d3b3adcf92abafb473a26395e888f5cce900fb832786ad55679da0df0",
   "stages": [
     "REAL_CSV_ADMITTED",
     "DATASET_ELIGIBLE",
