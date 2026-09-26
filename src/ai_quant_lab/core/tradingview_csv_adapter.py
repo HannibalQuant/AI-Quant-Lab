@@ -18,8 +18,11 @@ from ai_quant_lab.core.model import require_utc
 
 MAX_TRADINGVIEW_COLUMNS = 64
 MAX_TRADINGVIEW_LINE_BYTES = 16_384
-_CANONICAL_HEADER = (
+_CANONICAL_HEADER_WITH_VOLUME = (
     "bar_open_time,bar_close_time,open,high,low,close,volume,finality,availability_time\n"
+)
+_CANONICAL_HEADER_WITHOUT_VOLUME = (
+    "bar_open_time,bar_close_time,open,high,low,close,finality,availability_time\n"
 )
 
 
@@ -36,7 +39,7 @@ class TradingViewCsvAdapterPolicy:
     high_column: str = "high"
     low_column: str = "low"
     close_column: str = "close"
-    volume_column: str = ""
+    volume_column: str | None = None
     timestamp_unit: str = "unix_seconds"
     source_timezone: str = "UTC"
     derive_bar_close_from_timeframe: bool = True
@@ -50,10 +53,13 @@ class TradingViewCsvAdapterPolicy:
             self.high_column,
             self.low_column,
             self.close_column,
-            self.volume_column,
         )
         if any(not isinstance(item, str) or not item.strip() for item in required):
             raise TradingViewCsvAdapterError("source column names must be explicit non-empty text")
+        if self.volume_column is not None and (
+            not isinstance(self.volume_column, str) or not self.volume_column.strip()
+        ):
+            raise TradingViewCsvAdapterError("source volume column must be explicit non-empty text")
         if self.timestamp_unit not in {"unix_seconds", "unix_milliseconds"}:
             raise TradingViewCsvAdapterError(
                 "TradingView timestamp unit must be explicitly declared"
@@ -165,12 +171,17 @@ def normalize_tradingview_csv(
         policy.low_column,
         policy.close_column,
     }
-    required.add(policy.volume_column)
+    if policy.volume_column is not None:
+        required.add(policy.volume_column)
     if not required.issubset(headers):
         raise TradingViewCsvAdapterError("TradingView export is missing explicitly mapped columns")
 
     output = io.StringIO(newline="")
-    output.write(_CANONICAL_HEADER)
+    output.write(
+        _CANONICAL_HEADER_WITH_VOLUME
+        if policy.volume_column is not None
+        else _CANONICAL_HEADER_WITHOUT_VOLUME
+    )
     writer = csv.writer(output, lineterminator="\n")
     previous_open: datetime | None = None
     first_open: datetime | None = None
@@ -193,20 +204,18 @@ def normalize_tradingview_csv(
                     "TradingView bar opens must be unique and strictly ascending"
                 )
             closed = opened + timeframe.duration
-            volume = row[policy.volume_column]
-            writer.writerow(
-                (
-                    _stamp(opened),
-                    _stamp(closed),
-                    row[policy.open_column],
-                    row[policy.high_column],
-                    row[policy.low_column],
-                    row[policy.close_column],
-                    volume,
-                    "final",
-                    _stamp(closed),
-                )
-            )
+            canonical_row = [
+                _stamp(opened),
+                _stamp(closed),
+                row[policy.open_column],
+                row[policy.high_column],
+                row[policy.low_column],
+                row[policy.close_column],
+            ]
+            if policy.volume_column is not None:
+                canonical_row.append(row[policy.volume_column])
+            canonical_row.extend(("final", _stamp(closed)))
+            writer.writerow(canonical_row)
             first_open = opened if first_open is None else first_open
             last_close = closed
             previous_open = opened
@@ -241,6 +250,10 @@ def normalize_tradingview_csv(
             (
                 "availability_time=bar_close_time derived only under explicit "
                 "confirmed-bar research policy"
+            ),
+            (
+                "volume is emitted only when explicitly mapped; otherwise the canonical "
+                "schema records volume as absent"
             ),
             (
                 "extra TradingView indicator columns are ignored and never treated as "
