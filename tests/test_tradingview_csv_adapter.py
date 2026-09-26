@@ -76,6 +76,10 @@ def test_tradingview_export_normalizes_deterministically_and_preserves_source_ha
 
     assert first == second
     assert first.source_sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert first.provenance_note == (
+        f"tv_adapter_v1;source_sha256={first.source_sha256};"
+        f"canonical_sha256={first.canonical_sha256}"
+    )
     assert first.source_row_count == first.canonical_row_count == 2
     assert first.first_bar_open == datetime(2022, 1, 3, tzinfo=UTC)
     assert first.last_bar_close == datetime(2022, 1, 3, 8, tzinfo=UTC)
@@ -125,6 +129,15 @@ def test_missing_semantic_authority_fails_closed(
             volume_column="Volume",
             derive_finality_from_historical_export=derive_finality_from_historical_export,
             availability_at_bar_close=availability_at_bar_close,
+        )
+
+
+def test_volume_mapping_is_required_for_v1() -> None:
+    with pytest.raises(TradingViewCsvAdapterError, match="column names"):
+        TradingViewCsvAdapterPolicy(
+            time_column="time",
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
         )
 
 
