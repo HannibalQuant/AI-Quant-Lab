@@ -44,7 +44,13 @@ class TradingViewCsvAdapterPolicy:
     availability_at_bar_close: bool = False
 
     def __post_init__(self) -> None:
-        required = (\n            self.time_column,\n            self.open_column,\n            self.high_column,\n            self.low_column,\n            self.close_column,\n        )
+        required = (
+            self.time_column,
+            self.open_column,
+            self.high_column,
+            self.low_column,
+            self.close_column,
+        )
         if any(not isinstance(item, str) or not item.strip() for item in required):
             raise TradingViewCsvAdapterError("source column names must be explicit non-empty text")
         if self.timestamp_unit not in {"unix_seconds", "unix_milliseconds"}:
