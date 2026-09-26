@@ -17,10 +17,12 @@ eligibility, experiment authorization, validation, optimization, Pine, or deploy
 The source must explicitly map:
 - bar-open epoch timestamp;
 - open, high, low, close;
-- volume (required in the v1 canonical profile).
+- optional volume. When the source export has no volume, the canonical profile omits the
+  volume column and downstream schema must declare `VolumeSemantic.ABSENT`.
 
 Extra TradingView columns, including exported indicators, are ignored by the adapter and
-are never promoted into governed OHLCV evidence.
+are never promoted into governed OHLCV evidence. Missing volume is represented as absent,
+never as an empty or zero value.
 
 The operator must explicitly declare:
 - UTC source timestamps;
