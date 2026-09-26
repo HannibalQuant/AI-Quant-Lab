@@ -185,7 +185,8 @@ def _validate_bindings(
 
 
 _TRADINGVIEW_LINEAGE_RE = re.compile(
-    r"^tv_adapter_v1;source_sha256=([0-9a-f]{64});canonical_sha256=([0-9a-f]{64})$"
+    r"^tv_adapter_v1;source_sha256=([0-9a-f]{64});canonical_sha256=([0-9a-f]{64})"
+    r"(?:;window_start=([^;]+);window_end=([^;]+))?$"
 )
 
 

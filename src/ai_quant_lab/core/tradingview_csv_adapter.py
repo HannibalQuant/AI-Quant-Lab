@@ -18,8 +18,11 @@ from ai_quant_lab.core.model import require_utc
 
 MAX_TRADINGVIEW_COLUMNS = 64
 MAX_TRADINGVIEW_LINE_BYTES = 16_384
-_CANONICAL_HEADER = (
+_CANONICAL_HEADER_WITH_VOLUME = (
     "bar_open_time,bar_close_time,open,high,low,close,volume,finality,availability_time\n"
+)
+_CANONICAL_HEADER_WITHOUT_VOLUME = (
+    "bar_open_time,bar_close_time,open,high,low,close,finality,availability_time\n"
 )
 
 
@@ -36,9 +39,11 @@ class TradingViewCsvAdapterPolicy:
     high_column: str = "high"
     low_column: str = "low"
     close_column: str = "close"
-    volume_column: str = ""
+    volume_column: str | None = None
     timestamp_unit: str = "unix_seconds"
     source_timezone: str = "UTC"
+    window_start: datetime | None = None
+    window_end: datetime | None = None
     derive_bar_close_from_timeframe: bool = True
     derive_finality_from_historical_export: bool = False
     availability_at_bar_close: bool = False
@@ -50,10 +55,13 @@ class TradingViewCsvAdapterPolicy:
             self.high_column,
             self.low_column,
             self.close_column,
-            self.volume_column,
         )
         if any(not isinstance(item, str) or not item.strip() for item in required):
             raise TradingViewCsvAdapterError("source column names must be explicit non-empty text")
+        if self.volume_column is not None and (
+            not isinstance(self.volume_column, str) or not self.volume_column.strip()
+        ):
+            raise TradingViewCsvAdapterError("source volume column must be explicit non-empty text")
         if self.timestamp_unit not in {"unix_seconds", "unix_milliseconds"}:
             raise TradingViewCsvAdapterError(
                 "TradingView timestamp unit must be explicitly declared"
@@ -62,6 +70,17 @@ class TradingViewCsvAdapterPolicy:
             raise TradingViewCsvAdapterError(
                 "only explicitly declared UTC TradingView exports are supported"
             )
+        if (self.window_start is None) != (self.window_end is None):
+            raise TradingViewCsvAdapterError(
+                "TradingView research window requires both start and end"
+            )
+        if self.window_start is not None and self.window_end is not None:
+            require_utc(self.window_start, "TradingView window start")
+            require_utc(self.window_end, "TradingView window end")
+            if self.window_start >= self.window_end:
+                raise TradingViewCsvAdapterError(
+                    "TradingView research window must be strictly increasing"
+                )
         if not self.derive_bar_close_from_timeframe:
             raise TradingViewCsvAdapterError("bar close derivation must be explicitly authorized")
         if not self.derive_finality_from_historical_export:
@@ -120,6 +139,10 @@ def normalize_tradingview_csv(
 ) -> TradingViewCsvNormalizationResult:
     """Normalize one local TradingView export while preserving exact source-byte lineage."""
 
+    if policy.window_start is not None and policy.window_end is not None:
+        timeframe.require_aligned(policy.window_start)
+        timeframe.require_aligned(policy.window_end)
+
     if not source_path.is_absolute() or not allowed_root.is_absolute():
         raise TradingViewCsvAdapterError("source and allowed root must be absolute paths")
     if source_path.suffix != ".csv" or ".." in source_path.parts:
@@ -165,17 +188,23 @@ def normalize_tradingview_csv(
         policy.low_column,
         policy.close_column,
     }
-    required.add(policy.volume_column)
+    if policy.volume_column is not None:
+        required.add(policy.volume_column)
     if not required.issubset(headers):
         raise TradingViewCsvAdapterError("TradingView export is missing explicitly mapped columns")
 
     output = io.StringIO(newline="")
-    output.write(_CANONICAL_HEADER)
+    output.write(
+        _CANONICAL_HEADER_WITH_VOLUME
+        if policy.volume_column is not None
+        else _CANONICAL_HEADER_WITHOUT_VOLUME
+    )
     writer = csv.writer(output, lineterminator="\n")
     previous_open: datetime | None = None
     first_open: datetime | None = None
     last_close: datetime | None = None
     count = 0
+    selected_count = 0
 
     try:
         for row in reader:
@@ -192,29 +221,38 @@ def normalize_tradingview_csv(
                 raise TradingViewCsvAdapterError(
                     "TradingView bar opens must be unique and strictly ascending"
                 )
+            previous_open = opened
+            if (
+                policy.window_start is not None
+                and policy.window_end is not None
+                and not (policy.window_start <= opened < policy.window_end)
+            ):
+                continue
             closed = opened + timeframe.duration
-            volume = row[policy.volume_column]
-            writer.writerow(
-                (
-                    _stamp(opened),
-                    _stamp(closed),
-                    row[policy.open_column],
-                    row[policy.high_column],
-                    row[policy.low_column],
-                    row[policy.close_column],
-                    volume,
-                    "final",
-                    _stamp(closed),
-                )
-            )
+            canonical_row = [
+                _stamp(opened),
+                _stamp(closed),
+                row[policy.open_column],
+                row[policy.high_column],
+                row[policy.low_column],
+                row[policy.close_column],
+            ]
+            if policy.volume_column is not None:
+                canonical_row.append(row[policy.volume_column])
+            canonical_row.extend(("final", _stamp(closed)))
+            writer.writerow(canonical_row)
+            selected_count += 1
             first_open = opened if first_open is None else first_open
             last_close = closed
-            previous_open = opened
     except csv.Error as exc:
         raise TradingViewCsvAdapterError("TradingView CSV syntax is invalid") from exc
 
-    if count == 0 or first_open is None or last_close is None:
+    if count == 0:
         raise TradingViewCsvAdapterError("TradingView export contains no data rows")
+    if selected_count == 0 or first_open is None or last_close is None:
+        raise TradingViewCsvAdapterError(
+            "TradingView export contains no data rows in the governed research window"
+        )
     canonical_csv = output.getvalue()
     canonical_bytes = canonical_csv.encode("utf-8")
     if len(canonical_bytes) > MAX_CONTROLLED_HISTORICAL_FILE_BYTES:
@@ -225,12 +263,16 @@ def normalize_tradingview_csv(
     provenance_note = (
         f"tv_adapter_v1;source_sha256={source_sha256};canonical_sha256={canonical_sha256}"
     )
+    if policy.window_start is not None and policy.window_end is not None:
+        provenance_note += (
+            f";window_start={_stamp(policy.window_start)};window_end={_stamp(policy.window_end)}"
+        )
     return TradingViewCsvNormalizationResult(
         source_sha256,
         len(data),
         count,
         canonical_sha256,
-        count,
+        selected_count,
         first_open,
         last_close,
         canonical_csv,
@@ -241,6 +283,15 @@ def normalize_tradingview_csv(
             (
                 "availability_time=bar_close_time derived only under explicit "
                 "confirmed-bar research policy"
+            ),
+            (
+                "volume is emitted only when explicitly mapped; otherwise the canonical "
+                "schema records volume as absent"
+            ),
+            (
+                "research window is an explicit bar-open [start,end) filter"
+                if policy.window_start is not None
+                else "no research-window filter applied"
             ),
             (
                 "extra TradingView indicator columns are ignored and never treated as "

@@ -132,13 +132,83 @@ def test_missing_semantic_authority_fails_closed(
         )
 
 
-def test_volume_mapping_is_required_for_v1() -> None:
-    with pytest.raises(TradingViewCsvAdapterError, match="column names"):
-        TradingViewCsvAdapterPolicy(
+def test_no_volume_profile_omits_volume_column_without_inventing_values(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "no_volume.csv"
+    source.write_text(
+        "time,open,high,low,close,EMA\n"
+        "1641168000,170,172,168,171,169\n"
+        "1641182400,171,174,170,173,170\n",
+        encoding="utf-8",
+    )
+    result = normalize_tradingview_csv(
+        source,
+        allowed_root=tmp_path,
+        timeframe=timeframe_4h(),
+        policy=TradingViewCsvAdapterPolicy(
             time_column="time",
             derive_finality_from_historical_export=True,
             availability_at_bar_close=True,
+        ),
+    )
+
+    assert result.canonical_csv.startswith(
+        "bar_open_time,bar_close_time,open,high,low,close,finality,availability_time\n"
+    )
+    assert ",volume," not in result.canonical_csv.splitlines()[0]
+    assert (
+        "2022-01-03T00:00:00.000000Z,2022-01-03T04:00:00.000000Z,"
+        "170,172,168,171,final,2022-01-03T04:00:00.000000Z\n"
+    ) in result.canonical_csv
+    assert "EMA" not in result.canonical_csv
+
+
+def test_blank_volume_mapping_fails_closed() -> None:
+    with pytest.raises(TradingViewCsvAdapterError, match="volume column"):
+        TradingViewCsvAdapterPolicy(
+            time_column="time",
+            volume_column="",
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
         )
+
+
+def test_explicit_research_window_filters_bar_opens_and_preserves_full_source_hash(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "windowed.csv"
+    source.write_text(
+        "time,open,high,low,close,EMA\n"
+        "1641168000,170,172,168,171,169\n"
+        "1641182400,171,174,170,173,170\n"
+        "1641196800,173,175,172,174,171\n",
+        encoding="utf-8",
+    )
+    start = datetime(2022, 1, 3, tzinfo=UTC)
+    end = datetime(2022, 1, 3, 8, tzinfo=UTC)
+    result = normalize_tradingview_csv(
+        source,
+        allowed_root=tmp_path,
+        timeframe=timeframe_4h(),
+        policy=TradingViewCsvAdapterPolicy(
+            time_column="time",
+            window_start=start,
+            window_end=end,
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
+        ),
+    )
+
+    assert result.source_row_count == 3
+    assert result.canonical_row_count == 2
+    assert result.first_bar_open == start
+    assert result.last_bar_close == end
+    assert result.source_sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert result.provenance_note.endswith(
+        ";window_start=2022-01-03T00:00:00.000000Z;window_end=2022-01-03T08:00:00.000000Z"
+    )
+    assert "1641196800" not in result.canonical_csv
 
 
 def test_missing_mapping_and_misaligned_or_duplicate_time_fail_closed(tmp_path: Path) -> None:
