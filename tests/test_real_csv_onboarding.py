@@ -122,6 +122,8 @@ def context(
     missing: MissingDataPolicy = MissingDataPolicy.RECORD_GAPS,
     acquired_at: datetime | None = None,
     provenance_note: str = "operator declaration is recorded, not independently authenticated",
+    volume_field: str | None = "volume",
+    volume_semantic: VolumeSemantic = VolumeSemantic.BASE,
 ) -> tuple[
     RealCsvOnboardingRequest,
     SourceIdentity,
@@ -170,9 +172,9 @@ def context(
         "high",
         "low",
         "close",
-        "volume",
+        volume_field,
         "finality",
-        VolumeSemantic.BASE,
+        volume_semantic,
         V1,
     )
     actor = AgentId(f"operator-{suffix}")
@@ -190,20 +192,24 @@ def context(
         timestamps,
         availability,
         "explicit UTC Z timestamps; no filename inference",
-        (
-            ("availability_time", "availability_time"),
-            ("bar_close", "bar_close_time"),
-            ("bar_open", "bar_open_time"),
-            ("close", "close"),
-            ("finality", "finality"),
-            ("high", "high"),
-            ("low", "low"),
-            ("open", "open"),
-            ("volume", "volume"),
+        tuple(
+            sorted(
+                {
+                    "availability_time": "availability_time",
+                    "bar_close": "bar_close_time",
+                    "bar_open": "bar_open_time",
+                    "close": "close",
+                    "finality": "finality",
+                    "high": "high",
+                    "low": "low",
+                    "open": "open",
+                    **({} if volume_field is None else {"volume": volume_field}),
+                }.items()
+            )
         ),
         PriceDomain.POSITIVE_ONLY,
         "declared OHLC bar geometry",
-        VolumeSemantic.BASE,
+        volume_semantic,
         "final rows are available no earlier than bar close",
         missing,
         DuplicatePolicy.REJECT_ALL,
@@ -319,10 +325,10 @@ def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_li
     source = root / "tradingview.csv"
     start = int(datetime(2025, 2, 1, tzinfo=UTC).timestamp())
     source.write_text(
-        "time,open,high,low,close,Volume,EMA\n"
-        f"{start},100,102,99,101,10,100\n"
-        f"{start + 3600},101,103,100,102,11,101\n"
-        f"{start + 7200},102,104,101,103,12,102\n",
+        "time,open,high,low,close,EMA\n"
+        f"{start},100,102,99,101,100\n"
+        f"{start + 3600},101,103,100,102,101\n"
+        f"{start + 7200},102,104,101,103,102\n",
         encoding="utf-8",
     )
     timeframe = TimeframeIdentity(
@@ -339,7 +345,6 @@ def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_li
         timeframe=timeframe,
         policy=TradingViewCsvAdapterPolicy(
             time_column="time",
-            volume_column="Volume",
             timestamp_unit="unix_seconds",
             source_timezone="UTC",
             derive_bar_close_from_timeframe=True,
@@ -358,6 +363,8 @@ def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_li
         timestamps=TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME,
         availability=AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC,
         provenance_note=normalized.provenance_note,
+        volume_field=None,
+        volume_semantic=VolumeSemantic.ABSENT,
     )
     result = onboard_real_csv(
         request,
@@ -389,6 +396,8 @@ def test_tradingview_adapter_output_flows_into_real_csv_onboarding_with_exact_li
         timestamps=TimestampSemantics.BAR_OPEN_UTC_CLOSE_DERIVED_FROM_TIMEFRAME,
         availability=AvailabilitySemantics.DERIVED_BAR_CLOSE_UTC,
         provenance_note=bad_note,
+        volume_field=None,
+        volume_semantic=VolumeSemantic.ABSENT,
     )
     with pytest.raises(RealCsvOnboardingError, match="canonical hash"):
         onboard_real_csv(
