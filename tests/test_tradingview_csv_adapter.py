@@ -109,25 +109,27 @@ def test_canonical_output_is_written_without_mutating_source(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize(
-    "bad_policy",
+    "policy_overrides",
     [
-        TradingViewCsvAdapterPolicy(
-            time_column="time",
-            volume_column="Volume",
-            derive_finality_from_historical_export=False,
-            availability_at_bar_close=True,
-        ),
-        TradingViewCsvAdapterPolicy(
-            time_column="time",
-            volume_column="Volume",
-            derive_finality_from_historical_export=True,
-            availability_at_bar_close=False,
-        ),
+        {
+            "derive_finality_from_historical_export": False,
+            "availability_at_bar_close": True,
+        },
+        {
+            "derive_finality_from_historical_export": True,
+            "availability_at_bar_close": False,
+        },
     ],
 )
-def test_missing_semantic_authority_fails_closed(bad_policy: TradingViewCsvAdapterPolicy) -> None:
+def test_missing_semantic_authority_fails_closed(
+    policy_overrides: dict[str, bool],
+) -> None:
     with pytest.raises(TradingViewCsvAdapterError):
-        _ = bad_policy
+        TradingViewCsvAdapterPolicy(
+            time_column="time",
+            volume_column="Volume",
+            **policy_overrides,
+        )
 
 
 def test_missing_mapping_and_misaligned_or_duplicate_time_fail_closed(tmp_path: Path) -> None:
