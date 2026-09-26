@@ -642,7 +642,7 @@ def verify_governed_pine_generation(
     context: GovernedPineGeneratorContext,
 ) -> None:
     """Deterministically rebuild generation and verify exact persisted intake lineage."""
-    strategy = _verify_generation_boundary(request, context=context)
+    strategy, specification = _verify_generation_boundary(request, context=context)
     expected_source = render_governed_pine_v6(
         strategy,
         specification,
