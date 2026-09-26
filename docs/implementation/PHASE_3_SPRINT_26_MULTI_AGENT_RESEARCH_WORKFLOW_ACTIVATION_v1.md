@@ -77,18 +77,21 @@ No Pine↔Python parity claim is created by this test. TradingView runtime remai
 
 ## 5. Historical data scaling
 
-Before Sprint 26, the bounded CSV adapter enforced:
+Before Sprint 26, both repository fixtures and controlled historical CSV input used:
 
 - `MAX_FILE_BYTES = 1_000_000`
 - `MAX_ROWS = 2_000`
 
-That resource envelope cannot carry the requested continuous 2022-01-01 through
-2026-01-01 SOLUSDT 4H window (approximately 8,766 bars).
+That historical-data resource envelope cannot carry the requested continuous
+2022-01-01 through 2026-01-01 SOLUSDT 4H window (approximately 8,766 bars).
 
-Sprint 26 changes the bounded limits to:
+Sprint 26 preserves the smaller repository-fixture limits and adds a separate bounded
+resource envelope only for `CONTROLLED_HISTORICAL`:
 
-- `MAX_FILE_BYTES = 8_000_000`
-- `MAX_ROWS = 20_000`
+- `MAX_CONTROLLED_HISTORICAL_FILE_BYTES = 8_000_000`
+- `MAX_CONTROLLED_HISTORICAL_ROWS = 20_000`
+
+The existing fixture limits remain 1 MB / 2,000 rows.
 
 The security boundary remains explicit and finite. The sprint does not introduce:
 
