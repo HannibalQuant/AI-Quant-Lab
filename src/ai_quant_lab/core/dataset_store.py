@@ -93,6 +93,7 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
 
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
+_MAX_DATASET_MANIFEST_BYTES: Final = 8_000_000
 
 
 type StoredDatasetObject = (
@@ -270,6 +271,15 @@ class RepositoryObjectKey:
 
     def __str__(self) -> str:
         return self.relative_path.as_posix()
+
+
+def _object_byte_limit(key: RepositoryObjectKey) -> int:
+    if key.object_type in {
+        StoredObjectType.DATASET_MANIFEST,
+        StoredObjectType.NORMALIZED_BAR_MANIFEST,
+    }:
+        return _MAX_DATASET_MANIFEST_BYTES
+    return _MAX_OBJECT_BYTES
 
 
 @dataclass(frozen=True, slots=True)
@@ -548,7 +558,7 @@ class LocalDatasetRepository:
         return path
 
     @staticmethod
-    def _read_exact_bytes(path: Path) -> bytes:
+    def _read_exact_bytes(path: Path, max_bytes: int) -> bytes:
         if path.is_symlink():
             raise InvalidRepositoryPath("stored object cannot be a symlink")
         flags = os.O_RDONLY
@@ -566,11 +576,11 @@ class LocalDatasetRepository:
             metadata = os.fstat(descriptor)
             if not stat.S_ISREG(metadata.st_mode):
                 raise InvalidRepositoryPath("stored object must be a regular file")
-            if metadata.st_size > _MAX_OBJECT_BYTES:
+            if metadata.st_size > max_bytes:
                 raise RepositoryIntegrityFailure("stored object exceeds bounded byte limit")
             with os.fdopen(descriptor, "rb", closefd=False) as stream:
-                data = stream.read(_MAX_OBJECT_BYTES + 1)
-            if len(data) > _MAX_OBJECT_BYTES:
+                data = stream.read(max_bytes + 1)
+            if len(data) > max_bytes:
                 raise RepositoryIntegrityFailure("stored object exceeds bounded byte limit")
             return data
         finally:
@@ -591,13 +601,14 @@ class LocalDatasetRepository:
             raise UnsupportedStoredType(f"unsupported stored dataset type: {type(record).__name__}")
         key = repository_key(record)
         canonical_bytes = encode(cast(GovernedRecord, record))
-        if len(canonical_bytes) > _MAX_OBJECT_BYTES:
+        max_bytes = _object_byte_limit(key)
+        if len(canonical_bytes) > max_bytes:
             raise RepositoryIntegrityFailure("canonical object exceeds bounded byte limit")
         verify_integrity(cast(GovernedRecord, record), key.fingerprint)
         directory = self._object_directory(key, create=True)
         destination = directory / key.relative_path.name
         if destination.exists() or destination.is_symlink():
-            existing = self._read_exact_bytes(destination)
+            existing = self._read_exact_bytes(destination, max_bytes)
             status = (
                 RepositoryWriteStatus.ALREADY_PRESENT_IDENTICAL
                 if hmac.compare_digest(existing, canonical_bytes)
@@ -622,7 +633,7 @@ class LocalDatasetRepository:
             try:
                 os.link(temporary_path, destination)
             except FileExistsError:
-                existing = self._read_exact_bytes(destination)
+                existing = self._read_exact_bytes(destination, max_bytes)
                 status = (
                     RepositoryWriteStatus.ALREADY_PRESENT_IDENTICAL
                     if hmac.compare_digest(existing, canonical_bytes)
@@ -654,7 +665,7 @@ class LocalDatasetRepository:
         if key.object_type is not expected_storage_type:
             raise RepositoryTypeMismatch("requested type does not match repository key")
         path = self.path_for(key)
-        data = self._read_exact_bytes(path)
+        data = self._read_exact_bytes(path, _object_byte_limit(key))
         try:
             record = cast(T, decode(data, cast(Any, expected_type)))
         except InvalidSerialization as exc:
