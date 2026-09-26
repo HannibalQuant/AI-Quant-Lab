@@ -9,8 +9,8 @@ import pytest
 from test_real_csv_onboarding import CLOCK, context
 
 from ai_quant_lab.core.csv_import import (
-    MAX_FILE_BYTES,
-    MAX_ROWS,
+    MAX_CONTROLLED_HISTORICAL_FILE_BYTES,
+    MAX_CONTROLLED_HISTORICAL_ROWS,
     CsvFileFailure,
     CsvInputScope,
     LocalCsvInputAdapter,
@@ -67,15 +67,15 @@ def test_four_year_4h_equivalent_row_budget_is_within_bounded_limits(tmp_path: P
     adapter = _adapter(tmp_path, FOUR_YEAR_4H_BAR_BUDGET, "four-year")
     prepared = adapter.prepare()
 
-    assert MAX_ROWS >= FOUR_YEAR_4H_BAR_BUDGET
+    assert MAX_CONTROLLED_HISTORICAL_ROWS >= FOUR_YEAR_4H_BAR_BUDGET
     assert prepared.row_count == FOUR_YEAR_4H_BAR_BUDGET
     assert not prepared.rejected
     assert prepared.file_size > 1_000_000
-    assert prepared.file_size <= MAX_FILE_BYTES
+    assert prepared.file_size <= MAX_CONTROLLED_HISTORICAL_FILE_BYTES
 
 
 def test_scaled_row_limit_remains_fail_closed(tmp_path: Path) -> None:
-    adapter = _adapter(tmp_path, MAX_ROWS + 1, "row-bound")
+    adapter = _adapter(tmp_path, MAX_CONTROLLED_HISTORICAL_ROWS + 1, "row-bound")
 
     with pytest.raises(CsvFileFailure, match="row limit"):
         adapter.prepare()
