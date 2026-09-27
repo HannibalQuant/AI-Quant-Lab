@@ -94,6 +94,7 @@ from ai_quant_lab.core.tradingview_research_export_contracts import (
 _FINGERPRINT: Final = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_OBJECT_BYTES: Final = 1_000_000
 _MAX_DATASET_MANIFEST_BYTES: Final = 8_000_000
+_MAX_BACKTEST_RESULT_BYTES: Final = 16_000_000
 
 
 type StoredDatasetObject = (
@@ -279,6 +280,8 @@ def _object_byte_limit(key: RepositoryObjectKey) -> int:
         StoredObjectType.NORMALIZED_BAR_MANIFEST,
     }:
         return _MAX_DATASET_MANIFEST_BYTES
+    if key.object_type is StoredObjectType.BACKTEST_RESULT_ARTIFACT:
+        return _MAX_BACKTEST_RESULT_BYTES
     return _MAX_OBJECT_BYTES
 
 
