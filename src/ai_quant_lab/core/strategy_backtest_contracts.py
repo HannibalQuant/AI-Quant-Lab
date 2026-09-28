@@ -148,9 +148,7 @@ class MultiSignalTrendParameters:
             or not isinstance(self.adx_slope_length, int)
             or not 0 <= self.adx_slope_length <= 1000
         ):
-            raise StrategyBacktestContractError(
-                "ADX slope length must be an integer in [0, 1000]"
-            )
+            raise StrategyBacktestContractError("ADX slope length must be an integer in [0, 1000]")
         if not self.fast_ema < self.medium_ema < self.slow_ema:
             raise StrategyBacktestContractError(
                 "multi-signal EMA lengths must satisfy fast < medium < slow"
