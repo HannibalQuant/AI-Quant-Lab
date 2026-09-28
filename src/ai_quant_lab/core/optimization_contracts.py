@@ -34,10 +34,14 @@ class OptimizationParameterType(StrEnum):
 
 class OptimizationParameterName(StrEnum):
     ADX_LENGTH = "adx_length"
+    ADX_SLOPE_LENGTH = "adx_slope_length"
     ADX_THRESHOLD_X100 = "adx_threshold_x100"
     ATR_LENGTH = "atr_length"
+    ATR_PCT_MAX_X100 = "atr_pct_max_x100"
+    ATR_PCT_MIN_X100 = "atr_pct_min_x100"
     ATR_STOP_MULT_X100 = "atr_stop_mult_x100"
     BREAK_EVEN_TRIGGER_R_X100 = "break_even_trigger_r_x100"
+    EMA_SEPARATION_MIN_PCT_X100 = "ema_separation_min_pct_x100"
     FAST_EMA = "fast_ema"
     MACD_FAST = "macd_fast"
     MACD_SIGNAL = "macd_signal"
@@ -183,6 +187,9 @@ class OptimizationParameter:
         }
         percentage_parameters = {
             OptimizationParameterName.ADX_THRESHOLD_X100,
+            OptimizationParameterName.ATR_PCT_MAX_X100,
+            OptimizationParameterName.ATR_PCT_MIN_X100,
+            OptimizationParameterName.EMA_SEPARATION_MIN_PCT_X100,
             OptimizationParameterName.RSI_LONG_MIN_X100,
             OptimizationParameterName.RSI_SHORT_MAX_X100,
         }
@@ -193,6 +200,8 @@ class OptimizationParameter:
         }
         if self.name is OptimizationParameterName.THRESHOLD_BPS:
             valid = 0 <= self.lower_bound <= self.upper_bound <= 10_000
+        elif self.name is OptimizationParameterName.ADX_SLOPE_LENGTH:
+            valid = 0 <= self.lower_bound <= self.upper_bound <= 1000
         elif self.name in length_parameters:
             valid = 1 <= self.lower_bound <= self.upper_bound <= 1000
         elif self.name in percentage_parameters:
