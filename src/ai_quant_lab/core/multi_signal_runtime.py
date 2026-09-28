@@ -318,9 +318,7 @@ def multi_signal_direction(
     ema_separation_pct = abs(point.fast_ema - point.slow_ema) / close * Decimal(100)
     atr_pct = point.atr / close * Decimal(100)
     anti_chop_ok = ema_separation_pct >= Decimal(parameters.ema_separation_min_pct)
-    volatility_ok = (
-        Decimal(parameters.atr_pct_min) <= atr_pct <= Decimal(parameters.atr_pct_max)
-    )
+    volatility_ok = Decimal(parameters.atr_pct_min) <= atr_pct <= Decimal(parameters.atr_pct_max)
     adx_slope_ok = parameters.adx_slope_length == 0 or (
         prior_adx is not None and point.adx > prior_adx
     )
