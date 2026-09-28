@@ -1246,7 +1246,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
             "contract_version": record.contract_version.number,
         }
         if record.multi_signal is not None:
-            strategy_payload["multi_signal"] = {
+            multi_signal_payload: dict[str, Any] = {
                 "fast_ema": record.multi_signal.fast_ema,
                 "medium_ema": record.multi_signal.medium_ema,
                 "slow_ema": record.multi_signal.slow_ema,
@@ -1270,7 +1270,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
                 or record.multi_signal.atr_pct_min != "0"
                 or record.multi_signal.atr_pct_max != "100"
             ):
-                strategy_payload["multi_signal"].update(
+                multi_signal_payload.update(
                     {
                         "ema_separation_min_pct": record.multi_signal.ema_separation_min_pct,
                         "adx_slope_length": record.multi_signal.adx_slope_length,
@@ -1278,6 +1278,7 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
                         "atr_pct_max": record.multi_signal.atr_pct_max,
                     }
                 )
+            strategy_payload["multi_signal"] = multi_signal_payload
         return strategy_payload
     if isinstance(record, BacktestResultArtifact):
         return {
