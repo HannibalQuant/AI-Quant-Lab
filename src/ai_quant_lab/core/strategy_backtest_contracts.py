@@ -118,6 +118,10 @@ class MultiSignalTrendParameters:
     take_profit_r: str
     break_even_trigger_r: str
     time_stop_bars: int
+    ema_separation_min_pct: str = "0"
+    adx_slope_length: int = 0
+    atr_pct_min: str = "0"
+    atr_pct_max: str = "100"
 
     def __post_init__(self) -> None:
         integer_fields = (
@@ -139,6 +143,14 @@ class MultiSignalTrendParameters:
             raise StrategyBacktestContractError(
                 "multi-signal integer parameters must be integers in [1, 1000]"
             )
+        if (
+            isinstance(self.adx_slope_length, bool)
+            or not isinstance(self.adx_slope_length, int)
+            or not 0 <= self.adx_slope_length <= 1000
+        ):
+            raise StrategyBacktestContractError(
+                "ADX slope length must be an integer in [0, 1000]"
+            )
         if not self.fast_ema < self.medium_ema < self.slow_ema:
             raise StrategyBacktestContractError(
                 "multi-signal EMA lengths must satisfy fast < medium < slow"
@@ -153,6 +165,9 @@ class MultiSignalTrendParameters:
             "atr_stop_mult",
             "take_profit_r",
             "break_even_trigger_r",
+            "ema_separation_min_pct",
+            "atr_pct_min",
+            "atr_pct_max",
         ):
             _decimal_text(getattr(self, field), f"multi_signal.{field}")
 
@@ -162,6 +177,9 @@ class MultiSignalTrendParameters:
         atr_stop = Decimal(self.atr_stop_mult)
         take_profit = Decimal(self.take_profit_r)
         break_even = Decimal(self.break_even_trigger_r)
+        ema_separation = Decimal(self.ema_separation_min_pct)
+        atr_pct_min = Decimal(self.atr_pct_min)
+        atr_pct_max = Decimal(self.atr_pct_max)
         if not Decimal(0) <= rsi_short < rsi_long <= Decimal(100):
             raise StrategyBacktestContractError(
                 "RSI thresholds must satisfy 0 <= short < long <= 100"
@@ -171,6 +189,14 @@ class MultiSignalTrendParameters:
         if atr_stop <= 0 or take_profit <= 0 or break_even <= 0:
             raise StrategyBacktestContractError(
                 "ATR stop, take-profit R and break-even trigger R must be positive"
+            )
+        if not Decimal(0) <= ema_separation <= Decimal(100):
+            raise StrategyBacktestContractError(
+                "EMA separation minimum percent must be in [0, 100]"
+            )
+        if not Decimal(0) <= atr_pct_min < atr_pct_max <= Decimal(100):
+            raise StrategyBacktestContractError(
+                "ATR percent regime must satisfy 0 <= min < max <= 100"
             )
 
 
