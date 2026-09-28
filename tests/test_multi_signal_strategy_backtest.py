@@ -380,8 +380,7 @@ def test_regime_filters_gate_signal_deterministically(tmp_path: Path) -> None:
     )
 
     assert (
-        multi_signal_direction(bar, point, filtered, Decimal("20"))
-        is SimulatedPositionState.LONG
+        multi_signal_direction(bar, point, filtered, Decimal("20")) is SimulatedPositionState.LONG
     )
     assert (
         multi_signal_direction(
@@ -402,8 +401,7 @@ def test_regime_filters_gate_signal_deterministically(tmp_path: Path) -> None:
         is SimulatedPositionState.FLAT
     )
     assert (
-        multi_signal_direction(bar, point, filtered, Decimal("26"))
-        is SimulatedPositionState.FLAT
+        multi_signal_direction(bar, point, filtered, Decimal("26")) is SimulatedPositionState.FLAT
     )
     assert multi_signal_direction(bar, point, filtered, None) is SimulatedPositionState.FLAT
 
