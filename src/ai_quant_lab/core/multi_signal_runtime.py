@@ -303,6 +303,7 @@ def multi_signal_direction(
     bar: MarketBar,
     point: MultiSignalIndicatorPoint,
     parameters: MultiSignalTrendParameters,
+    prior_adx: Decimal | None = None,
 ) -> SimulatedPositionState:
     if not point.ready:
         return SimulatedPositionState.FLAT
@@ -310,9 +311,23 @@ def multi_signal_direction(
     assert point.plus_di is not None
     assert point.minus_di is not None
     assert point.adx is not None
+    assert point.atr is not None
     close = Decimal(bar.close.text)
+    if close <= 0:
+        return SimulatedPositionState.FLAT
+    ema_separation_pct = abs(point.fast_ema - point.slow_ema) / close * Decimal(100)
+    atr_pct = point.atr / close * Decimal(100)
+    anti_chop_ok = ema_separation_pct >= Decimal(parameters.ema_separation_min_pct)
+    volatility_ok = (
+        Decimal(parameters.atr_pct_min) <= atr_pct <= Decimal(parameters.atr_pct_max)
+    )
+    adx_slope_ok = parameters.adx_slope_length == 0 or (
+        prior_adx is not None and point.adx > prior_adx
+    )
+    regime_ok = anti_chop_ok and volatility_ok and adx_slope_ok
     long_signal = (
-        point.fast_ema > point.medium_ema > point.slow_ema
+        regime_ok
+        and point.fast_ema > point.medium_ema > point.slow_ema
         and close > point.slow_ema
         and point.rsi >= Decimal(parameters.rsi_long_min)
         and point.macd > point.macd_signal
@@ -322,7 +337,8 @@ def multi_signal_direction(
     if long_signal:
         return SimulatedPositionState.LONG
     short_signal = (
-        point.fast_ema < point.medium_ema < point.slow_ema
+        regime_ok
+        and point.fast_ema < point.medium_ema < point.slow_ema
         and close < point.slow_ema
         and point.rsi <= Decimal(parameters.rsi_short_max)
         and point.macd < point.macd_signal
@@ -561,7 +577,12 @@ def simulate_multi_signal_backtest(
             if pending is not None:
                 continue
 
-            direction = multi_signal_direction(bar, point, parameters)
+            if parameters.adx_slope_length > 0:
+                prior_index = index - parameters.adx_slope_length
+                prior_adx = indicators[prior_index].adx if prior_index >= 0 else None
+                direction = multi_signal_direction(bar, point, parameters, prior_adx)
+            else:
+                direction = multi_signal_direction(bar, point, parameters)
             if position is SimulatedPositionState.FLAT:
                 if direction in (
                     SimulatedPositionState.LONG,
