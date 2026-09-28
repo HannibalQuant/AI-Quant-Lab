@@ -354,10 +354,8 @@ def render_governed_pine_v6(
         (
             "emaSeparationPct = close > 0 ? math.abs(fastEma - slowEma) / close * 100.0 : na",
             "atrPct = close > 0 ? atrValue / close * 100.0 : na",
-            "antiChopOk = not na(emaSeparationPct) "
-            "and emaSeparationPct >= emaSeparationMinPct",
-            "volatilityRegimeOk = not na(atrPct) "
-            "and atrPct >= atrPctMin and atrPct <= atrPctMax",
+            "antiChopOk = not na(emaSeparationPct) and emaSeparationPct >= emaSeparationMinPct",
+            "volatilityRegimeOk = not na(atrPct) and atrPct >= atrPctMin and atrPct <= atrPctMax",
             "adxSlopeOk = adxSlopeLength == 0 or "
             "(not na(adxValue[adxSlopeLength]) and adxValue > adxValue[adxSlopeLength])",
             "regimeOk = antiChopOk and volatilityRegimeOk and adxSlopeOk",
