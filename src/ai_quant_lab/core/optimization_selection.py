@@ -240,10 +240,14 @@ def _multi_signal_parameter_update(
 ) -> MultiSignalTrendParameters:
     supported = {
         "adx_length",
+        "adx_slope_length",
         "adx_threshold_x100",
         "atr_length",
+        "atr_pct_max_x100",
+        "atr_pct_min_x100",
         "atr_stop_mult_x100",
         "break_even_trigger_r_x100",
+        "ema_separation_min_pct_x100",
         "fast_ema",
         "macd_fast",
         "macd_signal",
@@ -302,6 +306,22 @@ def _multi_signal_parameter_update(
                 else parent.break_even_trigger_r
             ),
             values.get("time_stop_bars", parent.time_stop_bars),
+            (
+                _scaled_decimal(values["ema_separation_min_pct_x100"])
+                if "ema_separation_min_pct_x100" in values
+                else parent.ema_separation_min_pct
+            ),
+            values.get("adx_slope_length", parent.adx_slope_length),
+            (
+                _scaled_decimal(values["atr_pct_min_x100"])
+                if "atr_pct_min_x100" in values
+                else parent.atr_pct_min
+            ),
+            (
+                _scaled_decimal(values["atr_pct_max_x100"])
+                if "atr_pct_max_x100" in values
+                else parent.atr_pct_max
+            ),
         )
     except StrategyBacktestContractError as exc:
         raise OptimizationInputInvalid(

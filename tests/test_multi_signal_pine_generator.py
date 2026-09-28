@@ -165,6 +165,51 @@ def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(
     assert "atrStopMult = 3" in changed_source
 
 
+def test_filtered_multi_signal_pine_contains_regime_guards(tmp_path: Path) -> None:
+    filtered = replace(
+        parameters(),
+        ema_separation_min_pct="0.4",
+        adx_slope_length=2,
+        atr_pct_min="0.7",
+        atr_pct_max="4.5",
+    )
+    context = _multi_context(tmp_path, params=filtered)
+    source = render_governed_pine_v6(
+        context[6],
+        context[7],
+        script_title="AIQL SOL 4H Filtered",
+    )
+
+    required = (
+        "emaSeparationMinPct = 0.4",
+        "adxSlopeLength = 2",
+        "atrPctMin = 0.7",
+        "atrPctMax = 4.5",
+        "emaSeparationPct = close > 0 ? math.abs(fastEma - slowEma) / close * 100.0 : na",
+        "atrPct = close > 0 ? atrValue / close * 100.0 : na",
+        "adxValue > adxValue[adxSlopeLength]",
+        "regimeOk = antiChopOk and volatilityRegimeOk and adxSlopeOk",
+        "signalsReady and regimeOk",
+    )
+    for token in required:
+        assert token in source
+
+
+def test_default_multi_signal_pine_does_not_emit_inactive_regime_filters(
+    tmp_path: Path,
+) -> None:
+    context = _multi_context(tmp_path, params=parameters())
+    source = render_governed_pine_v6(
+        context[6],
+        context[7],
+        script_title="AIQL SOL 4H Defaults",
+    )
+    assert "emaSeparationMinPct" not in source
+    assert "adxSlopeLength" not in source
+    assert "atrPctMin" not in source
+    assert "regimeOk" not in source
+
+
 @pytest.mark.parametrize(
     "mutator",
     (
@@ -176,6 +221,9 @@ def test_multi_signal_render_is_byte_deterministic_and_parameter_sensitive(
         lambda p: replace(p, take_profit_r="-1"),
         lambda p: replace(p, break_even_trigger_r="0"),
         lambda p: replace(p, time_stop_bars=0),
+        lambda p: replace(p, ema_separation_min_pct="-0.1"),
+        lambda p: replace(p, adx_slope_length=-1),
+        lambda p: replace(p, atr_pct_min="5", atr_pct_max="5"),
     ),
 )
 def test_invalid_multi_signal_parameters_fail_closed(

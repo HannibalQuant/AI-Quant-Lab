@@ -1195,6 +1195,38 @@ def test_multi_signal_candidate_derivation_updates_only_declared_parameters(
                         1,
                         5800,
                     ),
+                    OptimizationParameter(
+                        OptimizationParameterName.EMA_SEPARATION_MIN_PCT_X100,
+                        OptimizationParameterType.INTEGER,
+                        40,
+                        40,
+                        1,
+                        40,
+                    ),
+                    OptimizationParameter(
+                        OptimizationParameterName.ADX_SLOPE_LENGTH,
+                        OptimizationParameterType.INTEGER,
+                        2,
+                        2,
+                        1,
+                        2,
+                    ),
+                    OptimizationParameter(
+                        OptimizationParameterName.ATR_PCT_MIN_X100,
+                        OptimizationParameterType.INTEGER,
+                        70,
+                        70,
+                        1,
+                        70,
+                    ),
+                    OptimizationParameter(
+                        OptimizationParameterName.ATR_PCT_MAX_X100,
+                        OptimizationParameterType.INTEGER,
+                        450,
+                        450,
+                        1,
+                        450,
+                    ),
                 ),
                 key=lambda item: item.name.value,
             )
@@ -1220,6 +1252,10 @@ def test_multi_signal_candidate_derivation_updates_only_declared_parameters(
     assert candidate.multi_signal.fast_ema == 12
     assert candidate.multi_signal.atr_stop_mult == "2.5"
     assert candidate.multi_signal.rsi_long_min == "58"
+    assert candidate.multi_signal.ema_separation_min_pct == "0.4"
+    assert candidate.multi_signal.adx_slope_length == 2
+    assert candidate.multi_signal.atr_pct_min == "0.7"
+    assert candidate.multi_signal.atr_pct_max == "4.5"
     restored = replace(
         candidate,
         strategy_id=parent.strategy_id,

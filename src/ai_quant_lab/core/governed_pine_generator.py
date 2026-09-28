@@ -334,6 +334,37 @@ def render_governed_pine_v6(
     if parameters is None:  # pragma: no cover - guarded by _validate_strategy
         raise GovernedPineGeneratorUnsupported("multi-signal strategy parameters are missing")
 
+    filters_active = (
+        parameters.ema_separation_min_pct != "0"
+        or parameters.adx_slope_length != 0
+        or parameters.atr_pct_min != "0"
+        or parameters.atr_pct_max != "100"
+    )
+    filter_parameter_lines = (
+        (
+            f"emaSeparationMinPct = {parameters.ema_separation_min_pct}",
+            f"adxSlopeLength = {parameters.adx_slope_length}",
+            f"atrPctMin = {parameters.atr_pct_min}",
+            f"atrPctMax = {parameters.atr_pct_max}",
+        )
+        if filters_active
+        else ()
+    )
+    filter_indicator_lines = (
+        (
+            "emaSeparationPct = close > 0 ? math.abs(fastEma - slowEma) / close * 100.0 : na",
+            "atrPct = close > 0 ? atrValue / close * 100.0 : na",
+            "antiChopOk = not na(emaSeparationPct) and emaSeparationPct >= emaSeparationMinPct",
+            "volatilityRegimeOk = not na(atrPct) and atrPct >= atrPctMin and atrPct <= atrPctMax",
+            "adxSlopeOk = adxSlopeLength == 0 or "
+            "(not na(adxValue[adxSlopeLength]) and adxValue > adxValue[adxSlopeLength])",
+            "regimeOk = antiChopOk and volatilityRegimeOk and adxSlopeOk",
+        )
+        if filters_active
+        else ()
+    )
+    regime_clause = " and regimeOk" if filters_active else ""
+
     lines = (
         "//@version=6",
         "// AI Quant Lab governed Pine generator v2",
@@ -373,6 +404,7 @@ def render_governed_pine_v6(
         f"takeProfitR = {parameters.take_profit_r}",
         f"breakEvenTriggerR = {parameters.break_even_trigger_r}",
         f"timeStopBars = {parameters.time_stop_bars}",
+        *filter_parameter_lines,
         "",
         "fastEma = ta.ema(close, fastEmaLength)",
         "mediumEma = ta.ema(close, mediumEmaLength)",
@@ -382,16 +414,17 @@ def render_governed_pine_v6(
         "ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)",
         "[plusDI, minusDI, adxValue] = ta.dmi(adxLength, adxLength)",
         "atrValue = ta.atr(atrLength)",
+        *filter_indicator_lines,
         "",
         "confirmedBar = barstate.isconfirmed",
         "signalsReady = not na(fastEma) and not na(mediumEma) and not na(slowEma) "
         "and not na(rsiValue) and not na(macdLine) and not na(macdSignalLine) "
         "and not na(adxValue) and not na(atrValue)",
-        "longSignal = confirmedBar and signalsReady and fastEma > mediumEma "
+        f"longSignal = confirmedBar and signalsReady{regime_clause} and fastEma > mediumEma "
         "and mediumEma > slowEma and close > slowEma and rsiValue >= rsiLongMin "
         "and macdLine > macdSignalLine "
         "and adxValue >= adxThreshold and plusDI > minusDI",
-        "shortSignal = confirmedBar and signalsReady and fastEma < mediumEma "
+        f"shortSignal = confirmedBar and signalsReady{regime_clause} and fastEma < mediumEma "
         "and mediumEma < slowEma and close < slowEma and rsiValue <= rsiShortMax "
         "and macdLine < macdSignalLine "
         "and adxValue >= adxThreshold and minusDI > plusDI",

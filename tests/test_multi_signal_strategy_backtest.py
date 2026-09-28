@@ -82,6 +82,10 @@ def parameters(
     take_profit_r: str = "100",
     break_even_trigger_r: str = "100",
     time_stop_bars: int = 100,
+    ema_separation_min_pct: str = "0",
+    adx_slope_length: int = 0,
+    atr_pct_min: str = "0",
+    atr_pct_max: str = "100",
 ) -> MultiSignalTrendParameters:
     return MultiSignalTrendParameters(
         2,
@@ -100,6 +104,10 @@ def parameters(
         take_profit_r,
         break_even_trigger_r,
         time_stop_bars,
+        ema_separation_min_pct,
+        adx_slope_length,
+        atr_pct_min,
+        atr_pct_max,
     )
 
 
@@ -340,6 +348,62 @@ def test_indicator_state_is_deterministic_and_emits_both_directions(tmp_path: Pa
     assert SimulatedPositionState.LONG in directions
     assert SimulatedPositionState.SHORT in directions
     assert all(point.atr is None or point.atr >= 0 for point in points_a)
+
+
+def test_regime_filters_gate_signal_deterministically(tmp_path: Path) -> None:
+    context = _multi_context(tmp_path)
+    bar = replace(
+        context[3].normalized_bars[-1],
+        open=DecimalValue("108"),
+        high=DecimalValue("111"),
+        low=DecimalValue("99"),
+        close=DecimalValue("110"),
+    )
+    point = MultiSignalIndicatorPoint(
+        Decimal("110"),
+        Decimal("105"),
+        Decimal("100"),
+        Decimal("65"),
+        Decimal("2"),
+        Decimal("1"),
+        Decimal("30"),
+        Decimal("10"),
+        Decimal("25"),
+        Decimal("2"),
+    )
+    filtered = replace(
+        parameters(),
+        ema_separation_min_pct="5",
+        adx_slope_length=2,
+        atr_pct_min="1",
+        atr_pct_max="3",
+    )
+
+    assert (
+        multi_signal_direction(bar, point, filtered, Decimal("20")) is SimulatedPositionState.LONG
+    )
+    assert (
+        multi_signal_direction(
+            bar,
+            point,
+            replace(filtered, ema_separation_min_pct="10"),
+            Decimal("20"),
+        )
+        is SimulatedPositionState.FLAT
+    )
+    assert (
+        multi_signal_direction(
+            bar,
+            point,
+            replace(filtered, atr_pct_min="2"),
+            Decimal("20"),
+        )
+        is SimulatedPositionState.FLAT
+    )
+    assert (
+        multi_signal_direction(bar, point, filtered, Decimal("26")) is SimulatedPositionState.FLAT
+    )
+    assert multi_signal_direction(bar, point, filtered, None) is SimulatedPositionState.FLAT
 
 
 def test_governed_backtest_executes_completed_long_and_short_cycles(tmp_path: Path) -> None:
