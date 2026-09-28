@@ -1264,6 +1264,20 @@ def _payload(record: GovernedRecord) -> dict[str, Any]:
                 "break_even_trigger_r": record.multi_signal.break_even_trigger_r,
                 "time_stop_bars": record.multi_signal.time_stop_bars,
             }
+            if (
+                record.multi_signal.ema_separation_min_pct != "0"
+                or record.multi_signal.adx_slope_length != 0
+                or record.multi_signal.atr_pct_min != "0"
+                or record.multi_signal.atr_pct_max != "100"
+            ):
+                strategy_payload["multi_signal"].update(
+                    {
+                        "ema_separation_min_pct": record.multi_signal.ema_separation_min_pct,
+                        "adx_slope_length": record.multi_signal.adx_slope_length,
+                        "atr_pct_min": record.multi_signal.atr_pct_min,
+                        "atr_pct_max": record.multi_signal.atr_pct_max,
+                    }
+                )
         return strategy_payload
     if isinstance(record, BacktestResultArtifact):
         return {
@@ -3076,26 +3090,41 @@ def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
     item = _strict_object(payload, fields, "StrategyDefinition.payload")
     multi_signal = None
     if has_multi_signal:
+        base_multi_signal_fields = {
+            "fast_ema",
+            "medium_ema",
+            "slow_ema",
+            "rsi_length",
+            "rsi_long_min",
+            "rsi_short_max",
+            "macd_fast",
+            "macd_slow",
+            "macd_signal",
+            "adx_length",
+            "adx_threshold",
+            "atr_length",
+            "atr_stop_mult",
+            "take_profit_r",
+            "break_even_trigger_r",
+            "time_stop_bars",
+        }
+        filter_fields = {
+            "ema_separation_min_pct",
+            "adx_slope_length",
+            "atr_pct_min",
+            "atr_pct_max",
+        }
+        raw_payload = item["multi_signal"]
+        if not isinstance(raw_payload, dict):
+            raise InvalidSerialization("StrategyDefinition.payload.multi_signal must be an object")
+        present_filter_fields = filter_fields & set(raw_payload)
+        if present_filter_fields and present_filter_fields != filter_fields:
+            raise InvalidSerialization(
+                "StrategyDefinition.payload.multi_signal filter fields must be complete"
+            )
         raw = _strict_object(
-            item["multi_signal"],
-            {
-                "fast_ema",
-                "medium_ema",
-                "slow_ema",
-                "rsi_length",
-                "rsi_long_min",
-                "rsi_short_max",
-                "macd_fast",
-                "macd_slow",
-                "macd_signal",
-                "adx_length",
-                "adx_threshold",
-                "atr_length",
-                "atr_stop_mult",
-                "take_profit_r",
-                "break_even_trigger_r",
-                "time_stop_bars",
-            },
+            raw_payload,
+            base_multi_signal_fields | (filter_fields if present_filter_fields else set()),
             "StrategyDefinition.payload.multi_signal",
         )
         multi_signal = MultiSignalTrendParameters(
@@ -3115,6 +3144,26 @@ def _decode_strategy_definition(payload: Any) -> StrategyDefinition:
             _text(raw["take_profit_r"], "multi_signal.take_profit_r"),
             _text(raw["break_even_trigger_r"], "multi_signal.break_even_trigger_r"),
             _integer(raw["time_stop_bars"], "multi_signal.time_stop_bars"),
+            (
+                _text(raw["ema_separation_min_pct"], "multi_signal.ema_separation_min_pct")
+                if present_filter_fields
+                else "0"
+            ),
+            (
+                _integer(raw["adx_slope_length"], "multi_signal.adx_slope_length")
+                if present_filter_fields
+                else 0
+            ),
+            (
+                _text(raw["atr_pct_min"], "multi_signal.atr_pct_min")
+                if present_filter_fields
+                else "0"
+            ),
+            (
+                _text(raw["atr_pct_max"], "multi_signal.atr_pct_max")
+                if present_filter_fields
+                else "100"
+            ),
         )
     return StrategyDefinition(
         cast(ArtifactId, _typed_id(item["strategy_id"], ArtifactId, "strategy_id")),
