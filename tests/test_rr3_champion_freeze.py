@@ -6,9 +6,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PINE = _ROOT / "docs/research/artifacts/AIQL_RR3_SOLUSDT_4H_CANDIDATE_2_FINAL.pine"
-_HANDOFF = (
-    _ROOT / "docs/research/RESEARCH_RUN_3_CANDIDATE_2_CHAMPION_FREEZE_HANDOFF_v1.md"
-)
+_HANDOFF = _ROOT / "docs/research/RESEARCH_RUN_3_CANDIDATE_2_CHAMPION_FREEZE_HANDOFF_v1.md"
 _EXPECTED_PINE_SHA256 = "4c3857331eba9c1c7cf141c91c63595ae9d7fa0ac3e719cc1abf9a5891e6aaf3"
 
 
