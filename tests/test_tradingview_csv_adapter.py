@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 
 from ai_quant_lab.core.csv_import import MAX_CONTROLLED_HISTORICAL_ROWS
-
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     TimeframeId,
