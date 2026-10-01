@@ -405,9 +405,11 @@ def onboard_real_csv(
     )
     if report.status is not CsvImportStatus.SUCCESS or report.incomplete_bars:
         quality_findings.append("pipeline_not_fully_accepted")
-    if any(finding.missing_intervals > 0 for finding in report.gap_findings):
+    if report.gap_findings:
         quality_findings.append("missing_intervals_recorded")
-        if request.declaration.missing_data_policy is MissingDataPolicy.REJECT_GAPS:
+        if request.declaration.missing_data_policy is MissingDataPolicy.REJECT_GAPS and any(
+            finding.missing_intervals > 0 for finding in report.gap_findings
+        ):
             quality_findings.append("missing_intervals_rejected_by_policy")
     admitted = not quality_findings or quality_findings == ["missing_intervals_recorded"]
     admission = _admission(

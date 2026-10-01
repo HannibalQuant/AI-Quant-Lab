@@ -994,4 +994,4 @@ def test_contiguous_bars_are_admitted_with_reject_gaps(tmp_path: Path) -> None:
     assert result.report is not None
     assert result.report.gap_findings
     assert all(finding.missing_intervals == 0 for finding in result.report.gap_findings)
-    assert "missing_intervals_recorded" not in result.admission.findings
+    assert "missing_intervals_rejected_by_policy" not in result.admission.findings
