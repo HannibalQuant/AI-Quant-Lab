@@ -984,3 +984,14 @@ def test_sprint_8_golden_evidence(tmp_path: Path) -> None:
         "source_identity": str(report.ingestion.manifest.source_refs[0].object_id),
         "timeframe_identity": str(report.normalized_manifest.timeframe_refs[0].object_id),
     }
+
+
+def test_contiguous_bars_are_admitted_with_reject_gaps(tmp_path: Path) -> None:
+    _, _, result = run(
+        tmp_path, suffix="contiguous-reject-gaps", missing=MissingDataPolicy.REJECT_GAPS
+    )
+    assert result.admission.status is CsvAdmissionStatus.ADMITTED
+    assert result.report is not None
+    assert result.report.gap_findings
+    assert all(finding.missing_intervals == 0 for finding in result.report.gap_findings)
+    assert "missing_intervals_recorded" not in result.admission.findings
