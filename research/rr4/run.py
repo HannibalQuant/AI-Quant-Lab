@@ -380,7 +380,7 @@ def main():
         )
     for filename, values in [("trades.csv", trade_rows), ("equity.csv", curves)]:
         with (out / filename).open("w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(values[0]))
+            writer = csv.DictWriter(f, fieldnames=list(values[0]), lineterminator="\n")
             writer.writeheader()
             writer.writerows(values)
     evidence = dict(
