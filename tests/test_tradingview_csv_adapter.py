@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from ai_quant_lab.core.csv_import import MAX_CONTROLLED_HISTORICAL_ROWS
 from ai_quant_lab.core.market_data import (
     AlignmentKind,
     TimeframeId,
@@ -274,4 +275,64 @@ def test_source_boundary_and_overwrite_are_fail_closed(tmp_path: Path) -> None:
             allowed_root=root,
             timeframe=timeframe_4h(),
             policy=policy(),
+        )
+
+
+def _bounded_source_rows(count: int) -> str:
+    start = 1_704_067_200
+    rows = ["time,open,high,low,close"]
+    for index in range(count):
+        stamp = start + index * 3_600
+        rows.append(f"{stamp},1,2,0.5,1.5")
+    return "\n".join(rows) + "\n"
+
+
+def test_controlled_historical_budget_supports_1h_research_and_remains_fail_closed(
+    tmp_path: Path,
+) -> None:
+    assert MAX_CONTROLLED_HISTORICAL_ROWS == 50_000
+    accepted = tmp_path / "accepted_50k.csv"
+    accepted.write_text(_bounded_source_rows(MAX_CONTROLLED_HISTORICAL_ROWS), encoding="utf-8")
+    result = normalize_tradingview_csv(
+        accepted,
+        allowed_root=tmp_path,
+        timeframe=TimeframeIdentity(
+            TimeframeId("1h"),
+            V1,
+            TimeframeUnit.HOUR,
+            1,
+            AlignmentKind.UTC_EPOCH_FIXED,
+            V1,
+        ),
+        policy=TradingViewCsvAdapterPolicy(
+            time_column="time",
+            derive_finality_from_historical_export=True,
+            availability_at_bar_close=True,
+        ),
+    )
+    assert result.source_row_count == MAX_CONTROLLED_HISTORICAL_ROWS
+    assert result.canonical_row_count == MAX_CONTROLLED_HISTORICAL_ROWS
+
+    rejected = tmp_path / "rejected_50k_plus_1.csv"
+    rejected.write_text(
+        _bounded_source_rows(MAX_CONTROLLED_HISTORICAL_ROWS + 1),
+        encoding="utf-8",
+    )
+    with pytest.raises(TradingViewCsvAdapterError, match="row bound"):
+        normalize_tradingview_csv(
+            rejected,
+            allowed_root=tmp_path,
+            timeframe=TimeframeIdentity(
+                TimeframeId("1h"),
+                V1,
+                TimeframeUnit.HOUR,
+                1,
+                AlignmentKind.UTC_EPOCH_FIXED,
+                V1,
+            ),
+            policy=TradingViewCsvAdapterPolicy(
+                time_column="time",
+                derive_finality_from_historical_export=True,
+                availability_at_bar_close=True,
+            ),
         )
