@@ -62,7 +62,7 @@ def short_allowed(bars, index, threshold):
     return D(bars[index].close.text) * 100 <= D(bars[index - 18].close.text) * (100 - threshold)
 
 
-def runtime(threshold, *, unmodified=False):
+def runtime(threshold, *, disable_short=False, unmodified=False):
     source = inspect.getsource(rt.simulate_multi_signal_backtest)
     anchor = (
         "            if position is SimulatedPositionState.FLAT:\n                if direction in ("
@@ -71,12 +71,12 @@ def runtime(threshold, *, unmodified=False):
     guard = """            if position is SimulatedPositionState.FLAT:
                 if (
                     direction is SimulatedPositionState.SHORT
-                    and not short_allowed(bars, index, threshold)
+                    and (disable_short or not short_allowed(bars, index, threshold))
                 ):
                     continue
                 if direction in ("""
     namespace = dict(vars(rt))
-    namespace.update(threshold=threshold, short_allowed=short_allowed)
+    namespace.update(threshold=threshold, disable_short=disable_short, short_allowed=short_allowed)
     namespace["_bar_ref"] = lambda bar: bar.ref
     names = [field.name for field in fields(BacktestResultArtifact)]
     namespace["BacktestResultArtifact"] = lambda *args: SimpleNamespace(
@@ -186,9 +186,17 @@ def main():
     )
     summaries, trade_rows, curves = [], [], []
     results = {}
-    for candidate, threshold in [("C0", None), ("C1", D(4)), ("C2", D(8)), ("C3", D(12))]:
+    # L0 is a post-hoc ablation requested after the original RR4 filter comparison.
+    candidates = [
+        ("C0", None, False),
+        ("C1", D(4), False),
+        ("C2", D(8), False),
+        ("C3", D(12), False),
+        ("L0", None, True),
+    ]
+    for candidate, threshold, disable_short in candidates:
         for commission in (10, 20, 30, 40):
-            fn, _ = runtime(threshold)
+            fn, _ = runtime(threshold, disable_short=disable_short)
             name = f"{candidate.lower()}-cost-{commission}"
             spec = SimpleNamespace(
                 capital_notional_minor=100000,
@@ -209,7 +217,9 @@ def main():
                 eligibility_ref=None,
                 engine_contract_ref=None,
             )
-            config = digest(f"{candidate}:{threshold}:{commission}:{EXPECTED_CANONICAL}")
+            config = digest(
+                f"{candidate}:{threshold}:{disable_short}:{commission}:{EXPECTED_CANONICAL}"
+            )
             result = fn(
                 base,
                 SimpleNamespace(configuration_fingerprint=config),
@@ -331,6 +341,16 @@ def main():
                 assert abs((compounded - 1) * 100 - D("9.7851")) < D("0.0001")
             summaries.append(summary)
             results[(candidate, commission)] = local
+            if candidate == "L0":
+                control_longs = [t for t in results[("C0", commission)] if t["side"] == "LONG"]
+
+                def ledger(trades):
+                    return [(t["side"], t["entry"], t["exit"], t["net_usdt"]) for t in trades]
+
+                assert ledger(local) == ledger(control_longs), (
+                    "LONG-only ablation changed the LONG ledger"
+                )
+                assert result.open_position is not rt.SimulatedPositionState.SHORT
             print(json.dumps(summary), flush=True)
             if commission == 10:
                 curves.extend(

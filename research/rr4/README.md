@@ -12,6 +12,12 @@ draft's absolute development gates. C2 ranks first among those two challengers
 by worst rolling-window return; this is not proof of improvement over C0.
 C3 fails the minimum 120 completed-trade gate (114 trades).
 
+A subsequent operator-requested LONG-only ablation (L0) does not justify
+removing SHORT from Candidate #2. It lowers full-period return, while reducing
+drawdown and improving the weakest rolling window. The original SHORT leg is
+net profitable after the declared costs. L0 is a new, post-hoc hypothesis,
+not a promoted replacement for the frozen LONG+SHORT candidate.
+
 This is an **exploratory prototype replay**, not a completed governed RR4
 authorization/validation chain. The new SHORT predicate is not encoded by the
 current StrategyDefinition contract. The runner therefore issues no governed
@@ -57,6 +63,36 @@ Indicators start from the first development bar, exactly as in C0.
 | C2 8% | 18.5573% | 2.9723% | 140 | 54 | 17.2703 | 4/4 | 0.1726% |
 | C3 12% | 18.1570% | 3.4233% | 114 | 28 | 13.2679 | 3/4 | -0.6083% |
 
+## Subsequent LONG-only ablation (L0)
+
+After inspecting C0–C3, the operator asked whether SHORT should be removed.
+L0 answers only that narrower question on the **same development data**. It
+disables the flat-to-SHORT entry in the isolated replay; the original signals,
+LONG entries/exits, risk rules, costs, sizing, bars, and rolling boundaries
+are unchanged. At each of the four commission levels, the full LONG trade
+ledger (side, entry time, exit time, net PnL) is byte-for-byte equal to C0's
+LONG ledger. All 20 full-period replays now pass the accounting verifier.
+
+| Variant, 10 bps | Return | Max DD | Trades | LONG net | SHORT net | Positive windows | Worst window | Rolling compound |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| C0 LONG+SHORT | 24.8645% | 2.5494% | 167 | +168.3024 USDT | +80.3430 USDT | 4/4 | 0.4172% | 9.7851% |
+| L0 LONG-only | 16.8302% | 2.0008% | 86 | +168.3024 USDT | 0 | 4/4 | 0.6551% | 12.3178% |
+
+At 40 bps commission, C0 returns 14.8178%, max DD 3.4605%, 2/4 positive
+rolling windows, worst -0.6063%; L0 returns 11.6145%, max DD 2.1883%,
+4/4 positive windows, worst +0.0075%. Thus L0 offers a smoother historical
+path, including under the cost stress, while C0 retains higher absolute return
+at all tested costs. The two variants do not have equal market exposure;
+L0's 81 fewer trades contribute to both its lower profit and lower drawdown.
+The 120-trade draft gate for RR4 full strategies would reject L0 (86), but
+that gate was not designed as a verdict on a simpler, separately scoped
+LONG-only strategy. No claim of fresh validation follows from this comparison.
+
+Decision: preserve the frozen C0 LONG+SHORT candidate. If simplicity and
+drawdown matter more than absolute return, L0 merits a separately registered
+LONG-only mandate with its own selection criteria and genuinely untouched
+validation data. Do not tune it or retroactively promote it using this RR4 run.
+
 At 40 bps commission, total returns are respectively 14.8178%, 13.3229%,
 10.1100%, 11.2670%. C2 and C3 SHORT contributions become negative
 (-15.0456 and -3.4756 USDT); C0 SHORT remains +32.0324 USDT.
@@ -93,7 +129,7 @@ a development advantage over the parent.
 
 ## Verification and limits
 
-All 16 full-period replays passed the existing independent accounting verifier.
+All 20 full-period replays passed the existing independent accounting verifier.
 The five gate tests check exact threshold boundaries, insufficient lookback,
 disabled control, and absence of reads beyond the completed signal bar.
 The runtime file hash is pinned; source is copied into an isolated namespace

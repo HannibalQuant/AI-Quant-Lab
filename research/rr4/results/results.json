@@ -1043,6 +1043,266 @@
         }
       ],
       "open_position": "FLAT"
+    },
+    {
+      "candidate": "L0",
+      "threshold_pct": null,
+      "commission_bps": 10,
+      "return_pct": 16.83023667791057,
+      "max_dd_pct": 2.0007679593906946,
+      "trades": 86,
+      "long_trades": 86,
+      "short_trades": 0,
+      "long_net": 168.30236677910568,
+      "short_net": 0.0,
+      "worst_trade": -8.88377676660996,
+      "positive_windows": 4,
+      "worst_window_pct": 0.6551106858660735,
+      "aggregate_window_pct": 12.317775969726108,
+      "windows_pct": [
+        7.500120148884101,
+        0.6551106858660735,
+        2.165365714587353,
+        1.601476891019224
+      ],
+      "window_details": [
+        {
+          "start": "2023-07-04T12:00:00+00:00",
+          "end_exclusive": "2024-01-03T00:00:00+00:00",
+          "trades": 22,
+          "long_trades": 22,
+          "short_trades": 0,
+          "long_net": 77.85667466423244,
+          "short_net": 0.0,
+          "max_dd_pct": 1.148253548391916
+        },
+        {
+          "start": "2024-01-03T00:00:00+00:00",
+          "end_exclusive": "2024-07-03T12:00:00+00:00",
+          "trades": 12,
+          "long_trades": 12,
+          "short_trades": 0,
+          "long_net": 7.310570390490424,
+          "short_net": 0.0,
+          "max_dd_pct": 1.352678881848181
+        },
+        {
+          "start": "2024-07-03T12:00:00+00:00",
+          "end_exclusive": "2025-01-02T00:00:00+00:00",
+          "trades": 13,
+          "long_trades": 13,
+          "short_trades": 0,
+          "long_net": 24.322245425208553,
+          "short_net": 0.0,
+          "max_dd_pct": 0.9298430685329947
+        },
+        {
+          "start": "2025-01-02T00:00:00+00:00",
+          "end_exclusive": "2025-07-03T12:00:00+00:00",
+          "trades": 6,
+          "long_trades": 6,
+          "short_trades": 0,
+          "long_net": 18.377937937805743,
+          "short_net": 0.0,
+          "max_dd_pct": 1.3228062399346112
+        }
+      ],
+      "open_position": "FLAT"
+    },
+    {
+      "candidate": "L0",
+      "threshold_pct": null,
+      "commission_bps": 20,
+      "return_pct": 15.091667872427175,
+      "max_dd_pct": 2.062886965319108,
+      "trades": 86,
+      "long_trades": 86,
+      "short_trades": 0,
+      "long_net": 150.91667872427175,
+      "short_net": 0.0,
+      "worst_trade": -9.075084297374115,
+      "positive_windows": 4,
+      "worst_window_pct": 0.4424728167267746,
+      "aggregate_window_pct": 11.32521501526804,
+      "windows_pct": [
+        7.094582793001455,
+        0.4424728167267746,
+        1.9501291053800913,
+        1.5128131088732009
+      ],
+      "window_details": [
+        {
+          "start": "2023-07-04T12:00:00+00:00",
+          "end_exclusive": "2024-01-03T00:00:00+00:00",
+          "trades": 22,
+          "long_trades": 22,
+          "short_trades": 0,
+          "long_net": 73.37433565055454,
+          "short_net": 0.0,
+          "max_dd_pct": 1.173926515020935
+        },
+        {
+          "start": "2024-01-03T00:00:00+00:00",
+          "end_exclusive": "2024-07-03T12:00:00+00:00",
+          "trades": 12,
+          "long_trades": 12,
+          "short_trades": 0,
+          "long_net": 4.900850099809253,
+          "short_net": 0.0,
+          "max_dd_pct": 1.3991796668244427
+        },
+        {
+          "start": "2024-07-03T12:00:00+00:00",
+          "end_exclusive": "2025-01-02T00:00:00+00:00",
+          "trades": 13,
+          "long_trades": 13,
+          "short_trades": 0,
+          "long_net": 21.695296230588724,
+          "short_net": 0.0,
+          "max_dd_pct": 0.9755003243468819
+        },
+        {
+          "start": "2025-01-02T00:00:00+00:00",
+          "end_exclusive": "2025-07-03T12:00:00+00:00",
+          "trades": 6,
+          "long_trades": 6,
+          "short_trades": 0,
+          "long_net": 17.158340402332463,
+          "short_net": 0.0,
+          "max_dd_pct": 1.3556454226238037
+        }
+      ],
+      "open_position": "FLAT"
+    },
+    {
+      "candidate": "L0",
+      "threshold_pct": null,
+      "commission_bps": 30,
+      "return_pct": 13.353099066943782,
+      "max_dd_pct": 2.1254034467615415,
+      "trades": 86,
+      "long_trades": 86,
+      "short_trades": 0,
+      "long_net": 133.5309906694378,
+      "short_net": 0.0,
+      "worst_trade": -9.26639182813827,
+      "positive_windows": 4,
+      "worst_window_pct": 0.22661456584128678,
+      "aggregate_window_pct": 10.325252320656473,
+      "windows_pct": [
+        6.686021257981701,
+        0.22661456584128678,
+        1.7306986252395653,
+        1.4220355014974204
+      ],
+      "window_details": [
+        {
+          "start": "2023-07-04T12:00:00+00:00",
+          "end_exclusive": "2024-01-03T00:00:00+00:00",
+          "trades": 22,
+          "long_trades": 22,
+          "short_trades": 0,
+          "long_net": 68.89199663687663,
+          "short_net": 0.0,
+          "max_dd_pct": 1.1999321253755344
+        },
+        {
+          "start": "2024-01-03T00:00:00+00:00",
+          "end_exclusive": "2024-07-03T12:00:00+00:00",
+          "trades": 12,
+          "long_trades": 12,
+          "short_trades": 0,
+          "long_net": 2.491129809128081,
+          "short_net": 0.0,
+          "max_dd_pct": 1.4464564565622224
+        },
+        {
+          "start": "2024-07-03T12:00:00+00:00",
+          "end_exclusive": "2025-01-02T00:00:00+00:00",
+          "trades": 13,
+          "long_trades": 13,
+          "short_trades": 0,
+          "long_net": 19.068347035968895,
+          "short_net": 0.0,
+          "max_dd_pct": 1.022197351957084
+        },
+        {
+          "start": "2025-01-02T00:00:00+00:00",
+          "end_exclusive": "2025-07-03T12:00:00+00:00",
+          "trades": 6,
+          "long_trades": 6,
+          "short_trades": 0,
+          "long_net": 15.938742866859185,
+          "short_net": 0.0,
+          "max_dd_pct": 1.3892659270291428
+        }
+      ],
+      "open_position": "FLAT"
+    },
+    {
+      "candidate": "L0",
+      "threshold_pct": null,
+      "commission_bps": 40,
+      "return_pct": 11.614530261460388,
+      "max_dd_pct": 2.1883212309006495,
+      "trades": 86,
+      "long_trades": 86,
+      "short_trades": 0,
+      "long_net": 116.14530261460388,
+      "short_net": 0.0,
+      "worst_trade": -9.457699358902422,
+      "positive_windows": 4,
+      "worst_window_pct": 0.007462216396656475,
+      "aggregate_window_pct": 9.317804781479323,
+      "windows_pct": [
+        6.274401589291983,
+        0.007462216396656475,
+        1.5069504922830104,
+        1.3290675636396254
+      ],
+      "window_details": [
+        {
+          "start": "2023-07-04T12:00:00+00:00",
+          "end_exclusive": "2024-01-03T00:00:00+00:00",
+          "trades": 22,
+          "long_trades": 22,
+          "short_trades": 0,
+          "long_net": 64.40965762319871,
+          "short_net": 0.0,
+          "max_dd_pct": 1.2890688749664185
+        },
+        {
+          "start": "2024-01-03T00:00:00+00:00",
+          "end_exclusive": "2024-07-03T12:00:00+00:00",
+          "trades": 12,
+          "long_trades": 12,
+          "short_trades": 0,
+          "long_net": 0.08140951844690911,
+          "short_net": 0.0,
+          "max_dd_pct": 1.4945288394496856
+        },
+        {
+          "start": "2024-07-03T12:00:00+00:00",
+          "end_exclusive": "2025-01-02T00:00:00+00:00",
+          "trades": 13,
+          "long_trades": 13,
+          "short_trades": 0,
+          "long_net": 16.441397841349065,
+          "short_net": 0.0,
+          "max_dd_pct": 1.0699700792009041
+        },
+        {
+          "start": "2025-01-02T00:00:00+00:00",
+          "end_exclusive": "2025-07-03T12:00:00+00:00",
+          "trades": 6,
+          "long_trades": 6,
+          "short_trades": 0,
+          "long_net": 14.719145331385905,
+          "short_net": 0.0,
+          "max_dd_pct": 1.4236959730936178
+        }
+      ],
+      "open_position": "FLAT"
     }
   ],
   "comparisons": [
