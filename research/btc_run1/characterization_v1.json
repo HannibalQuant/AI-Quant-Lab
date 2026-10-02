@@ -1,0 +1,218 @@
+{
+  "T1_regime_filter_eligible_bars": 3217,
+  "bars": 8760,
+  "baseline": "1aefdcb11bcb077a17d4fd7ca6e6afe288630f57",
+  "child_normalized_lock": {
+    "fingerprint": "sha256:0eb85defa88057a6b41f8f578d56475300b3f9c01e9a7463407a315c6abe94e6",
+    "id": "dataset-lock:btc-run1-development-normalized-lock-v1",
+    "version": 1
+  },
+  "child_normalized_manifest": {
+    "fingerprint": "sha256:5a6ddb9b956414f55095256de6da8d145dbfedcf26b9091cbfdfb800eb14210a",
+    "id": "dataset:btc-run1-development-normalized-v1",
+    "version": 1
+  },
+  "child_raw_lock": {
+    "fingerprint": "sha256:12eb55a36e09554f720f5e60bd8feac3ebdecd4c6c3cc047c4b446881f7d852a",
+    "id": "dataset-lock:btc-run1-development-raw-lock-v1",
+    "version": 1
+  },
+  "child_raw_manifest": {
+    "fingerprint": "sha256:b268b9028ff73ddd41e654ae84ceba4e724c1864f1172f1740030dbb9b2151bd",
+    "id": "dataset:btc-run1-development-raw-v1",
+    "version": 1
+  },
+  "definitions": {
+    "T1_filter": "regime predicate only, not trade signal/fill/PnL; all three filters jointly",
+    "annualization": "sample hourly standard deviation * sqrt(8760); descriptive, not predictive",
+    "indicators": "production Decimal indicators; only development; first 1000 bars excluded for regime statistics",
+    "monthly_return": "last close / first open - 1",
+    "persistence": "consecutive identical EMA-order label; final run right-censored",
+    "returns": "log(close_t/close_t-1); first return excluded; monthly boundary return assigned to later month within development",
+    "semivolatility": "sqrt(mean(min/max(log return,0)^2)*8760)"
+  },
+  "design_sha256": "3b401c4a62ad9d12e7b626eeed77a95b8eeac8db1098d2f2682065f505ed34ee",
+  "first_open": "2025-04-01T00:00:00+00:00",
+  "indicator_observations": 7760,
+  "indicator_warmup_bars": 1000,
+  "last_close": "2026-04-01T00:00:00+00:00",
+  "limitations": [
+    "No volume or funding data; no strategy profitability inference.",
+    "Indicator statistics exclude first 1000 development bars.",
+    "Price changes describe the supplied snapshot; no cross-market generalization.",
+    "Partition builder reads full parent bytes for integrity and selects by timestamp; analysis loads only development bars.",
+    "Child partition inherits parent admission/eligibility evidence; no new standalone admission/eligibility authorization is asserted."
+  ],
+  "lineage": "VERIFIED",
+  "monthly": [
+    {
+      "adx_ge20_share_pct": null,
+      "bars": 720,
+      "indicator_observations": 0,
+      "median_atr_pct": null,
+      "month": "2025-04",
+      "open_to_close_return_pct": 14.068063220605609,
+      "realized_vol_annualized_pct": 52.090118098846546
+    },
+    {
+      "adx_ge20_share_pct": 64.65517241379311,
+      "bars": 744,
+      "indicator_observations": 464,
+      "median_atr_pct": 0.5817458874165995,
+      "month": "2025-05",
+      "open_to_close_return_pct": 11.064743004058396,
+      "realized_vol_annualized_pct": 37.33777921263078
+    },
+    {
+      "adx_ge20_share_pct": 60.97222222222222,
+      "bars": 720,
+      "indicator_observations": 720,
+      "median_atr_pct": 0.4556161302177223,
+      "month": "2025-06",
+      "open_to_close_return_pct": 2.453683155284825,
+      "realized_vol_annualized_pct": 32.32138597361277
+    },
+    {
+      "adx_ge20_share_pct": 64.11290322580645,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.4335562091957292,
+      "month": "2025-07",
+      "open_to_close_return_pct": 8.03046330781032,
+      "realized_vol_annualized_pct": 30.901484352352874
+    },
+    {
+      "adx_ge20_share_pct": 76.88172043010752,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.4839802827823114,
+      "month": "2025-08",
+      "open_to_close_return_pct": -6.480766072925581,
+      "realized_vol_annualized_pct": 32.177608487446875
+    },
+    {
+      "adx_ge20_share_pct": 62.638888888888886,
+      "bars": 720,
+      "indicator_observations": 720,
+      "median_atr_pct": 0.38889319004569634,
+      "month": "2025-09",
+      "open_to_close_return_pct": 5.347926175718487,
+      "realized_vol_annualized_pct": 27.861282479518803
+    },
+    {
+      "adx_ge20_share_pct": 88.30645161290323,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.6140476427496677,
+      "month": "2025-10",
+      "open_to_close_return_pct": -3.8949885609218526,
+      "realized_vol_annualized_pct": 42.92910146107817
+    },
+    {
+      "adx_ge20_share_pct": 70.41666666666667,
+      "bars": 720,
+      "indicator_observations": 720,
+      "median_atr_pct": 0.7693727535408368,
+      "month": "2025-11",
+      "open_to_close_return_pct": -17.550894481407077,
+      "realized_vol_annualized_pct": 50.004351127160554
+    },
+    {
+      "adx_ge20_share_pct": 75.67204301075269,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.6350167456080096,
+      "month": "2025-12",
+      "open_to_close_return_pct": -2.9922326829570745,
+      "realized_vol_annualized_pct": 44.782581699424966
+    },
+    {
+      "adx_ge20_share_pct": 72.98387096774194,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.5409126445915005,
+      "month": "2026-01",
+      "open_to_close_return_pct": -10.186774460081882,
+      "realized_vol_annualized_pct": 37.73170939890331
+    },
+    {
+      "adx_ge20_share_pct": 65.92261904761905,
+      "bars": 672,
+      "indicator_observations": 672,
+      "median_atr_pct": 0.9518604994299826,
+      "month": "2026-02",
+      "open_to_close_return_pct": -14.951148881233777,
+      "realized_vol_annualized_pct": 65.11658116367964
+    },
+    {
+      "adx_ge20_share_pct": 63.575268817204304,
+      "bars": 744,
+      "indicator_observations": 744,
+      "median_atr_pct": 0.8125166774408944,
+      "month": "2026-03",
+      "open_to_close_return_pct": 1.9503376561285979,
+      "realized_vol_annualized_pct": 48.746245056918454
+    }
+  ],
+  "oos_bars_loaded_for_analysis": 0,
+  "overall": {
+    "downside_semivol_annualized_pct": 30.994861707866068,
+    "hourly_returns": 8759,
+    "lag1_return_autocorrelation": -0.002290056629894332,
+    "negative_hours": 4388,
+    "open_to_close_return_pct": -17.3054410342546,
+    "positive_hours": 4371,
+    "realized_vol_annualized_pct": 42.89158362902166,
+    "upside_semivol_annualized_pct": 29.64520388358905,
+    "zero_hours": 0
+  },
+  "parent_eligibility": {
+    "fingerprint": "sha256:f3162739d0f71448b00516af80a96ef3b4092e138bb52598a818a95e05258d8d",
+    "id": "artifact:btc-run1-r3-eligibility",
+    "version": 1
+  },
+  "parent_metadata_and_hash_read": true,
+  "parent_normalized_lock": {
+    "fingerprint": "sha256:2e23d6712e0a7d574caacbbe4e65340907d8eab2758f066e3d67fe5a0a8dfdc7",
+    "id": "dataset-lock:btc-run1-r3-normalized-lock",
+    "version": 1
+  },
+  "parent_normalized_manifest": {
+    "fingerprint": "sha256:ecc29cf5797ef8620a6450b36fe90db8bead9942ad98c96914cea448390e34a0",
+    "id": "dataset:btc-run1-r3-normalized-dataset",
+    "version": 1
+  },
+  "parent_subset_membership_verified": true,
+  "partition_sha256": "1ea4bcacd92175c5451199de06241515a66aaff91172f047299453c37cd9f1e6",
+  "regime_counts": {
+    "ADX_GE20:ATR_015_TO3": 5425,
+    "ADX_LT20:ATR_015_TO3": 2335
+  },
+  "report_id": "btc-run1-development-characterization-v1",
+  "scope": "DESCRIPTIVE_DEVELOPMENT_ONLY_NO_STRATEGY_RESULTS",
+  "trend_counts": {
+    "DOWN": 2984,
+    "MIXED": 2254,
+    "UP": 2522
+  },
+  "trend_runs": {
+    "DOWN": {
+      "max_hours": 280,
+      "median_hours": 39.5,
+      "runs": 52
+    },
+    "MIXED": {
+      "max_hours": 76,
+      "median_hours": 18,
+      "runs": 101
+    },
+    "UP": {
+      "max_hours": 186,
+      "median_hours": 29,
+      "runs": 49
+    }
+  },
+  "validation_bars_loaded_for_analysis": 0,
+  "window_end_exclusive": "2026-04-01T00:00:00+00:00",
+  "window_start": "2025-04-01T00:00:00+00:00"
+}
