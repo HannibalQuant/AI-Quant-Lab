@@ -317,7 +317,7 @@ def _require_scope(
         CostSemantics.DECLARED_BPS,
     ):
         raise StrategyBacktestError("trading costs must be explicit")
-    if specification.warmup_bars != 0:
+    if specification.warmup_bars != 0 and not multi_signal_profile:
         raise UnsupportedStrategy(
             "strategy indicators warm deterministically inside the authorized replay window"
         )

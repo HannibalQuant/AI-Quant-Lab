@@ -244,6 +244,12 @@ def _parse_static_source(
     strategy: StrategyDefinition,
     specification: ExperimentSpecification,
 ) -> _StaticDeclaration:
+    if specification.warmup_bars != 0:
+        raise _failure(
+            PineIntakeStatus.UNSUPPORTED,
+            PineIntakeReasonCode.UNSUPPORTED_FEATURE,
+            "Pine intake does not represent explicit warmup",
+        )
     versions = _version_declarations(source)
     if not versions:
         raise _failure(
