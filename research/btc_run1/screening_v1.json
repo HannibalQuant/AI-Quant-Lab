@@ -177,7 +177,9 @@
           "pnl": "-1.586500703417225811221707432",
           "return_pct": "-0.1689006851470545195689989641"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "6.693367521960321230618235563",
+      "drawdown_initial_capital_pct": "6.7018111856314052598626848874466300"
     },
     {
       "profile": "T0",
@@ -289,7 +291,9 @@
           "pnl": "-19.60275141797738360708014920",
           "return_pct": "-2.207093496248160586922234102"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "13.51297585450316702766210521",
+      "drawdown_initial_capital_pct": "13.5279869731076189613759834155671400"
     },
     {
       "profile": "T0",
@@ -401,7 +405,9 @@
           "pnl": "14.27909207702582667257841750",
           "return_pct": "1.459376126540548997684964583"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "2.430058750694053516519937235",
+      "drawdown_initial_capital_pct": "2.4363155961745567155596038933110400"
     },
     {
       "profile": "T1",
@@ -513,7 +519,9 @@
           "pnl": "9.70724624990718647495161265",
           "return_pct": "1.028354628182183992205161116"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "5.765498333795558496945772836",
+      "drawdown_initial_capital_pct": "5.7727714931831229990858803396074300"
     },
     {
       "profile": "T1",
@@ -625,7 +633,9 @@
           "pnl": "-4.15642944702775858455399110",
           "return_pct": "-0.4607927070420061922848495413"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "10.37508516379034758095005509",
+      "drawdown_initial_capital_pct": "10.3866105032567868698081061483600700"
     },
     {
       "profile": "T1",
@@ -737,7 +747,9 @@
           "pnl": "24.89946607490984579893337565",
           "return_pct": "2.542494397929236411912185644"
         }
-      ]
+      ],
+      "peak_relative_drawdown_pct": "2.233017364310060331464381484",
+      "drawdown_initial_capital_pct": "2.2368142366275476958700059732959100"
     }
   ],
   "funding": "UNAVAILABLE_NOT_MODELED",
@@ -782,7 +794,7 @@
     "H3": "FAIL: SHORT net contribution negative under base and stress for both profiles"
   },
   "next_step": "Review development-only loss attribution by side, exit reason and preregistered regime labels; no new runs or parameter changes before a new research mandate.",
-  "method": "Production governed admission, eligibility, authorization, Decimal multi-signal simulation and independent accounting/lineage verification. Six fixed attempts, no optimization. Monthly/quarterly marked equity; completed-side net PnL assigned by entry side. Drawdown is production peak-relative equity drawdown. Zero-cost scenario diagnostic only.",
+  "method": "Production governed admission, eligibility, authorization, Decimal multi-signal simulation and independent accounting/lineage verification. Six fixed attempts, no optimization. Monthly/quarterly marked equity; completed-side net PnL assigned by entry side. Engine drawdown is peak-relative; preregistered gate uses maximum marked-equity peak-to-trough loss divided by initial capital. Both are recorded. Zero-cost scenario diagnostic only.",
   "baseline_ci": "Quality Python 3.12 and 3.13 successful on baseline720fc; no engine changes.",
   "runner_sha256": "412ed9406932353a02caf76135095874d85ade20c3bd6ba6481d645e496b1fd8"
 }

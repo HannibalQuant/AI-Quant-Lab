@@ -23,4 +23,6 @@ Monthly/quarterly equity, exact source/dataset hashes, admission/eligibility ref
 
 Baseline CI passed for Python 3.12 and 3.13. This evidence-only change modifies no production code. No independent AI-agent review was performed.
 
+Drawdown gates use maximum marked-equity loss divided by initial capital, as preregistered; the table reports the engine peak-relative metric. Both exact measures are retained in JSON. All gate outcomes remain FAIL.
+
 Next step: Review development-only loss attribution by side, exit reason and preregistered regime labels; no new runs or parameter changes before a new research mandate.
