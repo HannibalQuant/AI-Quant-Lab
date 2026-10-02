@@ -1,0 +1,800 @@
+{
+  "baseline": "720fc1db39905d22609c77ac46f25716b78f29db",
+  "dataset": {
+    "baseline": "720fc1db39905d22609c77ac46f25716b78f29db",
+    "source_sha256": "43c2b1cbb3734320801c26cada7dc2c97cf1715978156aafffeabfd22419e4dd",
+    "source_bytes": 2764554,
+    "source_rows": 24105,
+    "canonical_sha256": "1ea4bcacd92175c5451199de06241515a66aaff91172f047299453c37cd9f1e6",
+    "canonical_rows": 8760,
+    "first_open": "2025-04-01T00:00:00+00:00",
+    "last_close": "2026-04-01T00:00:00+00:00",
+    "admission": "ADMITTED",
+    "eligibility": "ELIGIBLE",
+    "readiness": "RESEARCH_READY",
+    "findings": [],
+    "lineage": "VERIFIED",
+    "declaration": {
+      "id": "provenance:btc-dev-screen-v1-source-declaration",
+      "version": 1,
+      "fingerprint": "sha256:dd1173e182cbf9e6f637b7a6aedcc43ce76da345569420b874afedcca140c5d7"
+    },
+    "admission_ref": {
+      "id": "artifact:btc-dev-screen-v1-admission",
+      "version": 1,
+      "fingerprint": "sha256:060c92b3b5deafb9215f247e38b41a2caab00d2e7b39c7164ee79592331d9c5a"
+    },
+    "raw_manifest": {
+      "id": "dataset:btc-dev-screen-v1-raw-dataset",
+      "version": 1,
+      "fingerprint": "sha256:a71912871f330a71ff256f8335d4344e35e45d66028bed5360962a82b3c4f421"
+    },
+    "raw_lock": {
+      "id": "dataset-lock:btc-dev-screen-v1-raw-lock",
+      "version": 1,
+      "fingerprint": "sha256:80eedf6ad2bb5a4f1def89795eea191de0181535629d28fba8a1f15e80b353cc"
+    },
+    "normalized_manifest": {
+      "id": "dataset:btc-dev-screen-v1-normalized-dataset",
+      "version": 1,
+      "fingerprint": "sha256:8bd44288a87d80d9d0fa9b1e6d91d8e8cc272690fc493d8f343ee6c4733b838f"
+    },
+    "normalized_lock": {
+      "id": "dataset-lock:btc-dev-screen-v1-normalized-lock",
+      "version": 1,
+      "fingerprint": "sha256:769e6c8fa1bb119d610a6c7b10713d334eb42f2b552152d23c46fe4606fd8ab1"
+    },
+    "eligibility_ref": {
+      "id": "artifact:btc-dev-screen-v1-eligibility",
+      "version": 1,
+      "fingerprint": "sha256:b8bf0992336ca4d567498f7adabecdf92948fea9792090a1d05566919293a82c"
+    },
+    "limitation": "Development-only 8760 complete hourly bars; no volume; declared permission/local-only retention; derived historical finality and close-time availability; funding unavailable.",
+    "optimization_authorized": false,
+    "oos_used_for_strategy": false,
+    "parent_lineage": [
+      {
+        "id": "dataset:btc-run1-r3-normalized-dataset",
+        "version": 1,
+        "fingerprint": "sha256:ecc29cf5797ef8620a6450b36fe90db8bead9942ad98c96914cea448390e34a0"
+      },
+      {
+        "id": "dataset-lock:btc-run1-r3-normalized-lock",
+        "version": 1,
+        "fingerprint": "sha256:2e23d6712e0a7d574caacbbe4e65340907d8eab2758f066e3d67fe5a0a8dfdc7"
+      }
+    ],
+    "subset_verification": "byte-identical to previously locked development subset; original source SHA identical"
+  },
+  "runs": [
+    {
+      "profile": "T0",
+      "cost": "base",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:b6518fc20735c793f881cf14bc7e5aceffa1f2d25472f2a8f3bd3435fe3acf54",
+      "artifact_fingerprint": "sha256:20832f98e62ad78869b2250871f3acbfb7fb70b7e61860d11a88a37353d9fc64",
+      "authorization_fingerprint": "sha256:80c70ba3596b9b38f3062bab8fedaf594dc02579d105badf06e4136a05f85f12",
+      "net_pnl": "-62.27669148865395589526100865544838",
+      "return_pct": "-6.227669148865395589526100866",
+      "drawdown_pct": "6.693367521960321230618235563",
+      "trades": 214,
+      "profit_factor": "0.6742857930678988975682116004",
+      "sides": {
+        "LONG": {
+          "trades": 93,
+          "realized_net_pnl": "-32.20391414581743786176332106"
+        },
+        "SHORT": {
+          "trades": 121,
+          "realized_net_pnl": "-30.07277734283651803349768762"
+        }
+      },
+      "realized_net_pnl": "-62.27669148865395589526100868",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "42792.24937875490918112502022",
+      "exposed_bars": 2868,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-7.061861644840941482138657960",
+          "return_pct": "-0.7061861644840941482138658000"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-6.016286835121390879507635079",
+          "return_pct": "-0.6059075185779051464973955300"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-7.453742409678259786741825420",
+          "return_pct": "-0.7552515326515622290682995300"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-8.917335997897678094711905905",
+          "return_pct": "-0.9104263747797976481723331400"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-7.391385410557698772334397984",
+          "return_pct": "-0.7615660731333247202768404900"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "1.131246158469022951619908602",
+          "return_pct": "0.117451604886307919300468600"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "1.955261143141704630624193570",
+          "return_pct": "0.202766787779961129855073300"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-26.93608578875148865084898105",
+          "return_pct": "-2.787705068455013467160765620"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "3.346063630749130589539383224",
+          "return_pct": "0.356225773213882031407790400"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "2.914386843049992405008107244",
+          "return_pct": "0.309167632325101745650625000"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-7.846951177216348805769197900",
+          "return_pct": "-0.8298644227453662413255669600"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-13.07814847996233236164629304",
+          "return_pct": "-1.307814847996233236164629304"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-23.76246381813363665378812930",
+          "return_pct": "-2.407735098937687539594517598"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-23.84957848714076106860487888",
+          "return_pct": "-2.476181906303773630121743603"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "-1.586500703417225811221707432",
+          "return_pct": "-0.1689006851470545195689989641"
+        }
+      ],
+      "peak_relative_drawdown_pct": "6.693367521960321230618235563",
+      "drawdown_initial_capital_pct": "6.7018111856314052598626848874466300"
+    },
+    {
+      "profile": "T0",
+      "cost": "stress",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:06f33cc5f4653a4916ffc7a918d76d7eef20ceede59b9bb2213295425d41934a",
+      "artifact_fingerprint": "sha256:02b06e9f3bf5c1ffb49e4a0a6bf8736fd8fae01d30cfd3cdb0a5f413e7268e19",
+      "authorization_fingerprint": "sha256:750adc6c3b8d2dd0d98667415184031025d5583e633340cb3a1ff631c69ff897",
+      "net_pnl": "-131.4323385514580806277665320267052",
+      "return_pct": "-13.14323385514580806277665320",
+      "drawdown_pct": "13.51297585450316702766210521",
+      "trades": 216,
+      "profit_factor": "0.4501822467254740556721321572",
+      "sides": {
+        "LONG": {
+          "trades": 94,
+          "realized_net_pnl": "-64.58973549150769038930866080"
+        },
+        "SHORT": {
+          "trades": 122,
+          "realized_net_pnl": "-66.84260305995039023845787129"
+        }
+      },
+      "realized_net_pnl": "-131.4323385514580806277665324",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "43190.96276674240675331490695",
+      "exposed_bars": 2863,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-10.51445635316945465910392525",
+          "return_pct": "-1.051445635316945465910392520"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-12.17078504708630039054441842",
+          "return_pct": "-1.230011405950396074223415760"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-13.02859245680258318136953664",
+          "return_pct": "-1.333100962833039187299436820"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-15.98207719030687949458028944",
+          "return_pct": "-1.657399820867881728843095980"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-11.26725398585376055670482779",
+          "return_pct": "-1.188147780560348226007607050"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "-11.03331389170078813916494588",
+          "return_pct": "-1.177468534851346708909065040"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "-3.583062016966855449525950928",
+          "return_pct": "-0.3869382713369122590627237000"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-34.25004619159407514969248849",
+          "return_pct": "-3.713062286862859925222273640"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "-3.596187308877654472060398174",
+          "return_pct": "-0.4048983457207457783390132100"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "-2.340133399184535011415188604",
+          "return_pct": "-0.2645491278823208864785375100"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-13.66643070991519412360456242",
+          "return_pct": "-1.549070800072933618598147280"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-22.68524140025575504964834367",
+          "return_pct": "-2.268524140025575504964834367"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-40.27792363296322323265465387",
+          "return_pct": "-4.121284701632025842855153876"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-48.86642210026171873838338530",
+          "return_pct": "-5.214994787477494065028806196"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "-19.60275141797738360708014920",
+          "return_pct": "-2.207093496248160586922234102"
+        }
+      ],
+      "peak_relative_drawdown_pct": "13.51297585450316702766210521",
+      "drawdown_initial_capital_pct": "13.5279869731076189613759834155671400"
+    },
+    {
+      "profile": "T0",
+      "cost": "zero_cost_diagnostic",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:b6f0abf1cad7b9cc36e63caa4dc56a02ae8e927e5517e3db0e3f5b161dd87d7b",
+      "artifact_fingerprint": "sha256:8183b83d244eaed60a41e11c68994ca72827accd11c75935cf6ecf8761e9c294",
+      "authorization_fingerprint": "sha256:c654a8f44d640e4cdc58c39c2b94626d6d8f36bc53037cd7923760f1c54e7492",
+      "net_pnl": "-7.282805685793316638009948863898436",
+      "return_pct": "-0.7282805685793316638009948864",
+      "drawdown_pct": "2.430058750694053516519937235",
+      "trades": 211,
+      "profit_factor": "0.9538042635481334080660748209",
+      "sides": {
+        "LONG": {
+          "trades": 92,
+          "realized_net_pnl": "-11.70938981848288709224817299"
+        },
+        "SHORT": {
+          "trades": 119,
+          "realized_net_pnl": "4.426584132689570454238224140"
+        }
+      },
+      "realized_net_pnl": "-7.282805685793316638009948833",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "42183.86402604882754245351361",
+      "exposed_bars": 2896,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-5.514791767143857525729506434",
+          "return_pct": "-0.5514791767143857525729506400"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-0.7599231582285888063806602677",
+          "return_pct": "-0.0764137215855557262321297600"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-1.275645579704707187418334095",
+          "return_pct": "-0.1283700433977492848426600400"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-2.484007996608503508400154583",
+          "return_pct": "-0.2502905837995632770426919500"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-3.296181181108452137938516523",
+          "return_pct": "-0.3329591529475298443530166400"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "5.947799931470691010192905994",
+          "return_pct": "0.602815859917272556847978100"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "5.441227716011927993103606751",
+          "return_pct": "0.548169771847986536781241200"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-19.62037572750765314801770721",
+          "return_pct": "-1.965854322235598063185271650"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "10.20852369117824616053909093",
+          "return_pct": "1.043348952563953010957856600"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "9.348645852710560265980193582",
+          "return_pct": "0.945600339649365963927227600"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-5.278077466862979753940867009",
+          "return_pct": "-0.5288679832564208992922094100"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-6.274714925372446332110166702",
+          "return_pct": "-0.6274714925372446332110166702"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-7.055834757421662833757005201",
+          "return_pct": "-0.7100387665884720113726773315"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-8.23134808002503414472119447",
+          "return_pct": "-0.8342558976948891336000957156"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "14.27909207702582667257841750",
+          "return_pct": "1.459376126540548997684964583"
+        }
+      ],
+      "peak_relative_drawdown_pct": "2.430058750694053516519937235",
+      "drawdown_initial_capital_pct": "2.4363155961745567155596038933110400"
+    },
+    {
+      "profile": "T1",
+      "cost": "base",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:42c37e0f15af90178d7084f041a6bdaa4176f90b4891c0528579a4669531bedc",
+      "artifact_fingerprint": "sha256:7030a441595687274c8a8e46b608261a5071149686855af400803e5a98bcc758",
+      "authorization_fingerprint": "sha256:c46592ad42041385a05b28cf84c70454b3406717d386911a4e58ed62173d9179",
+      "net_pnl": "-46.33373573442786616507616103707314",
+      "return_pct": "-4.633373573442786616507616104",
+      "drawdown_pct": "5.765498333795558496945772836",
+      "trades": 195,
+      "profit_factor": "0.7242865199307319459323741633",
+      "sides": {
+        "LONG": {
+          "trades": 83,
+          "realized_net_pnl": "-27.75186373868167378779612876"
+        },
+        "SHORT": {
+          "trades": 112,
+          "realized_net_pnl": "-18.58187199574619237728003231"
+        }
+      },
+      "realized_net_pnl": "-46.33373573442786616507616108",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "38985.02265954398963471295357",
+      "exposed_bars": 2580,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-7.439836117671776830699680785",
+          "return_pct": "-0.7439836117671776830699680800"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-6.016286835121390879507635079",
+          "return_pct": "-0.6061382527774552648277978400"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-4.516770260733968703730076842",
+          "return_pct": "-0.4578377470906788676264436300"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-9.148520146180752903041480022",
+          "return_pct": "-0.9315954807111003765770334400"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-9.378904440411203964670642865",
+          "return_pct": "-0.9640364757949924150194702600"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "3.757128067725583344432090141",
+          "return_pct": "0.389945958170659347195198800"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "0.4939080336697239374116338911",
+          "return_pct": "0.051062761039963799775515700"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-23.79170028561126664022198212",
+          "return_pct": "-2.458453384294418199652538400"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "9.264380247115553188111420541",
+          "return_pct": "0.981438819938453229925891700"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "11.68338255778772065996249933",
+          "return_pct": "1.225670979025516569013830400"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-11.24051655499608737312230722",
+          "return_pct": "-1.164932901128233153058275480"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-13.45612295279316771020731586",
+          "return_pct": "-1.345612295279316771020731586"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-23.04419484732592557144219972",
+          "return_pct": "-2.335850982755959501583640125"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-19.54066418421595935837825809",
+          "return_pct": "-2.028092436896329957109792139"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "9.70724624990718647495161265",
+          "return_pct": "1.028354628182183992205161116"
+        }
+      ],
+      "peak_relative_drawdown_pct": "5.765498333795558496945772836",
+      "drawdown_initial_capital_pct": "5.7727714931831229990858803396074300"
+    },
+    {
+      "profile": "T1",
+      "cost": "stress",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:2f8329a83e48318653f1d61488e8e09930976ef38452242879f75811ae4f73ef",
+      "artifact_fingerprint": "sha256:fadf4d9e593dd887e885e910f27516c344445dbc357a305839f68b2efac90e12",
+      "authorization_fingerprint": "sha256:7d8b7084976ad4d117dc77ad369baf8d82d4d37185556d6482de4114f633171b",
+      "net_pnl": "-102.139235271067090108515718314209",
+      "return_pct": "-10.21392352710670901085157183",
+      "drawdown_pct": "10.37508516379034758095005509",
+      "trades": 193,
+      "profit_factor": "0.4972461595464865521472951676",
+      "sides": {
+        "LONG": {
+          "trades": 81,
+          "realized_net_pnl": "-53.00546012418477792631611531"
+        },
+        "SHORT": {
+          "trades": 112,
+          "realized_net_pnl": "-49.13377514688231218219960304"
+        }
+      },
+      "realized_net_pnl": "-102.1392352710670901085157183",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "38583.67837126564046263751702",
+      "exposed_bars": 2566,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-10.89167506556972698777858498",
+          "return_pct": "-1.089167506556972698777858500"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-12.17078504708630039054441842",
+          "return_pct": "-1.230480498472512916523142420"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-8.596742412151160864720554866",
+          "return_pct": "-0.8799684791662830763500740600"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-14.67479148241629198678518211",
+          "return_pct": "-1.515457318402639576538579630"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-12.11763106621055467760365905",
+          "return_pct": "-1.270636783744427488219640860"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "-6.787173822153311180638802950",
+          "return_pct": "-0.7208523749703951393156637800"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "-5.347188640124825205660581616",
+          "return_pct": "-0.5720379315922789589447433000"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-27.39681828832716023022994322",
+          "return_pct": "-2.947751800694942330946208340"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "4.538474642802243885511546651",
+          "return_pct": "0.503147242880261840498872100"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "7.645805002299527871666362431",
+          "return_pct": "0.843390567758731248316718300"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-16.34070909212953034173190018",
+          "return_pct": "-1.787429747168392064292450990"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-23.06246011265602737832300340",
+          "return_pct": "-2.306246011265602737832300340"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-35.38916496077800752910939603",
+          "return_pct": "-3.622459319646875919213770183"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-39.53118075060529661652932779",
+          "return_pct": "-4.198528912939650690178937745"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "-4.15642944702775858455399110",
+          "return_pct": "-0.4607927070420061922848495413"
+        }
+      ],
+      "peak_relative_drawdown_pct": "10.37508516379034758095005509",
+      "drawdown_initial_capital_pct": "10.3866105032567868698081061483600700"
+    },
+    {
+      "profile": "T1",
+      "cost": "zero_cost_diagnostic",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:d51c5500b6a5a03c5f6a427a406b3fbfd6a61bd1d863a55c8fa4798a2eb5875c",
+      "artifact_fingerprint": "sha256:17df7d819b1dd17f26ad92c1934af3e828be07f88725e9af6184a2c1ff7d2733",
+      "authorization_fingerprint": "sha256:6fa50d464ccd29a3047cdcad89c73d8e33ca96216601b934063d10f4448d583c",
+      "net_pnl": "4.231656351887454937891501993364846",
+      "return_pct": "0.4231656351887454937891501993",
+      "drawdown_pct": "2.233017364310060331464381484",
+      "trades": 195,
+      "profit_factor": "1.030324387300521780364934020",
+      "sides": {
+        "LONG": {
+          "trades": 83,
+          "realized_net_pnl": "-8.334498911736671712384274530"
+        },
+        "SHORT": {
+          "trades": 112,
+          "realized_net_pnl": "12.56615526362412665027577651"
+        }
+      },
+      "realized_net_pnl": "4.231656351887454937891502001",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "38979.09934582463920163733996",
+      "exposed_bars": 2618,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-4.907970229895817075183084281",
+          "return_pct": "-0.4907970229895817075183084300"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-0.7599231582285888063806602677",
+          "return_pct": "-0.0763671233910047122653795000"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-0.7424142087183940847019339891",
+          "return_pct": "-0.0746646119321364392156064300"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-3.643191052079274508058914987",
+          "return_pct": "-0.3666695699376297209535293500"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-5.034376931102160334767682724",
+          "return_pct": "-0.5085504039088221522459976500"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "8.442237240320238005435491304",
+          "return_pct": "0.857156393042877080561847500"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "4.282344187828722190544393452",
+          "return_pct": "0.431099349145776833039884300"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-18.30451557114711624792948217",
+          "return_pct": "-1.834787700156423986479669510"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "14.64533595438542010374559011",
+          "return_pct": "1.495441087282486153560307300"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "16.90192337666622418309947099",
+          "return_pct": "1.700433151718165761932643800"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-6.647793256141798487911685449",
+          "return_pct": "-0.6576247304977359123978839100"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-5.667893388124405881563744549",
+          "return_pct": "-0.5667893388124405881563744549"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-9.419982191899828927528531700",
+          "return_pct": "-0.9473677988733390632048580409"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-5.57993414299815605194959741",
+          "return_pct": "-0.5665413192353818371077478230"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "24.89946607490984579893337565",
+          "return_pct": "2.542494397929236411912185644"
+        }
+      ],
+      "peak_relative_drawdown_pct": "2.233017364310060331464381484",
+      "drawdown_initial_capital_pct": "2.2368142366275476958700059732959100"
+    }
+  ],
+  "funding": "UNAVAILABLE_NOT_MODELED",
+  "validation_used": false,
+  "oos_used": false,
+  "authorization": "Six exact production authorizations AUTHORIZED; local operator scope, actor authority not independently verified.",
+  "gates": {
+    "T0": {
+      "state": "FAIL",
+      "checks": {
+        "minimum_total_trades": true,
+        "minimum_trades_each_side": true,
+        "base_net_positive": false,
+        "base_pf_at_least_1_10": false,
+        "base_dd_at_most_5pct": false,
+        "three_positive_quarters": false,
+        "worst_quarter_at_least_minus_2pct": false,
+        "stress_net_positive": false,
+        "stress_dd_at_most_7_5pct": false,
+        "short_positive_base_and_stress": false
+      }
+    },
+    "T1": {
+      "state": "FAIL",
+      "checks": {
+        "minimum_total_trades": true,
+        "minimum_trades_each_side": true,
+        "base_net_positive": false,
+        "base_pf_at_least_1_10": false,
+        "base_dd_at_most_5pct": false,
+        "three_positive_quarters": false,
+        "worst_quarter_at_least_minus_2pct": false,
+        "stress_net_positive": false,
+        "stress_dd_at_most_7_5pct": false,
+        "short_positive_base_and_stress": false
+      }
+    }
+  },
+  "hypotheses": {
+    "H1": "FAIL: both cost-bearing profiles fail preregistered gates",
+    "H2": "NOT_ESTABLISHED: required positive T0 prerequisite fails",
+    "H3": "FAIL: SHORT net contribution negative under base and stress for both profiles"
+  },
+  "next_step": "Review development-only loss attribution by side, exit reason and preregistered regime labels; no new runs or parameter changes before a new research mandate.",
+  "method": "Production governed admission, eligibility, authorization, Decimal multi-signal simulation and independent accounting/lineage verification. Six fixed attempts, no optimization. Monthly/quarterly marked equity; completed-side net PnL assigned by entry side. Engine drawdown is peak-relative; preregistered gate uses maximum marked-equity peak-to-trough loss divided by initial capital. Both are recorded. Zero-cost scenario diagnostic only.",
+  "baseline_ci": "Quality Python 3.12 and 3.13 successful on baseline720fc; no engine changes.",
+  "runner_sha256": "412ed9406932353a02caf76135095874d85ade20c3bd6ba6481d645e496b1fd8"
+}
