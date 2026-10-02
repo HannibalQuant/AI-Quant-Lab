@@ -382,6 +382,8 @@ def simulate_multi_signal_backtest(
     parameters = strategy.multi_signal
     if parameters is None:
         raise MultiSignalExecutionError("multi-signal strategy parameters are required")
+    if specification.warmup_bars and specification.warmup_bars >= len(bars) - 1:
+        raise MultiSignalExecutionError("warmup must leave a signal bar and a later fill bar")
     indicators = build_multi_signal_indicators(bars, parameters)
     scale = Decimal(strategy.capital_minor_unit_scale)
     strategy_ref = _exact(strategy, strategy.strategy_id, strategy.version)
@@ -572,7 +574,7 @@ def simulate_multi_signal_backtest(
                 )
             )
 
-            if pending is not None:
+            if pending is not None or index < specification.warmup_bars:
                 continue
 
             if parameters.adx_slope_length > 0:
@@ -738,6 +740,9 @@ def verify_multi_signal_backtest_accounting(
             "result denomination does not match exact multi-signal strategy"
         )
 
+    if specification.warmup_bars and specification.warmup_bars >= len(bars) - 1:
+        raise MultiSignalAccountingError("warmup must leave a signal bar and a later fill bar")
+
     bar_refs = tuple(_bar_ref(bar) for bar in bars)
     if tuple(point.bar_ref for point in artifact.equity_curve) != bar_refs:
         raise MultiSignalAccountingError(
@@ -780,6 +785,8 @@ def verify_multi_signal_backtest_accounting(
                 raise MultiSignalAccountingError(
                     "order/fill identity or temporal binding is inconsistent"
                 )
+            if indexes[order.source_bar_ref] < specification.warmup_bars:
+                raise MultiSignalAccountingError("order signal originates inside warmup")
             if prior_fill_time is not None and matched_fill.fill_time <= prior_fill_time:
                 raise MultiSignalAccountingError("fills must be strictly time ordered")
             prior_fill_time = matched_fill.fill_time

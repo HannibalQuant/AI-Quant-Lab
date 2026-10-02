@@ -188,11 +188,13 @@ def _multi_context(
     tmp_path: Path,
     *,
     params: MultiSignalTrendParameters | None = None,
+    warmup_bars: int = 0,
+    csv_text: str | None = None,
 ) -> tuple[Any, ...]:
     base = authorized_context(
         tmp_path,
         suffix="sprint-25-multi",
-        csv_text=_trend_csv(),
+        csv_text=_trend_csv() if csv_text is None else csv_text,
     )
     (
         declaration,
@@ -221,6 +223,7 @@ def _multi_context(
         observation_end=report.normalized_bars[-1].bar_close,
         knowledge_cutoff=datetime(2025, 2, 2, tzinfo=UTC),
         engine_contract_ref=engine_ref,
+        warmup_bars=warmup_bars,
     )
     policy = replace(
         legacy_policy,
@@ -452,8 +455,9 @@ def _scripted_risk_run(
     trigger_high: str = "100",
     trigger_low: str = "100",
     bar_count: int = 8,
+    warmup_bars: int = 0,
 ) -> tuple[Any, tuple[Any, ...]]:
-    context = _multi_context(tmp_path, params=params)
+    context = _multi_context(tmp_path, params=params, warmup_bars=warmup_bars)
     report = context[3]
     bars = tuple(
         replace(
@@ -487,7 +491,7 @@ def _scripted_risk_run(
         Decimal("1"),
     )
     points = tuple(point for _ in bars)
-    signal_bar_id = bars[0].bar_id
+    signal_bar_id = bars[warmup_bars].bar_id
     monkeypatch.setattr(
         runtime_module,
         "build_multi_signal_indicators",
@@ -652,9 +656,11 @@ def test_time_stop_counts_completed_bars_from_actual_fill_bar(
     assert artifact.fills[1].bar_ref.object_id == bars[5].bar_id
 
 
+@pytest.mark.parametrize("warmup", (0, 1))
 def test_terminal_risk_exit_without_eligible_later_open_fails_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    warmup: int,
 ) -> None:
     with pytest.raises(MultiSignalMissingNextBar):
         _scripted_risk_run(
@@ -671,6 +677,7 @@ def test_terminal_risk_exit_without_eligible_later_open_fails_closed(
             trigger_high="100",
             trigger_low="97",
             bar_count=5,
+            warmup_bars=warmup,
         )
 
 
@@ -796,3 +803,130 @@ def test_multi_signal_runtime_has_no_optimizer_network_or_live_execution_capabil
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
     assert not calls.intersection({"eval", "exec"})
+
+
+def test_governed_warmup_preserves_indicator_history_and_suppresses_orders(tmp_path: Path) -> None:
+    context = _multi_context(tmp_path, warmup_bars=9)
+    result = _execute(context)
+    bars = context[3].normalized_bars
+    artifact = result.artifact
+    indexes = {bar.bar_id: i for i, bar in enumerate(bars)}
+    assert artifact.orders
+    assert all(indexes[order.source_bar_ref.object_id] >= 9 for order in artifact.orders)
+    assert all(indexes[fill.bar_ref.object_id] >= 10 for fill in artifact.fills)
+    assert len(artifact.equity_curve) == len(bars)
+    for point in artifact.equity_curve[:10]:
+        assert Decimal(point.position_quantity) == 0
+        assert Decimal(point.realized_pnl) == 0
+        assert Decimal(point.unrealized_pnl) == 0
+        assert Decimal(point.equity) == Decimal(context[7].capital_notional_minor) / 100
+    assert context[6].multi_signal is not None
+    full = build_multi_signal_indicators(bars, context[6].multi_signal)
+    sliced = build_multi_signal_indicators(bars[9:], context[6].multi_signal)
+    assert full[9] != sliced[0]
+    expected_direction = multi_signal_direction(bars[9], full[9], context[6].multi_signal)
+    first = artifact.orders[0]
+    assert indexes[first.source_bar_ref.object_id] == 9
+    assert first.side is (
+        SimulatedOrderSide.BUY
+        if expected_direction is SimulatedPositionState.LONG
+        else SimulatedOrderSide.SELL
+    )
+
+
+@pytest.mark.parametrize("warmup", (22, 23, 1000))
+def test_warmup_without_signal_and_fill_capacity_fails_closed(tmp_path: Path, warmup: int) -> None:
+    from ai_quant_lab.core.strategy_backtest import StrategyBacktestError
+
+    context = _multi_context(tmp_path, warmup_bars=warmup)
+    assert len(context[3].normalized_bars) == 23
+    with pytest.raises(StrategyBacktestError, match="warmup must leave"):
+        _execute(context)
+
+
+def test_accounting_rejects_orders_originating_in_warmup(tmp_path: Path) -> None:
+    from ai_quant_lab.core.multi_signal_runtime import (
+        MultiSignalAccountingError,
+        verify_multi_signal_backtest_accounting,
+    )
+
+    context = _multi_context(tmp_path)
+    artifact = _execute(context).artifact
+    bars = context[3].normalized_bars
+    first_index = next(
+        i for i, bar in enumerate(bars) if bar.bar_id == artifact.orders[0].source_bar_ref.object_id
+    )
+    with pytest.raises(MultiSignalAccountingError, match="inside warmup"):
+        verify_multi_signal_backtest_accounting(
+            artifact=artifact,
+            specification=replace(context[7], warmup_bars=first_index + 1),
+            strategy=context[6],
+            bars=bars,
+        )
+
+
+def test_exact_1000_bar_warmup_runs_through_governed_authorization(tmp_path: Path) -> None:
+    rows = []
+    prior = 100
+    start = datetime(2024, 12, 22, tzinfo=UTC)
+    for index in range(1004):
+        close = 100 if index < 1000 else 101 + 2 * (index - 1000)
+        opened = start + timedelta(hours=index)
+        closed = opened + timedelta(hours=1)
+        available = closed + timedelta(seconds=5)
+        rows.append(
+            f"{opened.strftime('%Y-%m-%dT%H:%M:%S.000000Z')},"
+            f"{closed.strftime('%Y-%m-%dT%H:%M:%S.000000Z')},"
+            f"{prior},{max(prior, close) + 1},{min(prior, close) - 1},{close},100,final,"
+            f"{available.strftime('%Y-%m-%dT%H:%M:%S.000000Z')}\n"
+        )
+        prior = close
+    context = _multi_context(tmp_path, warmup_bars=1000, csv_text=HEADER + "".join(rows))
+    artifact = _execute(context).artifact
+    bars = context[3].normalized_bars
+    assert len(artifact.equity_curve) == 1004
+    assert artifact.orders[0].source_bar_ref.object_id == bars[1000].bar_id
+    assert artifact.fills[0].bar_ref.object_id == bars[1002].bar_id
+    assert all(Decimal(point.position_quantity) == 0 for point in artifact.equity_curve[:1002])
+    assert artifact.open_position is SimulatedPositionState.LONG
+
+
+def test_warmup_change_requires_new_exact_authorization(tmp_path: Path) -> None:
+    context = list(_multi_context(tmp_path))
+    context[7] = replace(context[7], warmup_bars=9)
+    from ai_quant_lab.core.experiment_runner import ExperimentRunnerLineageMismatch
+
+    with pytest.raises(ExperimentRunnerLineageMismatch, match="exact references"):
+        _execute(tuple(context))
+
+
+def test_explicit_warmup_is_not_silently_promoted_to_pine(tmp_path: Path) -> None:
+    from ai_quant_lab.core.governed_pine_generator import (
+        GovernedPineGeneratorUnsupported,
+        render_governed_pine_v6,
+    )
+    from ai_quant_lab.core.pine_strategy_contracts import PineIntakeStatus
+    from ai_quant_lab.core.pine_strategy_intake import PineIntakeFailure, _parse_static_source
+
+    context = _multi_context(tmp_path, warmup_bars=9)
+    with pytest.raises(GovernedPineGeneratorUnsupported, match="explicit warmup"):
+        render_governed_pine_v6(context[6], context[7], script_title="Warmup boundary")
+    with pytest.raises(PineIntakeFailure, match="explicit warmup") as failed:
+        _parse_static_source("", context[6], context[7])
+    assert failed.value.status is PineIntakeStatus.UNSUPPORTED
+
+
+def test_legacy_profile_still_rejects_explicit_warmup(tmp_path: Path) -> None:
+    from ai_quant_lab.core.strategy_backtest import (
+        UnsupportedStrategy,
+        _require_scope,
+        strategy_backtest_replay_contract,
+    )
+
+    context = authorized_context(tmp_path)
+    with pytest.raises(UnsupportedStrategy):
+        _require_scope(
+            replace(context[7], warmup_bars=1),
+            strategy_backtest_replay_contract(),
+            context[6],
+        )

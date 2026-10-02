@@ -240,6 +240,8 @@ def _validate_specification(
     strategy: StrategyDefinition,
     specification: ExperimentSpecification,
 ) -> None:
+    if specification.warmup_bars != 0:
+        raise GovernedPineGeneratorUnsupported("Pine generation does not represent explicit warmup")
     if specification.sizing_semantics is not PositionSizingSemantics.FIXED_NOTIONAL:
         raise GovernedPineGeneratorUnsupported(
             "Pine generation currently supports FIXED_NOTIONAL experiment sizing only"
