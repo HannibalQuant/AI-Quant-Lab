@@ -37,6 +37,7 @@ from ai_quant_lab.core.strategy_backtest_contracts import (
     SimulatedPositionState,
     SimulatedTrade,
     StrategyDefinition,
+    StrategyModel,
 )
 
 _V1 = ObjectVersion(1)
@@ -346,6 +347,45 @@ def multi_signal_direction(
     return SimulatedPositionState.SHORT if short_signal else SimulatedPositionState.FLAT
 
 
+def pullback_entry_direction(
+    bars: tuple[MarketBar, ...],
+    indicators: tuple[MultiSignalIndicatorPoint, ...],
+    parameters: MultiSignalTrendParameters,
+    index: int,
+    warmup_bars: int,
+) -> SimulatedPositionState:
+    """PB0: exactly one completed pullback bar, then confirmed trend resumption."""
+    if index < max(1, warmup_bars + 1):
+        return SimulatedPositionState.FLAT
+    point, previous = indicators[index], indicators[index - 1]
+    if not point.ready or not previous.ready:
+        return SimulatedPositionState.FLAT
+    prior_adx = (
+        indicators[index - parameters.adx_slope_length].adx
+        if parameters.adx_slope_length and index >= parameters.adx_slope_length
+        else None
+    )
+    direction = multi_signal_direction(bars[index], point, parameters, prior_adx)
+    bar, prior = bars[index], bars[index - 1]
+    close = Decimal(bar.close.text)
+    previous_close = Decimal(prior.close.text)
+    if direction is SimulatedPositionState.LONG and (
+        Decimal(prior.low.text) <= previous.fast_ema
+        and previous_close <= previous.fast_ema
+        and close > point.fast_ema
+        and close > Decimal(prior.high.text)
+    ):
+        return direction
+    if direction is SimulatedPositionState.SHORT and (
+        Decimal(prior.high.text) >= previous.fast_ema
+        and previous_close >= previous.fast_ema
+        and close < point.fast_ema
+        and close < Decimal(prior.low.text)
+    ):
+        return direction
+    return SimulatedPositionState.FLAT
+
+
 def _next_fill_index(bars: tuple[MarketBar, ...], source_index: int) -> int:
     signal_time = bars[source_index].availability_time
     for index in range(source_index + 1, len(bars)):
@@ -584,6 +624,10 @@ def simulate_multi_signal_backtest(
             else:
                 direction = multi_signal_direction(bar, point, parameters)
             if position is SimulatedPositionState.FLAT:
+                if strategy.model is StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT:
+                    direction = pullback_entry_direction(
+                        bars, indicators, parameters, index, specification.warmup_bars
+                    )
                 if direction in (
                     SimulatedPositionState.LONG,
                     SimulatedPositionState.SHORT,
@@ -763,8 +807,14 @@ def verify_multi_signal_backtest_accounting(
         fills_by_bar[stored_fill.bar_ref] = stored_fill
 
     with localcontext(_DECIMAL_CONTEXT):
+        pullback_points = (
+            build_multi_signal_indicators(bars, strategy.multi_signal)
+            if strategy.model is StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT
+            and strategy.multi_signal is not None
+            else ()
+        )
         prior_fill_time = None
-        for order in artifact.orders:
+        for order_index, order in enumerate(artifact.orders):
             matched_fill = fills_by_order.get(order.order_id)
             if matched_fill is None:
                 raise MultiSignalAccountingError("simulated order has no matching fill")
@@ -787,6 +837,27 @@ def verify_multi_signal_backtest_accounting(
                 )
             if indexes[order.source_bar_ref] < specification.warmup_bars:
                 raise MultiSignalAccountingError("order signal originates inside warmup")
+            if (
+                strategy.model is StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT
+                and order_index % 2 == 0
+            ):
+                assert strategy.multi_signal is not None
+                expected_direction = pullback_entry_direction(
+                    bars,
+                    pullback_points,
+                    strategy.multi_signal,
+                    indexes[order.source_bar_ref],
+                    specification.warmup_bars,
+                )
+                expected_side = (
+                    SimulatedOrderSide.BUY
+                    if expected_direction is SimulatedPositionState.LONG
+                    else SimulatedOrderSide.SELL
+                    if expected_direction is SimulatedPositionState.SHORT
+                    else None
+                )
+                if expected_side is not order.side:
+                    raise MultiSignalAccountingError("entry does not satisfy exact PB0 predicates")
             if prior_fill_time is not None and matched_fill.fill_time <= prior_fill_time:
                 raise MultiSignalAccountingError("fills must be strictly time ordered")
             prior_fill_time = matched_fill.fill_time

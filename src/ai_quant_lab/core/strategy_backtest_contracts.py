@@ -33,6 +33,7 @@ class StrategyBacktestContractError(ValueError):
 
 class StrategyModel(StrEnum):
     CLOSE_VS_OPEN_LONG_ONLY = "CLOSE_VS_OPEN_LONG_ONLY"
+    MULTI_SIGNAL_PULLBACK_LONG_SHORT = "MULTI_SIGNAL_PULLBACK_LONG_SHORT"
     MULTI_SIGNAL_TREND_LONG_SHORT = "MULTI_SIGNAL_TREND_LONG_SHORT"
 
 
@@ -228,7 +229,11 @@ class StrategyDefinition:
         multi_signal_profile = (
             self.version == ObjectVersion(2)
             and self.contract_version == ObjectVersion(2)
-            and self.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+            and self.model
+            in (
+                StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+                StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT,
+            )
             and self.side_permission is SidePermission.LONG_SHORT
             and isinstance(self.multi_signal, MultiSignalTrendParameters)
             and self.threshold_bps == 0

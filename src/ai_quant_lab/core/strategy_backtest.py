@@ -174,11 +174,33 @@ def multi_signal_strategy_backtest_engine_ref() -> TraceabilityRef:
     return _exact(contract, contract.engine_id, contract.version)
 
 
+def pullback_strategy_backtest_replay_contract() -> ExperimentReplayContract:
+    return ExperimentReplayContract(
+        ArtifactId("multi-signal-pullback-long-short-backtest-engine-v1"),
+        _V1,
+        ExperimentFamily.STRATEGY_BACKTEST,
+        NoLookaheadSemantics.EXPLICIT_EVENT_AVAILABILITY_NEXT_EVENT,
+        ReplayOrdering.BAR_OPEN_CLOSE_SOURCE_OBSERVATION_ID,
+        NumericSemantics.DECIMAL128_HALF_EVEN,
+        34,
+        _METRICS,
+        _OUTPUTS,
+        _V1,
+    )
+
+
+def pullback_strategy_backtest_engine_ref() -> TraceabilityRef:
+    contract = pullback_strategy_backtest_replay_contract()
+    return _exact(contract, contract.engine_id, contract.version)
+
+
 def _expected_strategy_engine(strategy: StrategyDefinition) -> ExperimentReplayContract:
     if strategy.model is StrategyModel.CLOSE_VS_OPEN_LONG_ONLY:
         return strategy_backtest_replay_contract()
     if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
         return multi_signal_strategy_backtest_replay_contract()
+    if strategy.model is StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT:
+        return pullback_strategy_backtest_replay_contract()
     raise UnsupportedStrategy("unsupported strategy model")
 
 
@@ -295,7 +317,11 @@ def _require_scope(
         and strategy.multi_signal is None
     )
     multi_signal_profile = (
-        strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT
+        strategy.model
+        in (
+            StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+            StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT,
+        )
         and strategy.side_permission is SidePermission.LONG_SHORT
         and strategy.multi_signal is not None
     )
@@ -409,7 +435,10 @@ def _simulate(
     bars: tuple[MarketBar, ...],
     run_input: str,
 ) -> BacktestResultArtifact:
-    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+    if strategy.model in (
+        StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+        StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT,
+    ):
         try:
             return simulate_multi_signal_backtest(
                 request.experiment_run,
@@ -647,7 +676,10 @@ def verify_backtest_accounting(
     bars: tuple[MarketBar, ...],
 ) -> None:
     """Independently reconstruct the exact ledger for the governed strategy model."""
-    if strategy.model is StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT:
+    if strategy.model in (
+        StrategyModel.MULTI_SIGNAL_TREND_LONG_SHORT,
+        StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT,
+    ):
         try:
             verify_multi_signal_backtest_accounting(
                 artifact=artifact,
