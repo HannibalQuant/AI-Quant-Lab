@@ -190,6 +190,7 @@ def _multi_context(
     params: MultiSignalTrendParameters | None = None,
     warmup_bars: int = 0,
     csv_text: str | None = None,
+    pullback: bool = False,
 ) -> tuple[Any, ...]:
     base = authorized_context(
         tmp_path,
@@ -212,6 +213,19 @@ def _multi_context(
     definition = strategy(params=params)
     engine = multi_signal_strategy_backtest_replay_contract()
     engine_ref = multi_signal_strategy_backtest_engine_ref()
+    if pullback:
+        from ai_quant_lab.core.strategy_backtest import (
+            pullback_strategy_backtest_engine_ref,
+            pullback_strategy_backtest_replay_contract,
+        )
+
+        engine = pullback_strategy_backtest_replay_contract()
+        engine_ref = pullback_strategy_backtest_engine_ref()
+        definition = replace(
+            definition,
+            model=StrategyModel.MULTI_SIGNAL_PULLBACK_LONG_SHORT,
+            engine_contract_ref=engine_ref,
+        )
     specification = replace(
         legacy_specification,
         experiment_id=ExperimentId("sprint-25-multi-signal-experiment"),
