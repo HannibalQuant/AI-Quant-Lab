@@ -1,0 +1,994 @@
+{
+  "report_id": "btc-run1-loss-attribution-v1",
+  "baseline": "28f6d368ab386e25393f6ecec313cf694ce9d8d9",
+  "screening_head": "a26330d2f56108615f5e1125d8f9783e08158ae8",
+  "source_development_sha256": "1ea4bcacd92175c5451199de06241515a66aaff91172f047299453c37cd9f1e6",
+  "scope": "READ_ONLY_DEVELOPMENT_LEDGER_DIAGNOSTIC_NO_NEW_BACKTESTS",
+  "validation_bars": 0,
+  "oos_bars": 0,
+  "strategy_parameters_changed": false,
+  "runs": [
+    {
+      "profile": "T0",
+      "cost": "base",
+      "artifact_fingerprint": "sha256:20832f98e62ad78869b2250871f3acbfb7fb70b7e61860d11a88a37353d9fc64",
+      "summary": {
+        "trades": 214,
+        "losing_trades": 142,
+        "winning_trades": 72,
+        "net_pnl": "-62.2766914886539558952610086554483834",
+        "gross_execution_pnl": "-19.4844421098990467141359884248493297113",
+        "commission": "42.7922493787549091811250202305990516",
+        "reported_slippage_cost": "21.39612516729821894035556667019408710",
+        "losing_net_sum": "-191.2004148521413844201954646375047875",
+        "positive_gross_negative_net": 14
+      },
+      "simultaneous_exit_condition_trades": 2,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 93,
+            "losing_trades": 65,
+            "winning_trades": 28,
+            "net_pnl": "-32.2039141458174378617633210339853628",
+            "gross_execution_pnl": "-13.6175316774949327945578789128982641513",
+            "commission": "18.5863824683225050672054421210871012",
+            "reported_slippage_cost": "9.29319015307587142883737963041873032",
+            "losing_net_sum": "-70.9479413617389489390953065977090635",
+            "positive_gross_negative_net": 7
+          },
+          "SHORT": {
+            "trades": 121,
+            "losing_trades": 77,
+            "winning_trades": 44,
+            "net_pnl": "-30.0727773428365180334976876214630206",
+            "gross_execution_pnl": "-5.86691043240411391957810951195106556",
+            "commission": "24.2058669104324041139195781095119504",
+            "reported_slippage_cost": "12.10293501422234751151818703977535678",
+            "losing_net_sum": "-120.2524734904024354811001580397957240",
+            "positive_gross_negative_net": 7
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 43,
+            "losing_trades": 31,
+            "winning_trades": 12,
+            "net_pnl": "-10.7355411747180190097846589117606432",
+            "gross_execution_pnl": "-2.1357118997725267734409291443345642963",
+            "commission": "8.5998292749454922363437297674260787",
+            "reported_slippage_cost": "4.29991517852356580593162300638650481",
+            "losing_net_sum": "-15.9825697372659747520427444106562803",
+            "positive_gross_negative_net": 13
+          },
+          "INITIAL_STOP": {
+            "trades": 105,
+            "losing_trades": 105,
+            "winning_trades": 0,
+            "net_pnl": "-170.3886066537562838440864980159557678",
+            "gross_execution_pnl": "-149.348252500449265350228271688395047435",
+            "commission": "21.0403541533070184938582263275607180",
+            "reported_slippage_cost": "10.52014236962597654110691088344015749",
+            "losing_net_sum": "-170.3886066537562838440864980159557678",
+            "positive_gross_negative_net": 1
+          },
+          "INITIAL_STOP+BREAK_EVEN": {
+            "trades": 2,
+            "losing_trades": 2,
+            "winning_trades": 0,
+            "net_pnl": "-3.1122220801609331788251634187483456",
+            "gross_execution_pnl": "-2.7095125675933398389861772415068391",
+            "commission": "0.4027095125675933398389861772415068",
+            "reported_slippage_cost": "0.2013541292441870826313039999024430",
+            "losing_net_sum": "-3.1122220801609331788251634187483456",
+            "positive_gross_negative_net": 0
+          },
+          "TAKE_PROFIT": {
+            "trades": 57,
+            "losing_trades": 0,
+            "winning_trades": 57,
+            "net_pnl": "121.2940255597112755625794793500485393",
+            "gross_execution_pnl": "132.6432557761743473847902103527635508",
+            "commission": "11.3492302164630718222107310027150116",
+            "reported_slippage_cost": "5.67464968770790188166768211583062325",
+            "losing_net_sum": "0",
+            "positive_gross_negative_net": 0
+          },
+          "TIME_STOP": {
+            "trades": 7,
+            "losing_trades": 4,
+            "winning_trades": 3,
+            "net_pnl": "0.6656528602700045748558323409678339",
+            "gross_execution_pnl": "2.06577908174173786372917929662357032",
+            "commission": "1.4001262214717332888733469556557365",
+            "reported_slippage_cost": "0.70006380219658762901804666463435855",
+            "losing_net_sum": "-1.7170163809581926452410587921443938",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 214,
+            "losing_trades": 142,
+            "winning_trades": 72,
+            "net_pnl": "-62.2766914886539558952610086554483834",
+            "gross_execution_pnl": "-19.4844421098990467141359884248493297113",
+            "commission": "42.7922493787549091811250202305990516",
+            "reported_slippage_cost": "21.39612516729821894035556667019408710",
+            "losing_net_sum": "-191.2004148521413844201954646375047875",
+            "positive_gross_negative_net": 14
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 214,
+            "losing_trades": 142,
+            "winning_trades": 72,
+            "net_pnl": "-62.2766914886539558952610086554483834",
+            "gross_execution_pnl": "-19.4844421098990467141359884248493297113",
+            "commission": "42.7922493787549091811250202305990516",
+            "reported_slippage_cost": "21.39612516729821894035556667019408710",
+            "losing_net_sum": "-191.2004148521413844201954646375047875",
+            "positive_gross_negative_net": 14
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 121,
+            "losing_trades": 77,
+            "winning_trades": 44,
+            "net_pnl": "-30.0727773428365180334976876214630206",
+            "gross_execution_pnl": "-5.86691043240411391957810951195106556",
+            "commission": "24.2058669104324041139195781095119504",
+            "reported_slippage_cost": "12.10293501422234751151818703977535678",
+            "losing_net_sum": "-120.2524734904024354811001580397957240",
+            "positive_gross_negative_net": 7
+          },
+          "UP": {
+            "trades": 93,
+            "losing_trades": 65,
+            "winning_trades": 28,
+            "net_pnl": "-32.2039141458174378617633210339853628",
+            "gross_execution_pnl": "-13.6175316774949327945578789128982641513",
+            "commission": "18.5863824683225050672054421210871012",
+            "reported_slippage_cost": "9.29319015307587142883737963041873032",
+            "losing_net_sum": "-70.9479413617389489390953065977090635",
+            "positive_gross_negative_net": 7
+          }
+        },
+        "T1_filter_at_signal": {
+          "FAIL": {
+            "trades": 50,
+            "losing_trades": 40,
+            "winning_trades": 10,
+            "net_pnl": "-42.6800464007970007694260716297949106",
+            "gross_execution_pnl": "-32.659029009787328544502552097212032975",
+            "commission": "10.0210173910096722249235195325828781",
+            "reported_slippage_cost": "5.01050178337302950888700086240363043",
+            "losing_net_sum": "-63.3212476596856563995992770532965992",
+            "positive_gross_negative_net": 3
+          },
+          "PASS": {
+            "trades": 164,
+            "losing_trades": 102,
+            "winning_trades": 62,
+            "net_pnl": "-19.5966450878569551258349370256534728",
+            "gross_execution_pnl": "13.1745868998882818303665636723627032637",
+            "commission": "32.7712319877452369562015006980161735",
+            "reported_slippage_cost": "16.38562338392518943146856580779045667",
+            "losing_net_sum": "-127.8791671924557280205961875842081883",
+            "positive_gross_negative_net": 11
+          }
+        }
+      }
+    },
+    {
+      "profile": "T0",
+      "cost": "stress",
+      "artifact_fingerprint": "sha256:02b06e9f3bf5c1ffb49e4a0a6bf8736fd8fae01d30cfd3cdb0a5f413e7268e19",
+      "summary": {
+        "trades": 216,
+        "losing_trades": 154,
+        "winning_trades": 62,
+        "net_pnl": "-131.4323385514580806277665320267051053",
+        "gross_execution_pnl": "-45.050413017973267121136718152420279863",
+        "commission": "86.3819255334848135066298138742848278",
+        "reported_slippage_cost": "43.1909609072902960703438561442804070",
+        "losing_net_sum": "-239.0470983679449328539046530864706154",
+        "positive_gross_negative_net": 14
+      },
+      "simultaneous_exit_condition_trades": 0,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 94,
+            "losing_trades": 70,
+            "winning_trades": 24,
+            "net_pnl": "-64.5897354915076903893086607239926022",
+            "gross_execution_pnl": "-27.043823137783256903114890505002607951",
+            "commission": "37.5459123537244334861937702189899942",
+            "reported_slippage_cost": "18.7729479059869849468249288195333119",
+            "losing_net_sum": "-94.3677227988704645700499228696970262",
+            "positive_gross_negative_net": 3
+          },
+          "SHORT": {
+            "trades": 122,
+            "losing_trades": 84,
+            "winning_trades": 38,
+            "net_pnl": "-66.8426030599503902384578713027125031",
+            "gross_execution_pnl": "-18.006589880190010218021827647417671912",
+            "commission": "48.8360131797603800204360436552948336",
+            "reported_slippage_cost": "24.4180130013033111235189273247470951",
+            "losing_net_sum": "-144.6793755690744682838547302167735892",
+            "positive_gross_negative_net": 11
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 40,
+            "losing_trades": 35,
+            "winning_trades": 5,
+            "net_pnl": "-21.1732805509657017459914050496417160",
+            "gross_execution_pnl": "-5.175618556184316396954075620593652613",
+            "commission": "15.9976619947813853490373294290480645",
+            "reported_slippage_cost": "7.9988338206059570961593639198123318",
+            "losing_net_sum": "-23.1017507613268178861852972256962772",
+            "positive_gross_negative_net": 12
+          },
+          "INITIAL_STOP": {
+            "trades": 111,
+            "losing_trades": 111,
+            "winning_trades": 0,
+            "net_pnl": "-209.9272680908225249920232743141587345",
+            "gross_execution_pnl": "-165.44499536254512653508330398830310795",
+            "commission": "44.4822727282773984569399703258556272",
+            "reported_slippage_cost": "22.2409931601364968198402699198937457",
+            "losing_net_sum": "-209.9272680908225249920232743141587345",
+            "positive_gross_negative_net": 0
+          },
+          "TAKE_PROFIT": {
+            "trades": 56,
+            "losing_trades": 1,
+            "winning_trades": 55,
+            "net_pnl": "103.8804745523103659646164534586864270",
+            "gross_execution_pnl": "126.1799076140392210433809971029970043",
+            "commission": "22.2994330617288550787645436443105778",
+            "reported_slippage_cost": "11.1498538606259022045055197086721009",
+            "losing_net_sum": "-0.0306188974080107825307357783564162",
+            "positive_gross_negative_net": 1
+          },
+          "TIME_STOP": {
+            "trades": 9,
+            "losing_trades": 7,
+            "winning_trades": 2,
+            "net_pnl": "-4.2122644619802198543683061215910818",
+            "gross_execution_pnl": "-0.6097067132830452324803356465205236",
+            "commission": "3.6025577486971746218879704750705583",
+            "reported_slippage_cost": "1.8012800659219399498387025959022286",
+            "losing_net_sum": "-5.9874606183875791931653457682591875",
+            "positive_gross_negative_net": 1
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 216,
+            "losing_trades": 154,
+            "winning_trades": 62,
+            "net_pnl": "-131.4323385514580806277665320267051053",
+            "gross_execution_pnl": "-45.050413017973267121136718152420279863",
+            "commission": "86.3819255334848135066298138742848278",
+            "reported_slippage_cost": "43.1909609072902960703438561442804070",
+            "losing_net_sum": "-239.0470983679449328539046530864706154",
+            "positive_gross_negative_net": 14
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 216,
+            "losing_trades": 154,
+            "winning_trades": 62,
+            "net_pnl": "-131.4323385514580806277665320267051053",
+            "gross_execution_pnl": "-45.050413017973267121136718152420279863",
+            "commission": "86.3819255334848135066298138742848278",
+            "reported_slippage_cost": "43.1909609072902960703438561442804070",
+            "losing_net_sum": "-239.0470983679449328539046530864706154",
+            "positive_gross_negative_net": 14
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 122,
+            "losing_trades": 84,
+            "winning_trades": 38,
+            "net_pnl": "-66.8426030599503902384578713027125031",
+            "gross_execution_pnl": "-18.006589880190010218021827647417671912",
+            "commission": "48.8360131797603800204360436552948336",
+            "reported_slippage_cost": "24.4180130013033111235189273247470951",
+            "losing_net_sum": "-144.6793755690744682838547302167735892",
+            "positive_gross_negative_net": 11
+          },
+          "UP": {
+            "trades": 94,
+            "losing_trades": 70,
+            "winning_trades": 24,
+            "net_pnl": "-64.5897354915076903893086607239926022",
+            "gross_execution_pnl": "-27.043823137783256903114890505002607951",
+            "commission": "37.5459123537244334861937702189899942",
+            "reported_slippage_cost": "18.7729479059869849468249288195333119",
+            "losing_net_sum": "-94.3677227988704645700499228696970262",
+            "positive_gross_negative_net": 3
+          }
+        },
+        "T1_filter_at_signal": {
+          "FAIL": {
+            "trades": 52,
+            "losing_trades": 44,
+            "winning_trades": 8,
+            "net_pnl": "-58.9927937360771232626824106772220072",
+            "gross_execution_pnl": "-38.162004077529298627428260571056121106",
+            "commission": "20.8307896585478246352541501061658862",
+            "reported_slippage_cost": "10.4153670826369174252458728706952430",
+            "losing_net_sum": "-75.1734579807162404966854279853847136",
+            "positive_gross_negative_net": 3
+          },
+          "PASS": {
+            "trades": 164,
+            "losing_trades": 110,
+            "winning_trades": 54,
+            "net_pnl": "-72.4395448153809573650841213494830981",
+            "gross_execution_pnl": "-6.888408940443968493708457581364158757",
+            "commission": "65.5511358749369888713756637681189416",
+            "reported_slippage_cost": "32.7755938246533786450979832735851640",
+            "losing_net_sum": "-163.8736403872286923572192251010859018",
+            "positive_gross_negative_net": 11
+          }
+        }
+      }
+    },
+    {
+      "profile": "T0",
+      "cost": "zero_cost_diagnostic",
+      "artifact_fingerprint": "sha256:8183b83d244eaed60a41e11c68994ca72827accd11c75935cf6ecf8761e9c294",
+      "summary": {
+        "trades": 211,
+        "losing_trades": 122,
+        "winning_trades": 89,
+        "net_pnl": "-7.282805685793316638009948863898428645",
+        "gross_execution_pnl": "-7.282805685793316638009948863898428645",
+        "commission": "0",
+        "reported_slippage_cost": "0",
+        "losing_net_sum": "-157.651035466911502973397436984411316735",
+        "positive_gross_negative_net": 0
+      },
+      "simultaneous_exit_condition_trades": 2,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 92,
+            "losing_trades": 55,
+            "winning_trades": 37,
+            "net_pnl": "-11.709389818482887092248173002362476665",
+            "gross_execution_pnl": "-11.709389818482887092248173002362476665",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-59.419504317042626883543044214551382645",
+            "positive_gross_negative_net": 0
+          },
+          "SHORT": {
+            "trades": 119,
+            "losing_trades": 67,
+            "winning_trades": 52,
+            "net_pnl": "4.42658413268957045423822413846404802",
+            "gross_execution_pnl": "4.42658413268957045423822413846404802",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-98.23153114986887608985439276985993409",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 40,
+            "losing_trades": 16,
+            "winning_trades": 24,
+            "net_pnl": "0.149419893387100889349289548054546525",
+            "gross_execution_pnl": "0.149419893387100889349289548054546525",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-9.774261682359981537289471207750313855",
+            "positive_gross_negative_net": 0
+          },
+          "INITIAL_STOP": {
+            "trades": 103,
+            "losing_trades": 102,
+            "winning_trades": 1,
+            "net_pnl": "-144.9273578468509764231107288210412369",
+            "gross_execution_pnl": "-144.9273578468509764231107288210412369",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-145.0277531674004898747420968805718608",
+            "positive_gross_negative_net": 0
+          },
+          "INITIAL_STOP+BREAK_EVEN": {
+            "trades": 2,
+            "losing_trades": 2,
+            "winning_trades": 0,
+            "net_pnl": "-2.5069043591299781799766958049835942",
+            "gross_execution_pnl": "-2.5069043591299781799766958049835942",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-2.5069043591299781799766958049835942",
+            "positive_gross_negative_net": 0
+          },
+          "TAKE_PROFIT": {
+            "trades": 59,
+            "losing_trades": 0,
+            "winning_trades": 59,
+            "net_pnl": "136.5118112848393834343215546567530489",
+            "gross_execution_pnl": "136.5118112848393834343215546567530489",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "0",
+            "positive_gross_negative_net": 0
+          },
+          "TIME_STOP": {
+            "trades": 7,
+            "losing_trades": 2,
+            "winning_trades": 5,
+            "net_pnl": "3.49022534196115364140663155731880703",
+            "gross_execution_pnl": "3.49022534196115364140663155731880703",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-0.34211625802105338138917309110554788",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 211,
+            "losing_trades": 122,
+            "winning_trades": 89,
+            "net_pnl": "-7.282805685793316638009948863898428645",
+            "gross_execution_pnl": "-7.282805685793316638009948863898428645",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-157.651035466911502973397436984411316735",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 211,
+            "losing_trades": 122,
+            "winning_trades": 89,
+            "net_pnl": "-7.282805685793316638009948863898428645",
+            "gross_execution_pnl": "-7.282805685793316638009948863898428645",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-157.651035466911502973397436984411316735",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 119,
+            "losing_trades": 67,
+            "winning_trades": 52,
+            "net_pnl": "4.42658413268957045423822413846404802",
+            "gross_execution_pnl": "4.42658413268957045423822413846404802",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-98.23153114986887608985439276985993409",
+            "positive_gross_negative_net": 0
+          },
+          "UP": {
+            "trades": 92,
+            "losing_trades": 55,
+            "winning_trades": 37,
+            "net_pnl": "-11.709389818482887092248173002362476665",
+            "gross_execution_pnl": "-11.709389818482887092248173002362476665",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-59.419504317042626883543044214551382645",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "T1_filter_at_signal": {
+          "FAIL": {
+            "trades": 47,
+            "losing_trades": 35,
+            "winning_trades": 12,
+            "net_pnl": "-32.52429218284247141136002336340944828",
+            "gross_execution_pnl": "-32.52429218284247141136002336340944828",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-53.52189864135461344778100945021773098",
+            "positive_gross_negative_net": 0
+          },
+          "PASS": {
+            "trades": 164,
+            "losing_trades": 87,
+            "winning_trades": 77,
+            "net_pnl": "25.241486497049154773350074499511019635",
+            "gross_execution_pnl": "25.241486497049154773350074499511019635",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-104.129136825556889525616427534193585755",
+            "positive_gross_negative_net": 0
+          }
+        }
+      }
+    },
+    {
+      "profile": "T1",
+      "cost": "base",
+      "artifact_fingerprint": "sha256:7030a441595687274c8a8e46b608261a5071149686855af400803e5a98bcc758",
+      "summary": {
+        "trades": 195,
+        "losing_trades": 125,
+        "winning_trades": 70,
+        "net_pnl": "-46.3337357344278661650761610370731213",
+        "gross_execution_pnl": "-7.3487130748838765303632074967253443564",
+        "commission": "38.9850226595439896347129535403477751",
+        "reported_slippage_cost": "19.49251436572231752696672592105349367",
+        "losing_net_sum": "-168.0503097737090991038581381725173280",
+        "positive_gross_negative_net": 15
+      },
+      "simultaneous_exit_condition_trades": 0,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 83,
+            "losing_trades": 56,
+            "winning_trades": 27,
+            "net_pnl": "-27.7518637386816737877961287408999308",
+            "gross_execution_pnl": "-11.1630267654471209087048335744744079014",
+            "commission": "16.5888369732345528790912951664255249",
+            "reported_slippage_cost": "8.29441776946502744402228141257472223",
+            "losing_net_sum": "-64.3574553580488227588010893679236720",
+            "positive_gross_negative_net": 8
+          },
+          "SHORT": {
+            "trades": 112,
+            "losing_trades": 69,
+            "winning_trades": 43,
+            "net_pnl": "-18.5818719957461923772800322961731905",
+            "gross_execution_pnl": "3.814313690563244378341626077749063545",
+            "commission": "22.3961856863094367556216583739222502",
+            "reported_slippage_cost": "11.19809659625729008294444450847877144",
+            "losing_net_sum": "-103.6928544156602763450570488045936560",
+            "positive_gross_negative_net": 7
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 37,
+            "losing_trades": 27,
+            "winning_trades": 10,
+            "net_pnl": "-4.4476569594543765735359344088944097",
+            "gross_execution_pnl": "2.9497708828910270464536668805410215437",
+            "commission": "7.3974278423454036199896012894354308",
+            "reported_slippage_cost": "3.69871558329431835633115134092227069",
+            "losing_net_sum": "-8.7854063122136597992598297954166182",
+            "positive_gross_negative_net": 14
+          },
+          "INITIAL_STOP": {
+            "trades": 96,
+            "losing_trades": 95,
+            "winning_trades": 1,
+            "net_pnl": "-157.2989568807523036057617088557997564",
+            "gross_execution_pnl": "-138.0636251498457078932808639130992978201",
+            "commission": "19.2353317309065957124808449427004579",
+            "reported_slippage_cost": "9.61763375395544888367567007005176803",
+            "losing_net_sum": "-157.5915235476422427208031254985771009",
+            "positive_gross_negative_net": 1
+          },
+          "TAKE_PROFIT": {
+            "trades": 56,
+            "losing_trades": 0,
+            "winning_trades": 56,
+            "net_pnl": "114.7035887784038133779197739730324260",
+            "gross_execution_pnl": "125.8555694358985009567848842515762098",
+            "commission": "11.1519806574946875788651102785437830",
+            "reported_slippage_cost": "5.57602318664549942543265069365562820",
+            "losing_net_sum": "0",
+            "positive_gross_negative_net": 0
+          },
+          "TIME_STOP": {
+            "trades": 6,
+            "losing_trades": 3,
+            "winning_trades": 3,
+            "net_pnl": "0.7092893273750006363017082545886188",
+            "gross_execution_pnl": "1.90957175617230335967910528425672212",
+            "commission": "1.2002824287973027233773970296681034",
+            "reported_slippage_cost": "0.60014184182705086152725381642382675",
+            "losing_net_sum": "-1.6733799138531965837951828785236089",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 195,
+            "losing_trades": 125,
+            "winning_trades": 70,
+            "net_pnl": "-46.3337357344278661650761610370731213",
+            "gross_execution_pnl": "-7.3487130748838765303632074967253443564",
+            "commission": "38.9850226595439896347129535403477751",
+            "reported_slippage_cost": "19.49251436572231752696672592105349367",
+            "losing_net_sum": "-168.0503097737090991038581381725173280",
+            "positive_gross_negative_net": 15
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 195,
+            "losing_trades": 125,
+            "winning_trades": 70,
+            "net_pnl": "-46.3337357344278661650761610370731213",
+            "gross_execution_pnl": "-7.3487130748838765303632074967253443564",
+            "commission": "38.9850226595439896347129535403477751",
+            "reported_slippage_cost": "19.49251436572231752696672592105349367",
+            "losing_net_sum": "-168.0503097737090991038581381725173280",
+            "positive_gross_negative_net": 15
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 112,
+            "losing_trades": 69,
+            "winning_trades": 43,
+            "net_pnl": "-18.5818719957461923772800322961731905",
+            "gross_execution_pnl": "3.814313690563244378341626077749063545",
+            "commission": "22.3961856863094367556216583739222502",
+            "reported_slippage_cost": "11.19809659625729008294444450847877144",
+            "losing_net_sum": "-103.6928544156602763450570488045936560",
+            "positive_gross_negative_net": 7
+          },
+          "UP": {
+            "trades": 83,
+            "losing_trades": 56,
+            "winning_trades": 27,
+            "net_pnl": "-27.7518637386816737877961287408999308",
+            "gross_execution_pnl": "-11.1630267654471209087048335744744079014",
+            "commission": "16.5888369732345528790912951664255249",
+            "reported_slippage_cost": "8.29441776946502744402228141257472223",
+            "losing_net_sum": "-64.3574553580488227588010893679236720",
+            "positive_gross_negative_net": 8
+          }
+        },
+        "T1_filter_at_signal": {
+          "PASS": {
+            "trades": 195,
+            "losing_trades": 125,
+            "winning_trades": 70,
+            "net_pnl": "-46.3337357344278661650761610370731213",
+            "gross_execution_pnl": "-7.3487130748838765303632074967253443564",
+            "commission": "38.9850226595439896347129535403477751",
+            "reported_slippage_cost": "19.49251436572231752696672592105349367",
+            "losing_net_sum": "-168.0503097737090991038581381725173280",
+            "positive_gross_negative_net": 15
+          }
+        }
+      }
+    },
+    {
+      "profile": "T1",
+      "cost": "stress",
+      "artifact_fingerprint": "sha256:fadf4d9e593dd887e885e910f27516c344445dbc357a305839f68b2efac90e12",
+      "summary": {
+        "trades": 193,
+        "losing_trades": 133,
+        "winning_trades": 60,
+        "net_pnl": "-102.1392352710670901085157183142090624",
+        "gross_execution_pnl": "-24.971878528535809183240684301385245557",
+        "commission": "77.1673567425312809252750340128238180",
+        "reported_slippage_cost": "38.5836919830790950059233396890672969",
+        "losing_net_sum": "-203.1595326630056370854806941428444400",
+        "positive_gross_negative_net": 13
+      },
+      "simultaneous_exit_condition_trades": 0,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 81,
+            "losing_trades": 58,
+            "winning_trades": 23,
+            "net_pnl": "-53.0054601241847779263161152668482250",
+            "gross_execution_pnl": "-20.646753631447673272861838944737700835",
+            "commission": "32.3587064927371046534542763221105239",
+            "reported_slippage_cost": "16.1793487789636998427537080529243701",
+            "losing_net_sum": "-81.0502136434057383738255713140699003",
+            "positive_gross_negative_net": 3
+          },
+          "SHORT": {
+            "trades": 112,
+            "losing_trades": 75,
+            "winning_trades": 37,
+            "net_pnl": "-49.1337751468823121821996030473608374",
+            "gross_execution_pnl": "-4.325124897088135910378845356647544722",
+            "commission": "44.8086502497941762718207576907132941",
+            "reported_slippage_cost": "22.4043432041153951631696316361429268",
+            "losing_net_sum": "-122.1093190195998987116551228287745397",
+            "positive_gross_negative_net": 10
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 31,
+            "losing_trades": 27,
+            "winning_trades": 4,
+            "net_pnl": "-12.1460358062557416042453006775520706",
+            "gross_execution_pnl": "0.246584275485838116240489983291709583",
+            "commission": "12.3926200817415797204857906608437803",
+            "reported_slippage_cost": "6.1963164837715491176301292010410745",
+            "losing_net_sum": "-13.9200463376366070685099550436948812",
+            "positive_gross_negative_net": 10
+          },
+          "INITIAL_STOP": {
+            "trades": 99,
+            "losing_trades": 99,
+            "winning_trades": 0,
+            "net_pnl": "-183.5649806464479822001671665348949298",
+            "gross_execution_pnl": "-143.89777361059112419085374653193892144",
+            "commission": "39.6672070358568580093134200029560062",
+            "reported_slippage_cost": "19.8334794536342720478045669522984235",
+            "losing_net_sum": "-183.5649806464479822001671665348949298",
+            "positive_gross_negative_net": 1
+          },
+          "TAKE_PROFIT": {
+            "trades": 55,
+            "losing_trades": 1,
+            "winning_trades": 54,
+            "net_pnl": "97.4404718067423113913725460374680451",
+            "gross_execution_pnl": "119.3453310559058732626827392487116574",
+            "commission": "21.9048592491635618713101932112436150",
+            "reported_slippage_cost": "10.9525599224727593142876735760346323",
+            "losing_net_sum": "-0.0306188974080107825307357783564162",
+            "positive_gross_negative_net": 1
+          },
+          "TIME_STOP": {
+            "trades": 8,
+            "losing_trades": 6,
+            "winning_trades": 2,
+            "net_pnl": "-3.8686906251056776954757971392301071",
+            "gross_execution_pnl": "-0.6660202493363963713101670014496911",
+            "commission": "3.2026703757692813241656301377804165",
+            "reported_slippage_cost": "1.6013361232005145262009699596931666",
+            "losing_net_sum": "-5.6438867815130370342728367858982128",
+            "positive_gross_negative_net": 1
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 193,
+            "losing_trades": 133,
+            "winning_trades": 60,
+            "net_pnl": "-102.1392352710670901085157183142090624",
+            "gross_execution_pnl": "-24.971878528535809183240684301385245557",
+            "commission": "77.1673567425312809252750340128238180",
+            "reported_slippage_cost": "38.5836919830790950059233396890672969",
+            "losing_net_sum": "-203.1595326630056370854806941428444400",
+            "positive_gross_negative_net": 13
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 193,
+            "losing_trades": 133,
+            "winning_trades": 60,
+            "net_pnl": "-102.1392352710670901085157183142090624",
+            "gross_execution_pnl": "-24.971878528535809183240684301385245557",
+            "commission": "77.1673567425312809252750340128238180",
+            "reported_slippage_cost": "38.5836919830790950059233396890672969",
+            "losing_net_sum": "-203.1595326630056370854806941428444400",
+            "positive_gross_negative_net": 13
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 112,
+            "losing_trades": 75,
+            "winning_trades": 37,
+            "net_pnl": "-49.1337751468823121821996030473608374",
+            "gross_execution_pnl": "-4.325124897088135910378845356647544722",
+            "commission": "44.8086502497941762718207576907132941",
+            "reported_slippage_cost": "22.4043432041153951631696316361429268",
+            "losing_net_sum": "-122.1093190195998987116551228287745397",
+            "positive_gross_negative_net": 10
+          },
+          "UP": {
+            "trades": 81,
+            "losing_trades": 58,
+            "winning_trades": 23,
+            "net_pnl": "-53.0054601241847779263161152668482250",
+            "gross_execution_pnl": "-20.646753631447673272861838944737700835",
+            "commission": "32.3587064927371046534542763221105239",
+            "reported_slippage_cost": "16.1793487789636998427537080529243701",
+            "losing_net_sum": "-81.0502136434057383738255713140699003",
+            "positive_gross_negative_net": 3
+          }
+        },
+        "T1_filter_at_signal": {
+          "PASS": {
+            "trades": 193,
+            "losing_trades": 133,
+            "winning_trades": 60,
+            "net_pnl": "-102.1392352710670901085157183142090624",
+            "gross_execution_pnl": "-24.971878528535809183240684301385245557",
+            "commission": "77.1673567425312809252750340128238180",
+            "reported_slippage_cost": "38.5836919830790950059233396890672969",
+            "losing_net_sum": "-203.1595326630056370854806941428444400",
+            "positive_gross_negative_net": 13
+          }
+        }
+      }
+    },
+    {
+      "profile": "T1",
+      "cost": "zero_cost_diagnostic",
+      "artifact_fingerprint": "sha256:17df7d819b1dd17f26ad92c1934af3e828be07f88725e9af6184a2c1ff7d2733",
+      "summary": {
+        "trades": 195,
+        "losing_trades": 108,
+        "winning_trades": 87,
+        "net_pnl": "4.231656351887454937891501993364835705",
+        "gross_execution_pnl": "4.231656351887454937891501993364835705",
+        "commission": "0",
+        "reported_slippage_cost": "0",
+        "losing_net_sum": "-139.546310035904415892873518891570311485",
+        "positive_gross_negative_net": 0
+      },
+      "simultaneous_exit_condition_trades": 0,
+      "groups": {
+        "side": {
+          "LONG": {
+            "trades": 83,
+            "losing_trades": 48,
+            "winning_trades": 35,
+            "net_pnl": "-8.334498911736671712384274528984537225",
+            "gross_execution_pnl": "-8.334498911736671712384274528984537225",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-54.071274004651252699740221913068481745",
+            "positive_gross_negative_net": 0
+          },
+          "SHORT": {
+            "trades": 112,
+            "losing_trades": 60,
+            "winning_trades": 52,
+            "net_pnl": "12.56615526362412665027577652234937293",
+            "gross_execution_pnl": "12.56615526362412665027577652234937293",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-85.47503603125316319313329697850182974",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "exit_condition_set": {
+          "BREAK_EVEN": {
+            "trades": 36,
+            "losing_trades": 12,
+            "winning_trades": 24,
+            "net_pnl": "5.379357847687921049983049283084898095",
+            "gross_execution_pnl": "5.379357847687921049983049283084898095",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-3.785200430772533601741761855602884085",
+            "positive_gross_negative_net": 0
+          },
+          "INITIAL_STOP": {
+            "trades": 96,
+            "losing_trades": 94,
+            "winning_trades": 2,
+            "net_pnl": "-134.2597369456453295021738282914861767",
+            "gross_execution_pnl": "-134.2597369456453295021738282914861767",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-134.9516650548020320121071102636468547",
+            "positive_gross_negative_net": 0
+          },
+          "TAKE_PROFIT": {
+            "trades": 57,
+            "losing_trades": 0,
+            "winning_trades": 57,
+            "net_pnl": "130.6023801600684958198580462120062697",
+            "gross_execution_pnl": "130.6023801600684958198580462120062697",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "0",
+            "positive_gross_negative_net": 0
+          },
+          "TIME_STOP": {
+            "trades": 6,
+            "losing_trades": 2,
+            "winning_trades": 4,
+            "net_pnl": "2.50965528977636757022423478975984461",
+            "gross_execution_pnl": "2.50965528977636757022423478975984461",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-0.8094445503298502790246467723205727",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "adx_band": {
+          "ADX_GE20": {
+            "trades": 195,
+            "losing_trades": 108,
+            "winning_trades": 87,
+            "net_pnl": "4.231656351887454937891501993364835705",
+            "gross_execution_pnl": "4.231656351887454937891501993364835705",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-139.546310035904415892873518891570311485",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "atr_band": {
+          "ATR_015_TO3": {
+            "trades": 195,
+            "losing_trades": 108,
+            "winning_trades": 87,
+            "net_pnl": "4.231656351887454937891501993364835705",
+            "gross_execution_pnl": "4.231656351887454937891501993364835705",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-139.546310035904415892873518891570311485",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "ema_order": {
+          "DOWN": {
+            "trades": 112,
+            "losing_trades": 60,
+            "winning_trades": 52,
+            "net_pnl": "12.56615526362412665027577652234937293",
+            "gross_execution_pnl": "12.56615526362412665027577652234937293",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-85.47503603125316319313329697850182974",
+            "positive_gross_negative_net": 0
+          },
+          "UP": {
+            "trades": 83,
+            "losing_trades": 48,
+            "winning_trades": 35,
+            "net_pnl": "-8.334498911736671712384274528984537225",
+            "gross_execution_pnl": "-8.334498911736671712384274528984537225",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-54.071274004651252699740221913068481745",
+            "positive_gross_negative_net": 0
+          }
+        },
+        "T1_filter_at_signal": {
+          "PASS": {
+            "trades": 195,
+            "losing_trades": 108,
+            "winning_trades": 87,
+            "net_pnl": "4.231656351887454937891501993364835705",
+            "gross_execution_pnl": "4.231656351887454937891501993364835705",
+            "commission": "0",
+            "reported_slippage_cost": "0",
+            "losing_net_sum": "-139.546310035904415892873518891570311485",
+            "positive_gross_negative_net": 0
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Exit reasons absent in immutable ledger: independently reconstructed exact engine predicates; simultaneous conditions preserved, no invented precedence or intrabar path.",
+    "Entry regimes use only source signal bar information; fixed preregistered thresholds.",
+    "Groups are descriptive and selected after seeing performance, not independently validated causal evidence; no post-hoc subgroup promotion.",
+    "Gross PnL already includes execution-price slippage; commission difference is net=gross-commission. Reported slippage cost is diagnostic and must not be subtracted again.",
+    "Six cost scenarios have different trades because execution prices affect stops; no same-trade causal cost comparison.",
+    "Funding unavailable, no volume; no recommendation to deploy or switch direction."
+  ],
+  "checks": {
+    "all_exit_conditions_reconciled": true,
+    "no_earlier_exit_condition": true,
+    "all_net_sums_reconciled": true,
+    "development_only": true
+  },
+  "next_step": "Preregister a new bounded BTC development research hypothesis before any new variant or optimization; current T0/T1 remain failed."
+}
