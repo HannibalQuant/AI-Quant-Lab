@@ -1,0 +1,80 @@
+{
+  "design_id": "btc-sol-rr3-transfer-v1",
+  "status": "PREREGISTERED_OPERATOR_REQUESTED_DEVELOPMENT_ONLY",
+  "baseline": "404d73c6508e1a070f1cff1976a5efa357e94b27",
+  "operator_authorization": "2026-10-03: apply same logic and strategy as SOL4H",
+  "model": "MULTI_SIGNAL_TREND_LONG_SHORT",
+  "profile": "SOL4H_TRANSFER",
+  "parameters": {
+    "fast_ema": 12,
+    "medium_ema": 72,
+    "slow_ema": 160,
+    "rsi_length": 10,
+    "rsi_long_min": "61",
+    "rsi_short_max": "38",
+    "macd_fast": 7,
+    "macd_slow": 49,
+    "macd_signal": 17,
+    "adx_length": 14,
+    "adx_threshold": "20",
+    "atr_length": 14,
+    "atr_stop_mult": "2.5",
+    "take_profit_r": "2",
+    "break_even_trigger_r": "1",
+    "time_stop_bars": 18,
+    "ema_separation_min_pct": "0.2",
+    "adx_slope_length": 1,
+    "atr_pct_min": "0.5",
+    "atr_pct_max": "4"
+  },
+  "reference": "Frozen SOL RR3 Candidate2; logic and all strategy parameters copied unchanged; SOL artifact is reference only, never mutated.",
+  "frozen_pine_sha256": "4c3857331eba9c1c7cf141c91c63595ae9d7fa0ac3e719cc1abf9a5891e6aaf3",
+  "window": [
+    "2025-04-01T00:00:00Z",
+    "2026-04-01T00:00:00Z"
+  ],
+  "timeframe": "BTCUSDT 1H",
+  "warmup_bars": 1000,
+  "timeframe_interpretation": "All periods remain in bars; time stop18 BTC1H bars=18 hours versus72 hours on SOL4H. This is a timeframe transfer, not identical economic-time exposure.",
+  "cost_scenarios": {
+    "base": {
+      "commission_bps_per_fill": 10,
+      "slippage_bps_per_fill": 5
+    },
+    "stress": {
+      "commission_bps_per_fill": 20,
+      "slippage_bps_per_fill": 10
+    },
+    "zero_cost_diagnostic": {
+      "commission_bps_per_fill": 0,
+      "slippage_bps_per_fill": 0
+    }
+  },
+  "maximum_new_runs": 3,
+  "cumulative_screening_attempts": 12,
+  "initial_capital_usdt": 1000,
+  "fixed_notional_usdt": 100,
+  "gates": {
+    "max_base_drawdown_pct": 5,
+    "max_stress_drawdown_pct": 7.5,
+    "min_completed_trades": 80,
+    "min_completed_trades_per_side": 30,
+    "min_positive_quarters": 3,
+    "min_profit_factor": 1.1,
+    "min_worst_quarter_pct": -2,
+    "net_pnl_positive": true,
+    "short_pnl_positive_base_and_stress": true,
+    "stress_net_pnl_positive": true
+  },
+  "gate_interpretation": "All existing absolute gates unchanged, DD loss/initial capital; insufficient trades INCONCLUSIVE; zero diagnostic never promotes.",
+  "funding": "UNAVAILABLE_NOT_MODELED_ECONOMIC_PROMOTION_BLOCKED",
+  "validation_authorized": false,
+  "oos_authorized": false,
+  "optimization_authorized": false,
+  "candidate_selection_authorized": false,
+  "pine_authorized": false,
+  "execution_authorized": false,
+  "new_identity_required": true,
+  "prior_trials_retained": "Six T0/T1, three PB0; transfer is additional exploratory trial, no independent confirmation.",
+  "next_step": "Exact strategy/specification/authorization on frozen development dataset, three fixed cost scenarios using existing governed trend engine."
+}

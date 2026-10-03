@@ -1,0 +1,448 @@
+{
+  "baseline": "404d73c6508e1a070f1cff1976a5efa357e94b27",
+  "dataset": {
+    "baseline": "404d73c6508e1a070f1cff1976a5efa357e94b27",
+    "source_sha256": "43c2b1cbb3734320801c26cada7dc2c97cf1715978156aafffeabfd22419e4dd",
+    "source_bytes": 2764554,
+    "source_rows": 24105,
+    "canonical_sha256": "1ea4bcacd92175c5451199de06241515a66aaff91172f047299453c37cd9f1e6",
+    "canonical_rows": 8760,
+    "first_open": "2025-04-01T00:00:00+00:00",
+    "last_close": "2026-04-01T00:00:00+00:00",
+    "admission": "ADMITTED",
+    "eligibility": "ELIGIBLE",
+    "readiness": "RESEARCH_READY",
+    "findings": [],
+    "lineage": "VERIFIED",
+    "declaration": {
+      "id": "provenance:btc-dev-solcopy-v1-source-declaration",
+      "version": 1,
+      "fingerprint": "sha256:cd1a56e2e467131814151b25c7b10b20e90d4e98c4fe217d3a938077f28e60a1"
+    },
+    "admission_ref": {
+      "id": "artifact:btc-dev-solcopy-v1-admission",
+      "version": 1,
+      "fingerprint": "sha256:34e7d2d9aa42ea16336b9cbcc978a58307ec21234c088ae04d49fca438ccca6e"
+    },
+    "raw_manifest": {
+      "id": "dataset:btc-dev-solcopy-v1-raw-dataset",
+      "version": 1,
+      "fingerprint": "sha256:09de6637acd779dfa4c7094d139d9eaccf4d5b8f0ebcdd00e4e34597d915e96f"
+    },
+    "raw_lock": {
+      "id": "dataset-lock:btc-dev-solcopy-v1-raw-lock",
+      "version": 1,
+      "fingerprint": "sha256:3474089dd3c6786a1b1f9b7663ac6f12e86adf24cdc6a6c3c13d013e772bf10d"
+    },
+    "normalized_manifest": {
+      "id": "dataset:btc-dev-solcopy-v1-normalized-dataset",
+      "version": 1,
+      "fingerprint": "sha256:d7462b8dbc30dee1eb38a3aef525ecdf781ec7553ef7f797533f78cdb501070b"
+    },
+    "normalized_lock": {
+      "id": "dataset-lock:btc-dev-solcopy-v1-normalized-lock",
+      "version": 1,
+      "fingerprint": "sha256:3705577ed0de88cabcad42a9d38eec8dba023ef6cf15979c3b6ba85dbf1f039f"
+    },
+    "eligibility_ref": {
+      "id": "artifact:btc-dev-solcopy-v1-eligibility",
+      "version": 1,
+      "fingerprint": "sha256:1a4bac60f3eea092ac4d9d6fe405c278c9e70fd59542043a3c47c8247c96f925"
+    },
+    "limitation": "Development-only; 8760 complete 1H bars; volume absent, historical finality/close availability derived; permission/local-only retention declared by operator; funding unavailable.",
+    "optimization_authorized": false,
+    "oos_used_for_strategy": false,
+    "parent_lineage": [
+      {
+        "id": "dataset:btc-run1-r3-normalized-dataset",
+        "version": 1,
+        "fingerprint": "sha256:ecc29cf5797ef8620a6450b36fe90db8bead9942ad98c96914cea448390e34a0"
+      },
+      {
+        "id": "dataset-lock:btc-run1-r3-normalized-lock",
+        "version": 1,
+        "fingerprint": "sha256:2e23d6712e0a7d574caacbbe4e65340907d8eab2758f066e3d67fe5a0a8dfdc7"
+      }
+    ],
+    "subset_verification": "byte-identical to previously locked development subset; original source SHA identical",
+    "sol_transfer_design_sha256": "cad28e5fbd9d9e1decbde8d5a0ddee70e190b1995210bedb1088b6584c50c35c"
+  },
+  "runs": [
+    {
+      "profile": "SOL4H_TRANSFER",
+      "cost": "base",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:ee4714d09a7033bcffbc8218e4b882218a38d00c360c437ce10f005a452c106d",
+      "artifact_fingerprint": "sha256:3c71f3cb5f8b1d6e860181bad464c3486f3304496e1dcd37a2fc6ed74a5f8487",
+      "authorization_fingerprint": "sha256:2b9ebb793cc8324dbabc733f618fbe1057bf7a6b65f092e4eaeaf97834499c25",
+      "net_pnl": "-38.54091099570005052995904907676163",
+      "return_pct": "-3.854091099570005052995904908",
+      "drawdown_pct": "4.231407974169095444417047019",
+      "trades": 123,
+      "profit_factor": "0.6828873718745206249356153835",
+      "sides": {
+        "LONG": {
+          "trades": 41,
+          "realized_net_pnl": "-22.51860337378470070288913115"
+        },
+        "SHORT": {
+          "trades": 82,
+          "realized_net_pnl": "-16.02230762191534982706991791"
+        }
+      },
+      "realized_net_pnl": "-38.54091099570005052995904904",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "24585.28974862688357595722685",
+      "exposed_bars": 1634,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-5.858620112786843897873898440",
+          "return_pct": "-0.5858620112786843897873898400"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-5.584380552686528588244915267",
+          "return_pct": "-0.5617290121572129924131857600"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-3.730825372103345860177203621",
+          "return_pct": "-0.3774011386915321974988551500"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-3.782259254706934148749539600",
+          "return_pct": "-0.3840534862603325615491526800"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-1.256649903126712654182323945",
+          "return_pct": "-0.1280931346993888593536708600"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "0.3694605392794812589313055069",
+          "return_pct": "0.037708240610084585004156100"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "-0.8444448983196561640085041942",
+          "return_pct": "-0.0861540686795164242277380900"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-19.02590529140501360872459946",
+          "return_pct": "-1.942782263768708968357097540"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "7.342809136654819180770670220",
+          "return_pct": "0.764647851582415400147837900"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "1.769101195083991474592188509",
+          "return_pct": "0.182828424752464654709542700"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-7.939196481583307522292228790",
+          "return_pct": "-0.8189818984055672844667367300"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-11.44300066547337248611881371",
+          "return_pct": "-1.144300066547337248611881371"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-8.769734529936992663109067166",
+          "return_pct": "-0.8871248229328781385840170346"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-19.50088965044518851380179815",
+          "return_pct": "-1.990318750911145763115304362"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "1.172713850155503133070629939",
+          "return_pct": "0.1221212630416900362972765985"
+        }
+      ],
+      "drawdown_initial_capital_pct": "4.2328107344632520742748320163371300"
+    },
+    {
+      "profile": "SOL4H_TRANSFER",
+      "cost": "stress",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:a51dc92e7fc6befe3e0cd9d2a741fab82534c8de45ca10a2247827d25c56cb64",
+      "artifact_fingerprint": "sha256:9e5ea2fc3e3cf3112f07d5e109f0b106ddb574a39e11383c51bead75a0e849d1",
+      "authorization_fingerprint": "sha256:d57b8301a21afa16890e5a745a3e4bece7ffcc9e762f486c52abfa68e292ccfa",
+      "net_pnl": "-76.89589059596395273993003127162102",
+      "return_pct": "-7.689589059596395273993003127",
+      "drawdown_pct": "7.977478198663980012170056771",
+      "trades": 122,
+      "profit_factor": "0.4692076462608806447253188579",
+      "sides": {
+        "LONG": {
+          "trades": 40,
+          "realized_net_pnl": "-34.82737250032932035364351097"
+        },
+        "SHORT": {
+          "trades": 82,
+          "realized_net_pnl": "-42.06851809563463238628652030"
+        }
+      },
+      "realized_net_pnl": "-76.89589059596395273993003126",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "24390.38491535377479922636009",
+      "exposed_bars": 1610,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-7.640192922655342271900215077",
+          "return_pct": "-0.7640192922655342271900215100"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-7.787122375926045937635492174",
+          "return_pct": "-0.7847075546983652236217080300"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-5.529931329377195570020687336",
+          "return_pct": "-0.5616580081189436864838735800"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "-7.753495181868296198571282912",
+          "return_pct": "-0.7919465370805851913913215200"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-1.848721923375623099783668850",
+          "return_pct": "-0.1903369061056426783718704100"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "-4.684772188605300399934550500",
+          "return_pct": "-0.4832449246083531870258445400"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "-6.709202738198570375707237856",
+          "return_pct": "-0.6954301791199039929628691200"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-22.92768337178508923447301814",
+          "return_pct": "-2.393170050077395309533827920"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "3.603062062468326535884275258",
+          "return_pct": "0.385305242719185133368634100"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "-3.176380555460885592219873037",
+          "return_pct": "-0.3383728897778913533093876400"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-12.44145007117993059556828065",
+          "return_pct": "-1.329860416221613576651661370"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-15.42731529858138820953570725",
+          "return_pct": "-1.542731529858138820953570725"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-15.13214843462111486837563910",
+          "return_pct": "-1.536925477392264675159000256"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-34.32165829858896001011480650",
+          "return_pct": "-3.540357248806375008874157042"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "-12.01476856417248965190387843",
+          "return_pct": "-1.284838628247750833038359824"
+        }
+      ],
+      "drawdown_initial_capital_pct": "7.9789248814979775763746990868748200"
+    },
+    {
+      "profile": "SOL4H_TRANSFER",
+      "cost": "zero_cost_diagnostic",
+      "state": "COMPLETED",
+      "run_fingerprint": "sha256:1652e34fdfc43a4bff46cbe5381252e45d68bdd7c380ace328d5f46e8d37022f",
+      "artifact_fingerprint": "sha256:e4317740aea5619b1b627b19be4d640fb38ecebaf9e507394edeb9fda22e117b",
+      "authorization_fingerprint": "sha256:b8127e0ad571b471c6ea6bd42ce143d30bf3665974f99a824f7f255d15a16ac0",
+      "net_pnl": "-1.78616550349519869898853600319574",
+      "return_pct": "-0.1786165503495198698988536003",
+      "drawdown_pct": "1.952920401564390547551317389",
+      "trades": 124,
+      "profit_factor": "0.9825543474701326603354835566",
+      "sides": {
+        "LONG": {
+          "trades": 41,
+          "realized_net_pnl": "-10.46223070659563727454697678"
+        },
+        "SHORT": {
+          "trades": 83,
+          "realized_net_pnl": "8.676065203100438575558440776"
+        }
+      },
+      "realized_net_pnl": "-1.786165503495198698988536013",
+      "terminal_unrealized_pnl": "0",
+      "open_position": "FLAT",
+      "turnover_usdt": "24780.86170409030392414989459",
+      "exposed_bars": 1676,
+      "months": [
+        {
+          "month": "2025-04",
+          "pnl": "0",
+          "return_pct": "0"
+        },
+        {
+          "month": "2025-05",
+          "pnl": "-3.769421862131864177673867662",
+          "return_pct": "-0.3769421862131864177673867700"
+        },
+        {
+          "month": "2025-06",
+          "pnl": "-3.179209606119621585724666189",
+          "return_pct": "-0.3191238731160138562716966200"
+        },
+        {
+          "month": "2025-07",
+          "pnl": "-2.369684347202720483466210060",
+          "return_pct": "-0.2386265627634508511545284800"
+        },
+        {
+          "month": "2025-08",
+          "pnl": "0.03848922349871758539680620912",
+          "return_pct": "0.003885125173218378619745200"
+        },
+        {
+          "month": "2025-09",
+          "pnl": "-0.6645807587776713041137918568",
+          "return_pct": "-0.0670805719531818508841788300"
+        },
+        {
+          "month": "2025-10",
+          "pnl": "5.243160055283305153322915423",
+          "return_pct": "0.529582388525603349550490200"
+        },
+        {
+          "month": "2025-11",
+          "pnl": "2.130683869407228413887522760",
+          "return_pct": "0.214074805541297821363683800"
+        },
+        {
+          "month": "2025-12",
+          "pnl": "-14.90292731350274962147816974",
+          "return_pct": "-1.494133496269410305250713830"
+        },
+        {
+          "month": "2026-01",
+          "pnl": "11.08193624581912365816447377",
+          "return_pct": "1.127902009907139382780386000"
+        },
+        {
+          "month": "2026-02",
+          "pnl": "8.690324394499378362363207309",
+          "return_pct": "0.874622637700245548615993500"
+        },
+        {
+          "month": "2026-03",
+          "pnl": "-4.084935404268324699666755962",
+          "return_pct": "-0.4075566614406531133017668300"
+        }
+      ],
+      "quarters": [
+        {
+          "quarter": "2025Q2",
+          "pnl": "-6.948631468251485763398533851",
+          "return_pct": "-0.6948631468251485763398533851"
+        },
+        {
+          "quarter": "2025Q3",
+          "pnl": "-2.995775882481674202183195708",
+          "return_pct": "-0.3016738083661275625326302417"
+        },
+        {
+          "quarter": "2025Q4",
+          "pnl": "-7.529083388812216054267731557",
+          "return_pct": "-0.7604707699963914265257492674"
+        },
+        {
+          "quarter": "2026Q1",
+          "pnl": "15.68732523605017732086092512",
+          "return_pct": "1.596631244876842037008830428"
+        }
+      ],
+      "drawdown_initial_capital_pct": "1.9546070875730010953226423194943400"
+    }
+  ],
+  "funding": "UNAVAILABLE_NOT_MODELED_ECONOMIC_PROMOTION_BLOCKED",
+  "validation_used": false,
+  "oos_used": false,
+  "gate_checks": {
+    "minimum_base_completed_trades": true,
+    "minimum_base_each_side": true,
+    "base_net_positive": false,
+    "base_pf_ge1_10": false,
+    "base_dd_le5pct_initial_capital": true,
+    "three_positive_quarters": false,
+    "worst_quarter_ge_minus2pct": true,
+    "stress_net_positive": false,
+    "stress_dd_le7_5pct_initial_capital": false,
+    "short_positive_base_and_stress": false,
+    "minimum_stress_short_trades": true
+  },
+  "decision": "FAIL",
+  "optimization_authorized": false,
+  "candidate_selected": false,
+  "runner_sha256": "640647a801ae4418911f4a3cca9e3cf4e111b655326b2f13ee5fa12e8e599367",
+  "limitations": [
+    "Operator-requested transfer on previously observed BTC development; exploratory only, no independent confirmation.",
+    "No funding/volume; net includes commission/slippage only.",
+    "Terminal pending order fails closed; no forced closure or validation fill.",
+    "Zero-cost diagnostic cannot qualify candidate; gates and counts not relaxed.",
+    "Ledger-side completed PnL separate from any terminal unrealized PnL."
+  ],
+  "next_step": "Exact SOL transfer must pass fixed BTC gates before validation; if it fails preserve results and preregister any successor hypothesis. Protected windows remain sealed.",
+  "mechanical_retry": {
+    "scenario": "zero_cost_diagnostic",
+    "original_attempt": "FAILED_INVALID_IDENTIFIER_BEFORE_FIRST_FILL",
+    "reason": "run ID plus engine-generated order suffix exceeded governed identifier bound",
+    "correction": "shortened only run/spec/auth identifiers; strategy/dataset/costs/window unchanged; base/stress not rerun",
+    "retained_evidence": "run.log original traceback and original authorization; zero_retry.log and separate exact retry authorization",
+    "additional_mechanical_attempts": 1
+  },
+  "prospective_design_commit": "cf516247e7837f903e40f9aade58a90e5a470173"
+}
