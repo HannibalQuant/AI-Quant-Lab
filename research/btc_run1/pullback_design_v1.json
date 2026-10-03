@@ -1,0 +1,170 @@
+{
+  "design_id": "btc-run1-pullback-design-v1",
+  "status": "PREREGISTERED_PENDING_REVIEW_NOT_AUTHORIZED",
+  "baseline": "ac3daf5359e82e5fadf35d9b9e3cbc002f0ca98d",
+  "issue": 101,
+  "hypothesis": "One-bar EMA20 pullback and confirmed resumption can produce positive development net PnL after costs; exploratory hypothesis informed by already seen development losses, not independent confirmation.",
+  "profile": "PB0",
+  "direction": "LONG_SHORT",
+  "parameters": {
+    "adx_length": 14,
+    "adx_slope_length": 0,
+    "adx_threshold": "20",
+    "atr_length": 14,
+    "atr_pct_max": "100",
+    "atr_pct_min": "0",
+    "atr_stop_mult": "2",
+    "break_even_trigger_r": "1",
+    "ema_separation_min_pct": "0",
+    "fast_ema": 20,
+    "macd_fast": 12,
+    "macd_signal": 9,
+    "macd_slow": 26,
+    "medium_ema": 50,
+    "rsi_length": 14,
+    "rsi_long_min": "55",
+    "rsi_short_max": "45",
+    "slow_ema": 200,
+    "take_profit_r": "2",
+    "time_stop_bars": 48
+  },
+  "entry_rules": {
+    "common": "i>=1001; flat; indicators ready on i and i-1; T0 production direction at i matches proposed side; confirmed bars only. Exactly previous bar, no lookback search or persistent setup state.",
+    "long": "low[i-1]<=EMA20[i-1] AND close[i-1]<=EMA20[i-1] AND close[i]>EMA20[i] AND close[i]>high[i-1]",
+    "short": "high[i-1]>=EMA20[i-1] AND close[i-1]>=EMA20[i-1] AND close[i]<EMA20[i] AND close[i]<low[i-1]",
+    "numeric_semantics": "Production Decimal context; strict/non-strict comparisons as written; all EMA values computed using bars no later than their index."
+  },
+  "exit_rules": "Preserve T0 ATR from entry signal bar, initial stop 2ATR, target2R, BE trigger1R, time stop48 bars and opposite T0 production direction (not opposite PB0 entry). Confirmed-bar predicates, first eligible subsequent open. No forced terminal close; missing next bar fails closed.",
+  "window": [
+    "2025-04-01T00:00:00Z",
+    "2026-04-01T00:00:00Z"
+  ],
+  "warmup_bars": 1000,
+  "earliest_entry_signal_index": 1001,
+  "initial_capital_usdt": 1000,
+  "fixed_notional_usdt": 100,
+  "cost_scenarios": {
+    "base": {
+      "commission_bps_per_fill": 10,
+      "slippage_bps_per_fill": 5
+    },
+    "stress": {
+      "commission_bps_per_fill": 20,
+      "slippage_bps_per_fill": 10
+    },
+    "zero_cost_diagnostic": {
+      "commission_bps_per_fill": 0,
+      "slippage_bps_per_fill": 0
+    }
+  },
+  "maximum_new_runs": 3,
+  "cumulative_BTC_development_screening_runs_including_prior": 9,
+  "comparison": "Frozen T0/T1 results descriptive only; no rerun, no fresh independent comparator, no parameter ranking.",
+  "gates": {
+    "max_base_drawdown_pct": 5,
+    "max_stress_drawdown_pct": 7.5,
+    "min_completed_trades": 80,
+    "min_completed_trades_per_side": 30,
+    "min_positive_quarters": 3,
+    "min_profit_factor": 1.1,
+    "min_worst_quarter_pct": -2,
+    "net_pnl_positive": true,
+    "short_pnl_positive_base_and_stress": true,
+    "stress_net_pnl_positive": true
+  },
+  "gate_semantics": {
+    "drawdown": "maximum marked-equity peak-to-trough loss / initial capital",
+    "profit_factor": "sum positive completed-trade net / abs sum negative completed-trade net; undefined fails",
+    "activity": "base total>=80 and each side>=30; stress SHORT>=30; insufficient count INCONCLUSIVE without lowering thresholds",
+    "quarters": "four UTC development quarters, include flat warmup, marked-equity returns on beginning-quarter equity",
+    "all_gates_required": true,
+    "zero_cost_diagnostic_never_promotes": true
+  },
+  "dataset": {
+    "baseline": "720fc1db39905d22609c77ac46f25716b78f29db",
+    "source_sha256": "43c2b1cbb3734320801c26cada7dc2c97cf1715978156aafffeabfd22419e4dd",
+    "source_bytes": 2764554,
+    "source_rows": 24105,
+    "canonical_sha256": "1ea4bcacd92175c5451199de06241515a66aaff91172f047299453c37cd9f1e6",
+    "canonical_rows": 8760,
+    "first_open": "2025-04-01T00:00:00+00:00",
+    "last_close": "2026-04-01T00:00:00+00:00",
+    "admission": "ADMITTED",
+    "eligibility": "ELIGIBLE",
+    "readiness": "RESEARCH_READY",
+    "findings": [],
+    "lineage": "VERIFIED",
+    "declaration": {
+      "id": "provenance:btc-dev-screen-v1-source-declaration",
+      "version": 1,
+      "fingerprint": "sha256:dd1173e182cbf9e6f637b7a6aedcc43ce76da345569420b874afedcca140c5d7"
+    },
+    "admission_ref": {
+      "id": "artifact:btc-dev-screen-v1-admission",
+      "version": 1,
+      "fingerprint": "sha256:060c92b3b5deafb9215f247e38b41a2caab00d2e7b39c7164ee79592331d9c5a"
+    },
+    "raw_manifest": {
+      "id": "dataset:btc-dev-screen-v1-raw-dataset",
+      "version": 1,
+      "fingerprint": "sha256:a71912871f330a71ff256f8335d4344e35e45d66028bed5360962a82b3c4f421"
+    },
+    "raw_lock": {
+      "id": "dataset-lock:btc-dev-screen-v1-raw-lock",
+      "version": 1,
+      "fingerprint": "sha256:80eedf6ad2bb5a4f1def89795eea191de0181535629d28fba8a1f15e80b353cc"
+    },
+    "normalized_manifest": {
+      "id": "dataset:btc-dev-screen-v1-normalized-dataset",
+      "version": 1,
+      "fingerprint": "sha256:8bd44288a87d80d9d0fa9b1e6d91d8e8cc272690fc493d8f343ee6c4733b838f"
+    },
+    "normalized_lock": {
+      "id": "dataset-lock:btc-dev-screen-v1-normalized-lock",
+      "version": 1,
+      "fingerprint": "sha256:769e6c8fa1bb119d610a6c7b10713d334eb42f2b552152d23c46fe4606fd8ab1"
+    },
+    "eligibility_ref": {
+      "id": "artifact:btc-dev-screen-v1-eligibility",
+      "version": 1,
+      "fingerprint": "sha256:b8bf0992336ca4d567498f7adabecdf92948fea9792090a1d05566919293a82c"
+    },
+    "limitation": "Development-only 8760 complete hourly bars; no volume; declared permission/local-only retention; derived historical finality and close-time availability; funding unavailable.",
+    "optimization_authorized": false,
+    "oos_used_for_strategy": false,
+    "parent_lineage": [
+      {
+        "id": "dataset:btc-run1-r3-normalized-dataset",
+        "version": 1,
+        "fingerprint": "sha256:ecc29cf5797ef8620a6450b36fe90db8bead9942ad98c96914cea448390e34a0"
+      },
+      {
+        "id": "dataset-lock:btc-run1-r3-normalized-lock",
+        "version": 1,
+        "fingerprint": "sha256:2e23d6712e0a7d574caacbbe4e65340907d8eab2758f066e3d67fe5a0a8dfdc7"
+      }
+    ],
+    "subset_verification": "byte-identical to previously locked development subset; original source SHA identical"
+  },
+  "funding": "UNAVAILABLE_NOT_MODELED_ECONOMIC_PROMOTION_BLOCKED",
+  "protected_windows": {
+    "validation": [
+      "2026-04-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ],
+    "oos": [
+      "2026-07-01T00:00:00Z",
+      "2026-10-01T00:00:00Z"
+    ]
+  },
+  "optimization_authorized": false,
+  "new_backtests_authorized": false,
+  "candidate_selection_authorized": false,
+  "validation_access_authorized": false,
+  "oos_access_authorized": false,
+  "pine_authorized": false,
+  "deployment_authorized": false,
+  "engine_readiness": "UNSUPPORTED_CURRENT_MODEL: existing multi-signal entry is immediate direction; PB0 requires separately reviewed versioned strategy/engine support, targeted tests and exact authorization. No monkeypatch or new signal hidden under old engine refs.",
+  "stop_rule": "Preserve all results/failures; no threshold changes or replacement variants after seeing PB0 results. Integrity/accounting failure stops campaign; terminal missing-next-bar preserves failed attempt. Mechanical reruns only exact settings with documented reason.",
+  "next_step": "Implement isolated, versioned PB0 entry support with synthetic timing/state/accounting tests, retaining frozen T0/T1/SOL behavior; then obtain exact experiment authorizations before three runs."
+}
